@@ -110,6 +110,21 @@ public final class SlotGroupPanelAdapter {
         return this;
     }
 
+    // ── Teardown ────────────────────────────────────────────────────────
+
+    /**
+     * Phase 16j R5 — removes this adapter from every internal collection:
+     * the per-(category, region) bucket in {@link SlotGroupRegionRegistry},
+     * the PENDING + REGISTERED sets in {@link SlotGroupPanelRegistry}, and
+     * the per-panel padding metadata. After {@code unregister()} this
+     * adapter contributes nothing to layout, dispatch, or rendering.
+     * Idempotent.
+     */
+    public void unregister() {
+        SlotGroupRegionRegistry.unregisterSlotGroup(panel);
+        SlotGroupPanelRegistry.untrack(this);
+    }
+
     // ── Accessors ──────────────────────────────────────────────────────
 
     public Panel getPanel() { return panel; }
