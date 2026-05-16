@@ -1,6 +1,7 @@
 package com.trevorschoeny.menukit.mixin;
 
 import net.minecraft.world.inventory.Slot;
+import org.jetbrains.annotations.ApiStatus;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
@@ -17,6 +18,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  *
  * <p>Part of the <b>MenuKit</b> framework internals. Users never see this.
  */
+@ApiStatus.Internal
 @Mixin(Slot.class)
 public interface SlotPositionAccessor {
 

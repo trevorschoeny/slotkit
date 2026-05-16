@@ -31,6 +31,7 @@ import net.minecraft.world.inventory.StonecutterMenu;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.jetbrains.annotations.ApiStatus;
 
 /**
  * Library-shipped {@link SlotGroupResolver} registrations for every vanilla
@@ -51,6 +52,7 @@ import java.util.Map;
  * {@code menu.slots}. Empty-list values are omitted from the returned map
  * per {@link SlotGroupResolver}'s contract.
  */
+@ApiStatus.Internal
 public final class VanillaSlotGroupResolvers {
 
     private VanillaSlotGroupResolvers() {}

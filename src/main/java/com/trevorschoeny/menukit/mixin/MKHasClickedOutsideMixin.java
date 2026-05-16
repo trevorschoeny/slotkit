@@ -3,6 +3,7 @@ package com.trevorschoeny.menukit.mixin;
 import com.trevorschoeny.menukit.core.MKClickOutsideHelper;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.AbstractRecipeBookScreen;
+import org.jetbrains.annotations.ApiStatus;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -18,6 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * <p>See {@link MKHasClickedOutsideContainerMixin} (base) and
  * {@link MKHasClickedOutsideCreativeMixin} (creative) for the sibling targets.
  */
+@ApiStatus.Internal
 @Mixin(AbstractRecipeBookScreen.class)
 public abstract class MKHasClickedOutsideMixin {
 

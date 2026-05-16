@@ -2,6 +2,7 @@ package com.trevorschoeny.menukit.core;
 
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.inventory.Slot;
+import org.jetbrains.annotations.ApiStatus;
 
 /**
  * Shared helper used by the {@code MKHasClickedOutside*Mixin} family to detect
@@ -19,6 +20,7 @@ import net.minecraft.world.inventory.Slot;
  *
  * <p>1px tolerance matches vanilla's {@code AbstractContainerScreen.isHovering}.
  */
+@ApiStatus.Internal
 public final class MKClickOutsideHelper {
 
     private MKClickOutsideHelper() {}
