@@ -62,9 +62,15 @@ public final class SlotGroupPanelAdapter {
      * {@link RegionRegistry}'s per-(category, region) slot-group map happens
      * lazily in {@link #on} — at construction we don't yet know which
      * categories this adapter targets.
+     *
+     * <p>Padding defers to {@link Panel#interiorPadding()} — {@code 0} for
+     * {@link com.trevorschoeny.menukit.core.PanelStyle#NONE} (element edge
+     * = panel edge), {@link #DEFAULT_PADDING} for styled panels. Consumers
+     * who want a different value pass it via the explicit-padding
+     * constructor overload.
      */
     public SlotGroupPanelAdapter(Panel panel, SlotGroupRegion region) {
-        this(panel, region, DEFAULT_PADDING);
+        this(panel, region, panel.interiorPadding());
     }
 
     /** Constructor with explicit content padding. */
