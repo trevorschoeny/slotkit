@@ -197,6 +197,13 @@ public final class SlotGroupPanelAdapter {
             if (!element.isVisible()) continue;
             element.render(ctx);
         }
+
+        // Panel-level tooltip — fires over the slot-group panel's outer
+        // bounds. Phase 17 addition; matches the ScreenPanelAdapter and
+        // MenuKitScreen tooltip wiring.
+        panel.maybeQueueTooltip(graphics,
+                origin.x(), origin.y(), panelWidth, panelHeight,
+                mouseX, mouseY, ctx.hasMouseInput());
     }
 
     /**
