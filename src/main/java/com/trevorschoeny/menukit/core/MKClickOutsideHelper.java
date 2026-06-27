@@ -1,5 +1,7 @@
 package com.trevorschoeny.menukit.core;
 
+import com.trevorschoeny.menukit.inject.GraftScreenDispatcher;
+
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.inventory.Slot;
 import org.jetbrains.annotations.ApiStatus;
@@ -40,6 +42,19 @@ public final class MKClickOutsideHelper {
             AbstractContainerScreen<?> self,
             double mouseX, double mouseY,
             int leftPos, int topPos) {
+        // ── MKC slots: ask the same resolution getHoveredSlot uses ──────────
+        // A library-registered slot keeps its vanilla Slot.x/y parked off-screen
+        // and presents at a separate runtime position, so the Slot.x/y scan below
+        // can NEVER see it — that's the latent gap this closes. "Is this click
+        // outside the container?" is the same question as "which slot is under
+        // the cursor?"; route both through the one resolution that knows the
+        // runtime position (and unwraps the creative wrapper). If it claims a slot
+        // OR an in-panel point, the click is on the menu, not outside it.
+        if (GraftScreenDispatcher.fireResolveHover(self, mouseX, mouseY).handled()) {
+            return true;
+        }
+
+        // ── Vanilla-positioned slots: hit-test their real Slot.x/y ──────────
         // Slot.x / Slot.y are relative to the container frame's origin.
         double relX = mouseX - leftPos;
         double relY = mouseY - topPos;
