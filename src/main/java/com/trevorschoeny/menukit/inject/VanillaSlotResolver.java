@@ -82,8 +82,8 @@ public final class VanillaSlotResolver {
     public static Optional<SlotScreenRect> resolve(AbstractContainerScreen<?> screen, int containerIndex) {
         return resolveSlot(screen.getMenu(), containerIndex).map(s -> {
             AbstractContainerScreenAccessor acc = (AbstractContainerScreenAccessor) screen;
-            return new SlotScreenRect(acc.menuKit$getLeftPos() + s.x,
-                    acc.menuKit$getTopPos() + s.y, 16, 16);
+            return new SlotScreenRect(acc.mk$getLeftPos() + s.x,
+                    acc.mk$getTopPos() + s.y, 16, 16);
         });
     }
 }

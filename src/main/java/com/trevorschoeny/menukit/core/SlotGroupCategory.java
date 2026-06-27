@@ -21,7 +21,7 @@ public record SlotGroupCategory(String namespace, String path) {
     // Vanilla 1.21.11 categories — exhaustive coverage per M8 Principle 11's
     // exhaustive-coverage exception (low per-item cost + high migration cost
     // if a consumer discovers a category that wasn't shipped). Each has a
-    // corresponding resolver registered in MenuKitClient; see §6 of the
+    // corresponding resolver registered in MKClient; see §6 of the
     // M8 design doc for the full mapping table.
 
     // ── Player-scoped ──────────────────────────────────────────────────

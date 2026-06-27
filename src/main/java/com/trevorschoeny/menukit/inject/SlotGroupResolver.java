@@ -12,7 +12,7 @@ import java.util.Map;
  * Per-menu-class strategy that maps an {@link AbstractContainerMenu}
  * instance to its {@link SlotGroupCategory}-keyed slot groupings. Vanilla
  * menu resolvers ship in
- * {@link com.trevorschoeny.menukit.MenuKitClient}; modded consumers
+ * {@link com.trevorschoeny.menukit.MKClient}; modded consumers
  * register resolvers for their own menu classes via
  * {@link SlotGroupCategories#register}.
  *

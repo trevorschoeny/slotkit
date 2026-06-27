@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public abstract class MKHasClickedOutsideMixin {
 
     @Inject(method = "hasClickedOutside(DDII)Z", at = @At("HEAD"), cancellable = true)
-    private void menuKit$exemptSlotPositions(double mouseX, double mouseY,
+    private void mk$exemptSlotPositions(double mouseX, double mouseY,
                                               int leftPos, int topPos,
                                               CallbackInfoReturnable<Boolean> cir) {
         var self = (AbstractContainerScreen<?>) (Object) this;

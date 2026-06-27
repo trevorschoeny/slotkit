@@ -35,5 +35,5 @@ public interface SlotWrapperAccessor {
 
     /** The slot this wrapper delegates to (creative's {@code SlotWrapper.target}). */
     @Accessor("target")
-    Slot menuKit$getTarget();
+    Slot mk$getTarget();
 }

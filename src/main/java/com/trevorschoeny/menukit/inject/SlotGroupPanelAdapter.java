@@ -206,7 +206,7 @@ public final class SlotGroupPanelAdapter {
 
         // Panel-level tooltip — fires over the slot-group panel's outer
         // bounds. Phase 17 addition; matches the ScreenPanelAdapter and
-        // MenuKitScreen tooltip wiring.
+        // MKScreen tooltip wiring.
         panel.maybeQueueTooltip(graphics,
                 origin.x(), origin.y(), panelWidth, panelHeight,
                 mouseX, mouseY, ctx.hasMouseInput());

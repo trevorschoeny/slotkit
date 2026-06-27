@@ -77,7 +77,7 @@ public final class SlotGroupCategories {
      * log (mirrors {@link MenuChrome#register}).
      *
      * <p>Called at mod init — library-shipped resolvers register during
-     * {@code MenuKitClient.onInitializeClient}; modded consumers register
+     * {@code MKClient.onInitializeClient}; modded consumers register
      * from their own {@code ModInitializer}.
      *
      * @param menuClass the concrete menu class (typically the same class

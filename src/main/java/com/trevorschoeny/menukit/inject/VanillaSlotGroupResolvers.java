@@ -58,7 +58,7 @@ public final class VanillaSlotGroupResolvers {
     private VanillaSlotGroupResolvers() {}
 
     /**
-     * Called once from {@code MenuKitClient.onInitializeClient}. Registers
+     * Called once from {@code MKClient.onInitializeClient}. Registers
      * a resolver for each vanilla menu class listed in M8 §6.11.
      */
     public static void registerAll() {

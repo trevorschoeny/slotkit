@@ -33,7 +33,7 @@ public abstract class MKHasClickedOutsideCreativeMixin {
     @Shadow private boolean hasClickedOutside;
 
     @Inject(method = "hasClickedOutside(DDII)Z", at = @At("HEAD"), cancellable = true)
-    private void menuKit$exemptSlotPositions(double mouseX, double mouseY,
+    private void mk$exemptSlotPositions(double mouseX, double mouseY,
                                               int leftPos, int topPos,
                                               CallbackInfoReturnable<Boolean> cir) {
         var self = (AbstractContainerScreen<?>) (Object) this;

@@ -51,7 +51,7 @@ public final class Slots {
      */
     public static Slot target(Slot slot) {
         if (slot instanceof SlotWrapperAccessor wrapper) {
-            Slot t = wrapper.menuKit$getTarget();
+            Slot t = wrapper.mk$getTarget();
             if (t != null) return t;
         }
         return slot;

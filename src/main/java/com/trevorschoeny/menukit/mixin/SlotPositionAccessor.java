@@ -24,9 +24,9 @@ public interface SlotPositionAccessor {
 
     @Mutable
     @Accessor("x")
-    void menuKit$setX(int x);
+    void mk$setX(int x);
 
     @Mutable
     @Accessor("y")
-    void menuKit$setY(int y);
+    void mk$setY(int y);
 }

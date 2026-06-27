@@ -7,7 +7,7 @@ import net.minecraft.world.item.ItemStack;
  *
  * <p>Storage is deliberately minimal. It does not know who owns it, when
  * to save, or which player it belongs to. Those concerns live on
- * {@link com.trevorschoeny.menukit.screen.MenuKitScreenHandler} or a
+ * {@link com.trevorschoeny.menukit.screen.MKCScreenHandler} or a
  * binding registry — never here.
  *
  * <p>Each Storage is adapted internally to vanilla's {@code Container}
