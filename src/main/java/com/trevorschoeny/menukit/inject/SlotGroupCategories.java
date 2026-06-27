@@ -20,8 +20,8 @@ import java.util.Map;
  * providers for vanilla classes, modded consumers register for their own
  * classes via {@link #register}.
  *
- * <p>Consumers grafting into a vanilla menu (M4 slot-injection pattern) and
- * wanting their grafted slot group to participate in SlotGroupContext
+ * <p>Consumers registering into a vanilla menu (M4 slot-injection pattern) and
+ * wanting their registered slot group to participate in SlotGroupContext
  * dispatch declare their category via {@link #extend} — additive,
  * collision-rejecting, preserves the library's first-wins guarantee for
  * {@code register}.
@@ -103,9 +103,9 @@ public final class SlotGroupCategories {
      * extra categories without replacing the primary. Multiple extensions
      * per class are allowed, applied in registration order.
      *
-     * <p><b>Use case.</b> A consumer grafts a slot into a vanilla menu
+     * <p><b>Use case.</b> A consumer slots a slot into a vanilla menu
      * (e.g., {@code FurnaceMenu}) via M4 slot-injection and wants their
-     * grafted slot group to participate in SlotGroupContext dispatch
+     * registered slot group to participate in SlotGroupContext dispatch
      * under a consumer-owned category. The library's primary resolver
      * for the vanilla menu is already registered and first-wins blocks
      * a replacement; {@code extend} is the additive path.

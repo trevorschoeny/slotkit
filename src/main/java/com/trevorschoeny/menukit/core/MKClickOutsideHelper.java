@@ -1,6 +1,6 @@
 package com.trevorschoeny.menukit.core;
 
-import com.trevorschoeny.menukit.inject.GraftScreenDispatcher;
+import com.trevorschoeny.menukit.inject.SlotScreenDispatcher;
 
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.inventory.Slot;
@@ -15,7 +15,7 @@ import org.jetbrains.annotations.ApiStatus;
  * so all three overrides behave identically.
  *
  * <p>Vanilla's {@code hasClickedOutside} misclassifies clicks on slots
- * positioned outside the container frame (typical for grafted/decoration
+ * positioned outside the container frame (typical for registered/decoration
  * slots) as "outside" clicks — changing PICKUP to THROW and dropping items
  * as entities. The mixins use this helper to exempt click positions that
  * land on any active slot, regardless of where the container frame is.
@@ -50,7 +50,7 @@ public final class MKClickOutsideHelper {
         // the cursor?"; route both through the one resolution that knows the
         // runtime position (and unwraps the creative wrapper). If it claims a slot
         // OR an in-panel point, the click is on the menu, not outside it.
-        if (GraftScreenDispatcher.fireResolveHover(self, mouseX, mouseY).handled()) {
+        if (SlotScreenDispatcher.fireResolveHover(self, mouseX, mouseY).handled()) {
             return true;
         }
 

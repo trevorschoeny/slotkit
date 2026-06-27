@@ -20,7 +20,7 @@ import java.util.Optional;
  *
  * MenuKit's panel anchoring ({@link SlotGroupCategories} / {@link SlotGroupPanelAdapter})
  * already positions panels against a <em>category</em> of slots by index-slicing
- * {@code menu.slots}. This resolver answers the complementary question a graft
+ * {@code menu.slots}. This resolver answers the complementary question a slot
  * consumer asks: "where is the single vanilla slot whose player-inventory index
  * is N, <em>on this screen</em>?" — by identity, not by slice. That identity test
  * (`container` + `getContainerSlot`) is exactly what creative's {@code SlotWrapper}
@@ -75,7 +75,7 @@ public final class VanillaSlotResolver {
      * on {@code screen}, or empty when the screen doesn't surface that player slot.
      *
      * <p>The screen-level entry: the turnkey "register once, anchor anywhere" call
-     * — returns a {@link SlotScreenRect} in absolute screen pixels, so a graft
+     * — returns a {@link SlotScreenRect} in absolute screen pixels, so a slot
      * consumer can place its slots/decoration against it with no per-screen
      * branching at all.
      */

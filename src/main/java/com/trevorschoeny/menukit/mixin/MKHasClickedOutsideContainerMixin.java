@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * {@code hasClickedOutside} without overriding it (chests, hoppers, dispensers,
  * shulker boxes, etc.).
  *
- * <p>Without this fix, clicks on grafted/decoration slots positioned outside
+ * <p>Without this fix, clicks on registered/decoration slots positioned outside
  * the container frame get classified as "outside" clicks (k=-999), which
  * changes PICKUP to THROW and causes items to physically drop as entities
  * instead of going to the cursor.

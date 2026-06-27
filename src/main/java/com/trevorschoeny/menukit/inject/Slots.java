@@ -9,13 +9,13 @@ import net.minecraft.world.inventory.Slot;
  * vanilla {@link Slot} it represents — itself on most screens, or the slot a
  * creative {@code SlotWrapper} delegates to on the creative inventory tab.
  *
- * <h3>Why this is the foundation, not a graft detail</h3>
+ * <h3>Why this is the foundation, not a slot detail</h3>
  *
  * The creative inventory tab wraps every player-inventory slot in a
  * {@code SlotWrapper} whose {@code getContainerSlot()} reports the wrapper's own
  * index. So <em>any</em> code reading a slot's identity off {@code menu.slots} —
  * "which player-inventory slot is this?" (a vanilla concern, e.g. anchoring a
- * panel to the hotbar) or "is this one of my grafts?" (a containers concern) —
+ * panel to the hotbar) or "is this one of my slots?" (a containers concern) —
  * gets the wrong answer on creative unless it unwraps first. {@link #target}
  * is that unwrap, shared by both:
  *
@@ -23,13 +23,13 @@ import net.minecraft.world.inventory.Slot;
  *   <li>{@link VanillaSlotResolver} reads {@code target.container} +
  *       {@code target.getContainerSlot()} to find a vanilla player-inventory
  *       slot's on-screen position;</li>
- *   <li>MenuKit-Containers' {@code GraftSlots.asGraft} tests whether
- *       {@code target} is a grafted slot.</li>
+ *   <li>MenuKit-Containers' {@code MKCSlotAccess.asMKCSlot} tests whether
+ *       {@code target} is a registered slot.</li>
  * </ul>
  *
- * Before this, only grafts could see through the wrapper ({@code asGraft}); a
- * non-graft vanilla slot was unreachable on creative — the gap that left
- * hotbar-anchored grafts (pockets) dark there. One unwrap path closes it for
+ * Before this, only slots could see through the wrapper ({@code asMKCSlot}); a
+ * non-slot vanilla slot was unreachable on creative — the gap that left
+ * hotbar-anchored slots (pockets) dark there. One unwrap path closes it for
  * everyone.
  *
  * <p>Client-only: the creative wrapper is a client type. Only client-side render
@@ -44,7 +44,7 @@ public final class Slots {
      * {@code SlotWrapper} delegates to, or {@code slot} itself when it is not a
      * wrapper. Single-level — creative wraps each slot exactly once.
      *
-     * <p>Read <em>identity</em> (container, container-index, grafted type) off the
+     * <p>Read <em>identity</em> (container, container-index, registered type) off the
      * returned target; read <em>on-screen position</em> ({@code x}/{@code y}) off
      * the original {@code slot}, which is the wrapper carrying the creative
      * coordinates.

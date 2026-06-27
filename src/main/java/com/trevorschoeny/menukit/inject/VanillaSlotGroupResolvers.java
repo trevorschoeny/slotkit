@@ -350,7 +350,7 @@ public final class VanillaSlotGroupResolvers {
      *       clears slots and re-adds wrappers around every slot in
      *       {@code player.inventoryMenu}, then appends a
      *       {@code destroyItemSlot} trash bin. Without consumer mods, this
-     *       is 46 wrappers + 1 destroy = 47 slots. With a mod grafting N
+     *       is 46 wrappers + 1 destroy = 47 slots. With a mod registering N
      *       extra slots onto {@code InventoryMenu} (e.g., inventory-plus's
      *       equipment slots), it's (46 + N) wrappers + 1 destroy.</li>
      * </ul>
@@ -358,10 +358,10 @@ public final class VanillaSlotGroupResolvers {
      * <p><b>Why not match on a specific INVENTORY-tab count?</b> Early
      * drafts tried size == 46 (vanilla InventoryMenu slot count, forgetting
      * the destroy slot) and size == 47 (vanilla including destroy). Both
-     * failed in dev because inventory-plus grafts 2 slots into
+     * failed in dev because inventory-plus slots 2 slots into
      * {@code InventoryMenu}, producing size == 49. Any mod doing similar
-     * grafting changes the count. The slot layout at indices 0-45 — the
-     * player-inventory categories — is invariant under such grafting
+     * registering changes the count. The slot layout at indices 0-45 — the
+     * player-inventory categories — is invariant under such registering
      * because vanilla's rebuild loop preserves InventoryMenu's slot order.
      * Using {@code size != 54} captures INVENTORY-tab state correctly across
      * mod-extended inventories, at the cost of ambiguity if a future modded
@@ -380,10 +380,10 @@ public final class VanillaSlotGroupResolvers {
                 // PLAYER_HOTBAR resolves because the hotbar IS always visible.
                 out.put(SlotGroupCategory.PLAYER_HOTBAR, s.subList(45, 54));
             } else if (size >= 46) {
-                // INVENTORY tab — size varies with mod-grafted InventoryMenu
+                // INVENTORY tab — size varies with mod-registered InventoryMenu
                 // slots. Indices 0-45 are stable per vanilla's rebuild loop
                 // order; claim only those for the player-inventory layout.
-                // Index 46 and beyond may include mod-grafted slots and the
+                // Index 46 and beyond may include mod-registered slots and the
                 // destroyItemSlot trash bin — not named categories; skipped.
                 out.put(SlotGroupCategory.CRAFTING_OUTPUT, s.subList(0, 1));
                 out.put(SlotGroupCategory.CRAFTING_INPUT, s.subList(1, 5));
