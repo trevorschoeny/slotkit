@@ -58,16 +58,25 @@ public final class WindowEngine {
 
     // ── declare (client tier) ──────────────────────────────────────────
 
-    /** Declare a client-tier behavior on one address (the most specific level). */
+    /** Declare a behavior on one address (the most specific level). */
     public static <V> void set(Address address, BehaviorKey<V> key, Decl<V> decl) {
         requireApplies(key, address.kind());
+        if (key.tier() == Tier.SERVER) {
+            // Authoritative — routes to MKC's server store (no-op when MK-alone).
+            ServerTier.bridge().declare(address, key, decl);
+            return;
+        }
         PER_ADDRESS.computeIfAbsent(address, a -> new ConcurrentHashMap<>()).put(key, decl);
     }
 
-    /** Declare a client-tier behavior as a group default (the bulk level). */
+    /** Declare a behavior as a group default (the bulk level). */
     public static <V> void setGroup(GroupKey group, BehaviorKey<V> key, Decl<V> decl) {
         // A group's members vary, so its kind can't be pre-checked here;
         // applicability is enforced at the typed handle boundary (Phase 6).
+        if (key.tier() == Tier.SERVER) {
+            ServerTier.bridge().declareGroup(group, key, decl);
+            return;
+        }
         bindingFor(group).put(key, decl);
     }
 
@@ -75,9 +84,14 @@ public final class WindowEngine {
 
     /** The fully-resolved value of {@code key} at {@code address} — never null. */
     public static <V> V resolve(Address address, BehaviorKey<V> key) {
-        // AXIS 1 (server authority) sorts ABOVE this and plugs in at Phase 3b via
-        // the ServerTierBridge / AuthoritativeDeclarations port. None present yet,
-        // so resolution is the client tier's AXIS 2 only.
+        // AXIS 1 — server authority (above the client tier), for SERVER-tier keys.
+        // MKC absent => NoServerTier returns Inherit, so the key falls through to
+        // the client tier and finally the library default (the safe no-op).
+        if (key.tier() == Tier.SERVER) {
+            Decl<V> auth = ServerTier.declarations().resolve(address, key);
+            if (auth instanceof Decl.Set<V> s) return s.value();
+        }
+        // AXIS 2 — client tier specificity: per-slot > per-group > library default.
         Decl<V> slot = declAt(address, key);
         if (slot instanceof Decl.Set<V> s) return s.value();   // Inherit / absent => fall through
         Decl<V> group = declForGroups(address, key);
@@ -85,9 +99,9 @@ public final class WindowEngine {
         return key.libraryDefault();
     }
 
-    /** Whether the server tier (MKC) is present. False until Phase 3b wires the port. */
+    /** Whether the server tier (MKC) is present. */
     public static boolean serverTierPresent() {
-        return false;
+        return ServerTier.present();
     }
 
     // ── internals ──────────────────────────────────────────────────────
