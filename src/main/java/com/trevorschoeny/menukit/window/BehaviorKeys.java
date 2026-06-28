@@ -32,11 +32,13 @@ public final class BehaviorKeys {
     }
 
     /**
-     * Whether an addressable thing is shown. Client-tier, every kind. Default
-     * {@link TriBool#TRUE} — visible unless a declaration hides it.
+     * Whether an addressable thing is shown — a client-side {@link VisibilityRule}
+     * predicate (re-evaluated each frame), so one key spans static hide and dynamic
+     * reveal (hover). Client-tier, every kind. Default {@link VisibilityRule#VISIBLE}.
+     * Resolved + evaluated on the client only (never server-side; see VisibilityRule).
      */
-    public static final BehaviorKey<TriBool> VISIBILITY = BehaviorKey.of(
-            id("visibility"), TriBool.class, TriBool.TRUE, Tier.CLIENT,
+    public static final BehaviorKey<VisibilityRule> VISIBILITY = BehaviorKey.of(
+            id("visibility"), VisibilityRule.class, VisibilityRule.VISIBLE, Tier.CLIENT,
             KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT, KindTag.PANEL_ELEMENT, KindTag.PANEL);
 
     /**

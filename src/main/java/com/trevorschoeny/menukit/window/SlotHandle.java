@@ -18,10 +18,15 @@ public final class SlotHandle extends WindowHandle {
         super(address);
     }
 
-    /** Show/hide this slot on the client (CLIENT-tier; a created slot's contents keep syncing). */
-    public SlotHandle visibility(TriBool visible) {
-        set(BehaviorKeys.VISIBILITY, visible);
+    /** Drive this slot's client visibility by a {@link VisibilityRule} (a created slot's contents keep syncing regardless). */
+    public SlotHandle visibility(VisibilityRule rule) {
+        set(BehaviorKeys.VISIBILITY, rule);
         return this;
+    }
+
+    /** Show/hide this slot on the client (constant rule). */
+    public SlotHandle visibility(boolean visible) {
+        return visibility(VisibilityRule.of(visible));
     }
 
     /** Server-authoritative reaction when this slot gains content (MKC-only firing; the seam is owed). */
