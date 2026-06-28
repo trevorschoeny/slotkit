@@ -42,6 +42,18 @@ public final class VanillaAddressing {
         return Address.vanillaSlot(WindowMint.familyOf(menu), WindowMint.scopeOf(menu), inMenuSlot.index);
     }
 
+    /**
+     * The container-based {@link Address} of a slot reached WITHOUT a menu — an
+     * automation seam (hopper/dispenser) that has only {@code (container, index)}.
+     * Empty when the container has no §0050 identity (then no gating applies — the
+     * interaction stays vanilla). There is no menu fallback here: automation is not
+     * a menu interaction.
+     */
+    public static java.util.Optional<Address> addressOf(net.minecraft.world.Container container, int containerSlotIndex) {
+        return ServerTier.identity().identify(container, containerSlotIndex)
+                .map(r -> Address.vanillaSlot(CONTAINER_FAMILY, OwnerScope.sub(r.scopeId()), r.localIndex()));
+    }
+
     /** Whether {@code address} is a container-identified (menu-independent) vanilla address. */
     public static boolean isContainerAddressed(Address address) {
         return address.owner() instanceof OwnerRef.RootOwner root
