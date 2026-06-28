@@ -8,6 +8,7 @@ import com.trevorschoeny.menukit.core.RenderContext;
 import com.trevorschoeny.menukit.core.SlotGroupCategory;
 import com.trevorschoeny.menukit.core.SlotGroupRegion;
 import com.trevorschoeny.menukit.core.SlotGroupRegionMath;
+import com.trevorschoeny.menukit.window.ClientWindowVisibility;
 
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -156,7 +157,7 @@ public final class SlotGroupPanelAdapter {
     public Optional<ScreenOrigin> getOrigin(SlotGroupBounds bounds,
                                              SlotGroupCategory category,
                                              AbstractContainerScreen<?> screen) {
-        if (!panel.isVisible()) return Optional.empty();
+        if (!ClientWindowVisibility.panelShown(panel)) return Optional.empty();
         int pw = panel.getWidth() + 2 * padding;
         int ph = panel.getHeight() + 2 * padding;
         int prefix = SlotGroupRegionRegistry.axialPrefix(panel, category, region);
@@ -200,7 +201,7 @@ public final class SlotGroupPanelAdapter {
                 mouseX, mouseY);
 
         for (PanelElement element : panel.getElements()) {
-            if (!element.isVisible()) continue;
+            if (!ClientWindowVisibility.elementShown(panel, element)) continue;
             element.render(ctx);
         }
 
@@ -228,7 +229,7 @@ public final class SlotGroupPanelAdapter {
         int contentY = origin.y() + padding;
 
         for (PanelElement element : panel.getElements()) {
-            if (!element.isVisible()) continue;
+            if (!ClientWindowVisibility.elementShown(panel, element)) continue;
 
             int sx = contentX + element.getChildX();
             int sy = contentY + element.getChildY();
