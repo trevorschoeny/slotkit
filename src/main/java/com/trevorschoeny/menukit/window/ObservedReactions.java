@@ -27,11 +27,11 @@ import java.util.WeakHashMap;
  *
  * <h2>Kind-aware addressing</h2>
  *
- * A changed slot is addressed through {@link #installAddressing the installed
- * address function}: MKC installs the kind-aware {@code SlotAddresses.of} so created
- * slots resolve to their created address; MK-alone the default is
- * {@link VanillaAddressing#addressOf} (vanilla slots only — created slots need MKC).
- * Either way the reaction resolves at the SAME address a consumer set it on.
+ * A changed slot is addressed through {@link ClientSlotAddressing} — the shared
+ * client slot→address rule (MK-alone: vanilla slots; MKC installs the kind-aware
+ * {@code SlotAddresses.of} so created slots resolve to their created address). The
+ * reaction resolves at the SAME address a consumer set it on, and the same address
+ * {@link WindowSignals} reports for hover/click.
  *
  * <p>Client-thread only. A slot with no observed reaction resolves to
  * {@link ReactiveHook#NONE} and the fire-entry short-circuits, so the common case
@@ -40,19 +40,6 @@ import java.util.WeakHashMap;
 public final class ObservedReactions {
 
     private ObservedReactions() {}
-
-    /** Maps a live slot to its {@link Address}; swapped for the kind-aware MKC one when present. */
-    @FunctionalInterface
-    public interface SlotAddressFn {
-        Address addressOf(AbstractContainerMenu menu, Slot slot);
-    }
-
-    private static volatile SlotAddressFn addressFn = VanillaAddressing::addressOf;
-
-    /** MKC installs its kind-aware {@code SlotAddresses.of} here (so created slots address correctly). */
-    public static void installAddressing(SlotAddressFn fn) {
-        addressFn = java.util.Objects.requireNonNull(fn, "fn");
-    }
 
     // menu instance -> last-seen contents (copies). Reopen = new menu = fresh.
     private static final Map<AbstractContainerMenu, List<ItemStack>> SNAPSHOTS = new WeakHashMap<>();
@@ -76,7 +63,7 @@ public final class ObservedReactions {
             ItemStack after = slot.getItem();
             if (ItemStack.matches(before, after)) continue;
 
-            Address address = addressFn.addressOf(menu, slot);
+            Address address = ClientSlotAddressing.addressOf(menu, slot);
             // A swap (same count, different item) is both a take of the old and an
             // insert of the new — classify by content, fire both when both happen.
             boolean tookOld = !before.isEmpty()
