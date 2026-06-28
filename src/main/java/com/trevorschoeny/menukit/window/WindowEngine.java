@@ -62,8 +62,10 @@ public final class WindowEngine {
     public static <V> void set(Address address, BehaviorKey<V> key, Decl<V> decl) {
         requireApplies(key, address.kind());
         if (key.tier() == Tier.SERVER) {
-            // Authoritative — routes to MKC's server store (no-op when MK-alone).
-            ServerTier.bridge().declare(address, key, decl);
+            // Authoritative — routes to MKC's server store, BUFFERED until MKC's
+            // tier installs if it hasn't yet (so an init-time declaration lands
+            // regardless of mod load order); no-op when MK-alone.
+            ServerTier.declareWhenReady(() -> ServerTier.bridge().declare(address, key, decl));
             return;
         }
         PER_ADDRESS.computeIfAbsent(address, a -> new ConcurrentHashMap<>()).put(key, decl);
@@ -74,7 +76,7 @@ public final class WindowEngine {
         // A group's members vary, so its kind can't be pre-checked here;
         // applicability is enforced at the typed handle boundary (Phase 6).
         if (key.tier() == Tier.SERVER) {
-            ServerTier.bridge().declareGroup(group, key, decl);
+            ServerTier.declareWhenReady(() -> ServerTier.bridge().declareGroup(group, key, decl));
             return;
         }
         bindingFor(group).put(key, decl);
