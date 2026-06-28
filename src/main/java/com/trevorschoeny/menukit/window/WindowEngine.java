@@ -91,12 +91,38 @@ public final class WindowEngine {
             Decl<V> auth = ServerTier.declarations().resolve(address, key);
             if (auth instanceof Decl.Set<V> s) return s.value();
         }
-        // AXIS 2 — client tier specificity: per-slot > per-group > library default.
+        // AXIS 2 — client tier specificity: per-address > per-owner-ancestor >
+        // per-group > library default.
         Decl<V> slot = declAt(address, key);
         if (slot instanceof Decl.Set<V> s) return s.value();   // Inherit / absent => fall through
+        // Owner-chain inheritance: a default declared on an ancestor (a panel) is
+        // inherited by its children (panel elements / created slots) — nearest
+        // ancestor first. The owner nesting IS the cascade scope, so "set opacity/
+        // visibility once on the panel, it flows to everything inside" falls out
+        // here without a bespoke flag. A pure-client concern: server-tier keys live
+        // in the MKC store (AXIS-1, child-only) and ancestors are CLIENT panels.
+        for (Address ancestor = parentAddress(address); ancestor != null; ancestor = parentAddress(ancestor)) {
+            Decl<V> a = declAt(ancestor, key);
+            if (a instanceof Decl.Set<V> s) return s.value();
+        }
         Decl<V> group = declForGroups(address, key);
         if (group instanceof Decl.Set<V> s) return s.value();
         return key.libraryDefault();
+    }
+
+    /**
+     * The address of {@code a}'s owning ancestor — the panel a created slot or
+     * panel element (or a nested panel) hangs under — or {@code null} once the
+     * chain bottoms out at a {@link OwnerRef.RootOwner}. The ancestor of a
+     * {@link OwnerRef.NestedOwner} is the thing its {@code (parent, parentToken)}
+     * names; that is always a {@link KindTag#PANEL} (panels are the nestable owner),
+     * reconstructed so it equals the address a {@code PanelHandle} stores against.
+     */
+    private static Address parentAddress(Address a) {
+        if (a.owner() instanceof OwnerRef.NestedOwner nested) {
+            return new Address(nested.parent(), nested.parentToken(), KindTag.PANEL);
+        }
+        return null;
     }
 
     /** Whether the server tier (MKC) is present. */

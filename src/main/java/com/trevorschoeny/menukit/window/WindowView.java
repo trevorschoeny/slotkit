@@ -60,6 +60,19 @@ public final class WindowView {
         return new PanelHandle(address);
     }
 
+    // ── Identity minters (menu-independent: the panel subtree roots at a constant
+    //    family, so these need no live screen — one address everywhere) ──────────
+
+    /** A handle on the panel with id {@code panelId} (its own visibility/opacity/inertness). */
+    public PanelHandle panel(String panelId) {
+        return new PanelHandle(PanelAddressing.ofPanel(panelId));
+    }
+
+    /** A handle on element {@code elementDeclId} within panel {@code panelId}. */
+    public ElementHandle element(String panelId, String elementDeclId) {
+        return new ElementHandle(PanelAddressing.ofElement(panelId, elementDeclId));
+    }
+
     private static void requireKind(Address address, KindTag... allowed) {
         Objects.requireNonNull(address, "address");
         for (KindTag k : allowed) {
