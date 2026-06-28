@@ -31,22 +31,31 @@ public final class WindowSignals {
     private static volatile @Nullable Address hovered;
     private static volatile @Nullable Address selected;
 
+    // Display names (SlotNames) for the hovered/selected slot — computed here, where
+    // the live slot is in hand, so a consumer holding only the address can still read
+    // a human label. Pure display; mirrors the address fields above.
+    private static volatile @Nullable String hoveredName;
+    private static volatile @Nullable String selectedName;
+
     /** Update the hovered slot (MKClient, each client tick). Null clears it. */
     public static void tickHover(@Nullable AbstractContainerMenu menu, @Nullable Slot hoveredSlot) {
         hovered = (menu != null && hoveredSlot != null)
                 ? ClientSlotAddressing.addressOf(menu, hoveredSlot) : null;
+        hoveredName = SlotNames.nameOf(hovered, menu, hoveredSlot);
     }
 
     /** Record the last-clicked slot (MKClient, on a screen click). */
     public static void recordClick(@Nullable AbstractContainerMenu menu, @Nullable Slot clickedSlot) {
         if (menu != null && clickedSlot != null) {
             selected = ClientSlotAddressing.addressOf(menu, clickedSlot);
+            selectedName = SlotNames.nameOf(selected, menu, clickedSlot);
         }
     }
 
     /** Clear the selection (MKClient, when a container screen closes). */
     public static void clearSelection() {
         selected = null;
+        selectedName = null;
     }
 
     /** The hovered slot's {@link Address}, or {@code null} if nothing is hovered. */
@@ -54,6 +63,12 @@ public final class WindowSignals {
 
     /** The last-clicked slot's {@link Address}, or {@code null}. */
     public static @Nullable Address selected() { return selected; }
+
+    /** The hovered slot's display name (e.g. "Hotbar 3", "Chestplate"), or {@code null}. */
+    public static @Nullable String hoveredName() { return hoveredName; }
+
+    /** The last-clicked slot's display name, or {@code null}. */
+    public static @Nullable String selectedName() { return selectedName; }
 
     /** Whether {@code address} is the currently-hovered slot. */
     public static boolean isHovered(@Nullable Address address) {
