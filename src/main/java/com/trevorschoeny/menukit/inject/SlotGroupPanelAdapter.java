@@ -4,6 +4,7 @@ import com.trevorschoeny.menukit.core.Panel;
 import com.trevorschoeny.menukit.core.PanelElement;
 import com.trevorschoeny.menukit.core.PanelRendering;
 import com.trevorschoeny.menukit.core.PanelStyle;
+import com.trevorschoeny.menukit.core.RegionAnchor;
 import com.trevorschoeny.menukit.core.RenderContext;
 import com.trevorschoeny.menukit.core.SlotGroupCategory;
 import com.trevorschoeny.menukit.core.SlotGroupRegion;
@@ -52,17 +53,26 @@ public final class SlotGroupPanelAdapter {
     private final Panel panel;
     private final SlotGroupRegion region;
     private final int padding;
+    private final int priority;
 
     /** Declared targets; null until {@link #on} is called. */
     private @Nullable List<SlotGroupCategory> targets = null;
 
     // ── Constructors ────────────────────────────────────────────────────
+    //
+    // Phase 5 (B2) — RegionAnchor<SlotGroupRegion> overloads added so
+    // SlotGroupRegion.priority(int) reaches a real adapter/registry pathway,
+    // mirroring ScreenPanelAdapter(RegionAnchor<MenuRegion>) /
+    // VanillaScreenPanelAdapter(RegionAnchor<VanillaScreenRegion>). All four
+    // region enums now behave identically.
 
     /**
      * Constructs an adapter with default content padding. Registration into
-     * {@link RegionRegistry}'s per-(category, region) slot-group map happens
-     * lazily in {@link #on} — at construction we don't yet know which
-     * categories this adapter targets.
+     * the per-(category, region) slot-group map happens lazily in {@link #on}
+     * — at construction we don't yet know which categories this adapter
+     * targets. Uses {@link RegionAnchor#DEFAULT_PRIORITY} for sibling
+     * ordering; pair with the {@link RegionAnchor} constructor below for
+     * explicit priority.
      *
      * <p>Padding defers to {@link Panel#interiorPadding()} — {@code 0} for
      * {@link com.trevorschoeny.menukit.core.PanelStyle#NONE} (element edge
@@ -71,14 +81,44 @@ public final class SlotGroupPanelAdapter {
      * constructor overload.
      */
     public SlotGroupPanelAdapter(Panel panel, SlotGroupRegion region) {
-        this(panel, region, panel.interiorPadding());
+        this(panel, region, panel.interiorPadding(), RegionAnchor.DEFAULT_PRIORITY);
     }
 
-    /** Constructor with explicit content padding. */
+    /** Constructor with explicit content padding. Uses
+     *  {@link RegionAnchor#DEFAULT_PRIORITY} for sibling ordering. */
     public SlotGroupPanelAdapter(Panel panel, SlotGroupRegion region, int padding) {
+        this(panel, region, padding, RegionAnchor.DEFAULT_PRIORITY);
+    }
+
+    /**
+     * Region-aware constructor accepting a {@link RegionAnchor} — a slot-group
+     * region paired with an explicit stacking priority (e.g.
+     * {@code SlotGroupRegion.RIGHT_ALIGN_TOP.priority(50)}). Use when sibling
+     * slot-group panels in the same (category, region) pair need deterministic
+     * ordering relative to each other.
+     *
+     * <p>Padding defers to {@link Panel#interiorPadding()} (0 for NONE, 7
+     * otherwise) — same style-conditional default as the
+     * {@link ScreenPanelAdapter}/{@link VanillaScreenPanelAdapter}
+     * {@code RegionAnchor} constructors.
+     */
+    public SlotGroupPanelAdapter(Panel panel, RegionAnchor<SlotGroupRegion> anchor) {
+        this(panel, anchor.region(), panel.interiorPadding(), anchor.priority());
+    }
+
+    /** Region-aware constructor with both explicit padding and priority. */
+    public SlotGroupPanelAdapter(Panel panel, RegionAnchor<SlotGroupRegion> anchor,
+                                  int padding) {
+        this(panel, anchor.region(), padding, anchor.priority());
+    }
+
+    /** Internal canonical constructor — public overloads delegate here. */
+    private SlotGroupPanelAdapter(Panel panel, SlotGroupRegion region, int padding,
+                                   int priority) {
         this.panel = panel;
         this.region = region;
         this.padding = padding;
+        this.priority = priority;
         SlotGroupPanelRegistry.trackPending(this);
     }
 
@@ -111,7 +151,7 @@ public final class SlotGroupPanelAdapter {
         }
         this.targets = List.of(categories);
         for (SlotGroupCategory category : this.targets) {
-            SlotGroupRegionRegistry.registerSlotGroup(panel, category, region, padding);
+            SlotGroupRegionRegistry.registerSlotGroup(panel, category, region, padding, priority);
         }
         SlotGroupPanelRegistry.markTargetingDeclared(this);
         return this;

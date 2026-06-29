@@ -67,7 +67,15 @@ public final class WindowSignals {
         }
     }
 
-    /** Clear the selection (MKClient, when a container screen closes). */
+    /**
+     * Clear the selection (MKClient, when a container screen closes).
+     *
+     * <p><b>Internal write feeder</b> (see {@link #tickHover}/{@link #recordClick}) —
+     * the third member of the write trio. Only MK's client lifecycle calls it;
+     * consumers read the selection through the public API
+     * ({@link #isSelected}/{@link #selectedName}) and never reset it themselves.
+     */
+    @ApiStatus.Internal
     public static void clearSelection() {
         selected = null;
         selectedName = null;
