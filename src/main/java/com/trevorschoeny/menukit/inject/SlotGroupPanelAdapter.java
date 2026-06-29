@@ -223,6 +223,8 @@ public final class SlotGroupPanelAdapter {
         int pw = panel.getWidth() + 2 * padding;
         int ph = panel.getHeight() + 2 * padding;
         int prefix = SlotGroupRegionRegistry.axialPrefix(panel, category, region);
+        // Stale reference after unregister() — skip this panel this frame.
+        if (prefix == RegionRegistry.NOT_REGISTERED) return Optional.empty();
         Optional<ScreenOrigin> result =
                 SlotGroupRegionMath.resolveSlotGroup(region, bounds, pw, ph, prefix,
                         guiScaledWidth(), guiScaledHeight());
