@@ -199,6 +199,12 @@ public final class SlotGroupPanelAdapter {
         return mc.getWindow().getGuiScaledWidth();
     }
 
+    private static int guiScaledHeight() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.getWindow() == null) return Integer.MAX_VALUE / 4;
+        return mc.getWindow().getGuiScaledHeight();
+    }
+
     /**
      * Returns the panel's screen-space origin for the given slot-group
      * bounds anchored in {@code category}, or empty when the panel is
@@ -218,7 +224,8 @@ public final class SlotGroupPanelAdapter {
         int ph = panel.getHeight() + 2 * padding;
         int prefix = SlotGroupRegionRegistry.axialPrefix(panel, category, region);
         Optional<ScreenOrigin> result =
-                SlotGroupRegionMath.resolveSlotGroup(region, bounds, pw, ph, prefix);
+                SlotGroupRegionMath.resolveSlotGroup(region, bounds, pw, ph, prefix,
+                        guiScaledWidth(), guiScaledHeight());
         if (result.isEmpty()) {
             SlotGroupRegionRegistry.warnSlotGroupOverflowOnce(panel, category, region,
                     pw, ph, prefix, bounds);
