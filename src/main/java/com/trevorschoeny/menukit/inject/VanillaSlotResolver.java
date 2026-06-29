@@ -56,11 +56,13 @@ public final class VanillaSlotResolver {
      * {@code SlotWrapper} around it (so its {@code x}/{@code y} carry the creative
      * position). Empty when the menu doesn't surface that player slot.
      *
-     * <p>The menu-level entry: for a consumer that already works in screen-frame
-     * coordinates and wants the slot's frame-relative {@code x}/{@code y} (e.g.
-     * the Pocket column reading the live hotbar position off the menu).
+     * <p><b>Private — raw-{@code Slot} plumbing.</b> Returning a raw vanilla
+     * {@code Slot} is internal to this resolver; the public, address-only
+     * equivalent is {@link #resolve(AbstractContainerScreen, int)}, which returns a
+     * frame-relative {@link SlotScreenRect}. The {@code int} there is a vanilla
+     * player-inventory container index, the address-clean way to name the slot.
      */
-    public static Optional<Slot> resolveSlot(AbstractContainerMenu menu, int containerIndex) {
+    private static Optional<Slot> resolveSlot(AbstractContainerMenu menu, int containerIndex) {
         for (Slot s : menu.slots) {
             Slot target = Slots.target(s);
             if (target.container instanceof Inventory && target.getContainerSlot() == containerIndex) {

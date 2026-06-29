@@ -6,6 +6,8 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 
+import org.jetbrains.annotations.ApiStatus;
+
 /**
  * Mints the {@link Address} of a vanilla slot — the single place that decides a
  * vanilla slot's identity, shared by the client resolver (render/decorate) and
@@ -31,7 +33,14 @@ public final class VanillaAddressing {
     public static final ScreenFamilyKey CONTAINER_FAMILY =
             ScreenFamilyKey.of(Identifier.fromNamespaceAndPath("menukit", "container"));
 
-    /** The {@link Address} of {@code inMenuSlot} on {@code menu}. */
+    /**
+     * The {@link Address} of {@code inMenuSlot} on {@code menu}.
+     *
+     * <p><b>Internal minter.</b> Deriving a vanilla slot's address from a live
+     * {@code Slot} is library plumbing (resolution + the client/server addressing
+     * ports). Consumers hold addresses they minted by identity, not raw slots.
+     */
+    @ApiStatus.Internal
     public static Address addressOf(AbstractContainerMenu menu, Slot inMenuSlot) {
         Slot target = Slots.target(inMenuSlot); // identity off the unwrapped (creative) target
         var id = ServerTier.identity().identify(target.container, target.getContainerSlot());
@@ -48,7 +57,11 @@ public final class VanillaAddressing {
      * Empty when the container has no §0050 identity (then no gating applies — the
      * interaction stays vanilla). There is no menu fallback here: automation is not
      * a menu interaction.
+     *
+     * <p><b>Internal minter</b> (see the menu overload) — used by the library's
+     * automation gating seams (hopper/dispenser).
      */
+    @ApiStatus.Internal
     public static java.util.Optional<Address> addressOf(net.minecraft.world.Container container, int containerSlotIndex) {
         return ServerTier.identity().identify(container, containerSlotIndex)
                 .map(r -> Address.vanillaSlot(CONTAINER_FAMILY, OwnerScope.sub(r.scopeId()), r.localIndex()));

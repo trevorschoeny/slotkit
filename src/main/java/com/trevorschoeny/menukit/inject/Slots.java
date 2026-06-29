@@ -4,6 +4,8 @@ import com.trevorschoeny.menukit.mixin.SlotWrapperAccessor;
 
 import net.minecraft.world.inventory.Slot;
 
+import org.jetbrains.annotations.ApiStatus;
+
 /**
  * The one place a slot in a screen's {@code menu.slots} is resolved to the real
  * vanilla {@link Slot} it represents — itself on most screens, or the slot a
@@ -34,7 +36,13 @@ import net.minecraft.world.inventory.Slot;
  *
  * <p>Client-only: the creative wrapper is a client type. Only client-side render
  * + input + anchoring code calls this.
+ *
+ * <p><b>Internal plumbing.</b> The creative-wrapper unwrap is a library-internal
+ * detail of how MK resolves a raw vanilla {@code Slot}'s identity; it is not a
+ * consumer surface. Consumers address slots by {@link com.trevorschoeny.menukit.window.Address},
+ * never by handing MK a raw {@code Slot} to unwrap.
  */
+@ApiStatus.Internal
 public final class Slots {
 
     private Slots() {}

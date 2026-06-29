@@ -2,6 +2,8 @@ package com.trevorschoeny.menukit.window;
 
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
+import org.jetbrains.annotations.ApiStatus;
+
 import java.util.Objects;
 
 /**
@@ -37,7 +39,16 @@ public final class WindowView {
         return new WindowView(menu);
     }
 
-    /** A handle on the vanilla slot at flat menu {@code index}. */
+    /**
+     * A handle on the vanilla slot at flat menu {@code index}.
+     *
+     * <p><b>Internal plumbing.</b> The address-only public way to name a vanilla
+     * slot is {@link #slot(Address)} (with an address minted by identity). This
+     * int-index minter exists for the library's own resolution path and is not a
+     * consumer surface — a flat menu index is exactly the menu-coupling THE ONE
+     * WINDOW's addressing replaces.
+     */
+    @ApiStatus.Internal
     public SlotHandle slot(int index) {
         return new SlotHandle(VanillaAddressing.addressOf(menu, menu.getSlot(index)));
     }

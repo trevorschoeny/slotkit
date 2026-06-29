@@ -24,6 +24,19 @@ import java.util.Map;
  * <p>Resolution runs once per screen open; the result is implicitly
  * cached for the screen's lifetime. Dynamic menus whose slot set changes
  * mid-session aren't supported in v1 (see M8 §5.4 caching constraint).
+ *
+ * <h3>The documented exception to the address-only rule</h3>
+ *
+ * This interface (with {@link SlotGroupCategories#register}/{@code extend}/{@code of})
+ * is the ONE legitimate consumer-facing raw-vanilla-{@link Slot} surface in MenuKit
+ * — the <b>vanilla-observation seam</b>, where a consumer hands MenuKit the raw
+ * vanilla {@code Slot}s it has <em>observed</em> on a vanilla menu, grouping them by
+ * {@link SlotGroupCategory}. That polarity is the opposite of the created-slot
+ * Address world: there the consumer <em>declares</em> slots and addresses them by
+ * identity; here the consumer is <em>reading back</em> slots vanilla already owns,
+ * which have no MenuKit Address to name them by. Everything else in the library is
+ * addressed — this seam is the deliberate carve-out. See also
+ * {@link SlotGroupCategories}.
  */
 @FunctionalInterface
 public interface SlotGroupResolver {

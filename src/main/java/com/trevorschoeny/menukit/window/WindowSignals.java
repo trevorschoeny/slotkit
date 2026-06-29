@@ -3,6 +3,7 @@ package com.trevorschoeny.menukit.window;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 
+import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 
 /**
@@ -37,14 +38,28 @@ public final class WindowSignals {
     private static volatile @Nullable String hoveredName;
     private static volatile @Nullable String selectedName;
 
-    /** Update the hovered slot (MKClient, each client tick). Null clears it. */
+    /**
+     * Update the hovered slot (MKClient, each client tick). Null clears it.
+     *
+     * <p><b>Internal write feeder.</b> Only MK's client tick feeds the signals;
+     * it takes raw vanilla {@code Slot}s straight off the live screen. Consumers
+     * READ the signals through the public address-keyed/display API below
+     * ({@link #isHovered}/{@link #hoveredName}/…); they never feed them.
+     */
+    @ApiStatus.Internal
     public static void tickHover(@Nullable AbstractContainerMenu menu, @Nullable Slot hoveredSlot) {
         hovered = (menu != null && hoveredSlot != null)
                 ? ClientSlotAddressing.addressOf(menu, hoveredSlot) : null;
         hoveredName = SlotNames.nameOf(hovered, menu, hoveredSlot);
     }
 
-    /** Record the last-clicked slot (MKClient, on a screen click). */
+    /**
+     * Record the last-clicked slot (MKClient, on a screen click).
+     *
+     * <p><b>Internal write feeder</b> (see {@link #tickHover}). Consumers read the
+     * selection through the public API ({@link #isSelected}/{@link #selectedName}).
+     */
+    @ApiStatus.Internal
     public static void recordClick(@Nullable AbstractContainerMenu menu, @Nullable Slot clickedSlot) {
         if (menu != null && clickedSlot != null) {
             selected = ClientSlotAddressing.addressOf(menu, clickedSlot);

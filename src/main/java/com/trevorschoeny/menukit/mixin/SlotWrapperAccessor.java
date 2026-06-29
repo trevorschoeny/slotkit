@@ -23,9 +23,11 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  * MenuKit-Containers) because unwrapping a vanilla wrapper to a vanilla slot is a
  * vanilla-screen-geometry concern, not a slot concern: a pure-MK panel consumer
  * anchoring to a vanilla slot needs it just as much as a slot consumer does.
- * {@link com.trevorschoeny.menukit.inject.Slots#target(Slot)} is the public face;
- * MenuKit-Containers' {@code MKCSlotAccess.asMKCSlot} rides that same path so there is
- * one unwrap, not two.
+ * The library-internal {@link com.trevorschoeny.menukit.inject.Slots#target(Slot)}
+ * wraps this accessor; MenuKit-Containers' {@code MKCSlotAccess.asMKCSlot} rides
+ * that same path so there is one unwrap, not two. (Both are
+ * {@code @ApiStatus.Internal} — consumers address slots by {@code Address}, not by
+ * unwrapping raw {@code Slot}s.)
  *
  * <p>Client-only mixin (the creative screen is a client type). Targets the inner
  * class by binary name since it is not public.
