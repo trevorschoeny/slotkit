@@ -5,12 +5,14 @@ import com.trevorschoeny.menukit.core.PanelElement;
 import com.trevorschoeny.menukit.core.PanelRendering;
 import com.trevorschoeny.menukit.core.PanelStyle;
 import com.trevorschoeny.menukit.core.RegionAnchor;
+import com.trevorschoeny.menukit.core.RegionConstants;
 import com.trevorschoeny.menukit.core.RenderContext;
 import com.trevorschoeny.menukit.core.SlotGroupCategory;
 import com.trevorschoeny.menukit.core.SlotGroupRegion;
 import com.trevorschoeny.menukit.core.SlotGroupRegionMath;
 import com.trevorschoeny.menukit.window.ClientWindowVisibility;
 
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 
@@ -189,6 +191,14 @@ public final class SlotGroupPanelAdapter {
         return targets.contains(category);
     }
 
+    /** GUI-scaled window width (Pass 3 screen-edge reference); large fallback
+     *  when the window is unavailable so no spurious wrap fires. */
+    private static int guiScaledWidth() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc == null || mc.getWindow() == null) return Integer.MAX_VALUE / 4;
+        return mc.getWindow().getGuiScaledWidth();
+    }
+
     /**
      * Returns the panel's screen-space origin for the given slot-group
      * bounds anchored in {@code category}, or empty when the panel is
@@ -198,6 +208,12 @@ public final class SlotGroupPanelAdapter {
                                              SlotGroupCategory category,
                                              AbstractContainerScreen<?> screen) {
         if (!ClientWindowVisibility.panelShown(panel)) return Optional.empty();
+        // Pass 3 — feed the screen-edge content-width budget BEFORE measuring,
+        // so a slot-group-anchored panel wraps rather than sailing off-screen.
+        // Single chokepoint: both render() and the input path call getOrigin.
+        int availOuter = SlotGroupRegionMath.availableSlotGroupWidth(
+                region, bounds, guiScaledWidth(), RegionConstants.SCREEN_EDGE_MARGIN);
+        panel.setAvailableContentWidth(availOuter - 2 * padding);
         int pw = panel.getWidth() + 2 * padding;
         int ph = panel.getHeight() + 2 * padding;
         int prefix = SlotGroupRegionRegistry.axialPrefix(panel, category, region);
