@@ -157,22 +157,46 @@ public final class SlotGroupCategories {
 
         if (primary == null && extensions.isEmpty()) return Map.of();
 
+        // Resolvers speak in indices (the consumer never holds a raw Slot); the
+        // library dereferences index → Slot here, where it already has the menu.
         Map<SlotGroupCategory, List<Slot>> out = new HashMap<>();
         if (primary != null) {
-            out.putAll(primary.resolve(menu));
+            deref(menu, primary.resolve(menu), out, /*isExtension*/ false);
         }
         for (SlotGroupResolver ext : extensions) {
-            Map<SlotGroupCategory, List<Slot>> contribution = ext.resolve(menu);
-            for (Map.Entry<SlotGroupCategory, List<Slot>> entry : contribution.entrySet()) {
-                if (out.containsKey(entry.getKey())) {
-                    LOGGER.warn("[SlotGroupCategories] extension for {} tried to redefine " +
-                            "category {} — dropping (earlier entry wins)",
-                            menuClass.getName(), entry.getKey());
-                    continue;
-                }
-                out.put(entry.getKey(), entry.getValue());
-            }
+            deref(menu, ext.resolve(menu), out, /*isExtension*/ true);
         }
         return Map.copyOf(out);
+    }
+
+    /**
+     * Dereferences a resolver's category→index-array map onto {@code out} as
+     * category→{@code List<Slot>}, applying the additive collision policy: an
+     * extension category that collides with an already-accumulated one is dropped
+     * with a warn log (earlier entry wins). Out-of-range and empty index arrays
+     * are skipped defensively, matching {@link SlotGroupResolver}'s contract that
+     * categories the menu doesn't contain are simply absent.
+     */
+    private static void deref(AbstractContainerMenu menu,
+            Map<SlotGroupCategory, int[]> indices,
+            Map<SlotGroupCategory, List<Slot>> out, boolean isExtension) {
+        int slotCount = menu.slots.size();
+        for (Map.Entry<SlotGroupCategory, int[]> entry : indices.entrySet()) {
+            if (out.containsKey(entry.getKey())) {
+                if (isExtension) {
+                    LOGGER.warn("[SlotGroupCategories] extension for {} tried to redefine " +
+                            "category {} — dropping (earlier entry wins)",
+                            menu.getClass().getName(), entry.getKey());
+                }
+                continue;
+            }
+            int[] idx = entry.getValue();
+            if (idx == null || idx.length == 0) continue;   // empty omitted per contract
+            List<Slot> slots = new ArrayList<>(idx.length);
+            for (int i : idx) {
+                if (i >= 0 && i < slotCount) slots.add(menu.slots.get(i));
+            }
+            if (!slots.isEmpty()) out.put(entry.getKey(), List.copyOf(slots));
+        }
     }
 }
