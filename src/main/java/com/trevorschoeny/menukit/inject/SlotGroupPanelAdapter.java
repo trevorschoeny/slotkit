@@ -65,7 +65,7 @@ public final class SlotGroupPanelAdapter {
     // Phase 5 (B2) — RegionAnchor<SlotGroupRegion> overloads added so
     // SlotGroupRegion.priority(int) reaches a real adapter/registry pathway,
     // mirroring ScreenPanelAdapter(RegionAnchor<MenuRegion>) /
-    // VanillaScreenPanelAdapter(RegionAnchor<VanillaScreenRegion>). All four
+    // VanillaScreenPanelAdapter(RegionAnchor<ScreenRegion>). All four
     // region enums now behave identically.
 
     /**
