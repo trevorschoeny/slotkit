@@ -13,7 +13,7 @@ import com.trevorschoeny.menukit.core.SlotGroupRegionMath;
 import com.trevorschoeny.menukit.window.ClientWindowVisibility;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 
 import org.jspecify.annotations.Nullable;
@@ -243,7 +243,7 @@ public final class SlotGroupPanelAdapter {
      * {@link SlotGroupPanelRegistry}'s dispatch — once per matching (adapter,
      * category) pair per frame.
      */
-    public void render(GuiGraphics graphics, SlotGroupBounds bounds,
+    public void render(GuiGraphicsExtractor graphics, SlotGroupBounds bounds,
                        SlotGroupCategory category,
                        int mouseX, int mouseY,
                        AbstractContainerScreen<?> screen) {
