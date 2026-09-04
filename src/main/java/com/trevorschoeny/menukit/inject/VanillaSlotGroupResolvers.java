@@ -33,7 +33,7 @@ import org.jetbrains.annotations.ApiStatus;
 
 /**
  * Library-shipped {@link SlotGroupResolver} registrations for every vanilla
- * 1.21.11 {@link AbstractContainerMenu} whose slots map to named categories
+ * 26.2 {@link AbstractContainerMenu} whose slots map to named categories
  * in the M8 v1 coverage catalog. See
  * {@code Design Docs/Phase 12.5/M8_FOUR_CONTEXT_MODEL.md} §6 for the full
  * category list and §11.2 for the resolver count.
