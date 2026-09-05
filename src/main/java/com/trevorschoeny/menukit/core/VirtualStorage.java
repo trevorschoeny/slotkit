@@ -10,7 +10,7 @@ import java.util.function.IntFunction;
  * so consumers can bridge any external data source into MenuKit's
  * Storage interface.
  *
- * <p>Implements plain {@link Storage}, not {@link PersistentStorage}.
+ * <p>Implements plain {@link Storage}, not {@code PersistentStorage}.
  * Persistence is the external source's responsibility, not ours.
  *
  * <p>Absorbs the old {@code MKContainerSource} / {@code LiveContainerSource}

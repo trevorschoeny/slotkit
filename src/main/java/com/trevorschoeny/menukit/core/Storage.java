@@ -7,22 +7,22 @@ import net.minecraft.world.item.ItemStack;
  *
  * <p>Storage is deliberately minimal. It does not know who owns it, when
  * to save, or which player it belongs to. Those concerns live on
- * {@link com.trevorschoeny.menukit.screen.MKCScreenHandler} or a
+ * {@code MKCScreenHandler} or a
  * binding registry — never here.
  *
  * <p>Each Storage is adapted internally to vanilla's {@code Container}
  * interface by the handler during slot construction (via
- * {@link StorageContainerAdapter}). Consumers never see {@code Container};
+ * {@code StorageContainerAdapter}). Consumers never see {@code Container};
  * they see Storage.
  *
  * <p>For persistent storage (BlockEntity-scoped, Player-attached, Item-attached),
- * see {@link StorageAttachment}. M7's factories produce Storage views
+ * see {@code StorageAttachment}. M7's factories produce Storage views
  * backed by Fabric attachments or DataComponents with auto-persistence.
- * For session-only storage, see {@link EphemeralStorage}. For virtual
+ * For session-only storage, see {@code EphemeralStorage}. For virtual
  * observer views, see {@link VirtualStorage}.
  *
- * @see StorageAttachment
- * @see EphemeralStorage
+ * See {@code StorageAttachment}
+ * See {@code EphemeralStorage}
  * @see VirtualStorage
  */
 public interface Storage {
