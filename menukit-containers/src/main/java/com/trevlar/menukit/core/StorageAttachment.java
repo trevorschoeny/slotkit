@@ -1,0 +1,496 @@
+package com.trevlar.menukit.core;
+
+import com.trevlar.menukit.core.attachment.CustomAttachmentSpec;
+import com.trevlar.menukit.core.attachment.StorageAttachments;
+
+import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.component.DataComponentType;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.level.block.entity.BlockEntity;
+
+import java.util.function.Supplier;
+
+/**
+ * M7 — Storage Attachment Taxonomy. Public entry point for slot-group
+ * content persistence, by owner type.
+ *
+ * <p>Produces a {@link Storage} bound to a specific owner instance. The
+ * returned Storage reads/writes whatever persistence surface the factory
+ * declared — Fabric attachment (Player, BlockEntity), data component
+ * (ItemStack), in-memory list (Ephemeral), or consumer-supplied hooks
+ * (CustomAttachmentSpec).
+ *
+ * <p>See {@code Design Docs/Mechanisms/M7_STORAGE_ATTACHMENT.md} for design
+ * rationale including the per-entry Principle 11 check that scoped v1 to
+ * four factories (ephemeral, playerAttached, blockScoped, itemContainer) +
+ * custom extension. Block-portable and entity-attached are deferred to
+ * first-concrete-consumer trigger.
+ *
+ * <h3>Usage</h3>
+ *
+ * <pre>{@code
+ * // At mod init — declare the attachment.
+ * public static final StorageAttachment<BlockEntity, NonNullList<ItemStack>> FURNACE_EXTRA =
+ *     StorageAttachment.blockScoped("my-mod", "furnace_extra", 1);
+ *
+ * // At menu construction — bind to a specific owner instance.
+ * Storage storage = FURNACE_EXTRA.bind(furnaceBE);
+ * panel.slotGroup("extra").slot(0, 0).build(storage);
+ * }</pre>
+ *
+ * @param <O> owner type (Void for ephemeral, Player / BlockEntity / etc.
+ *            for persistent variants)
+ * @param <C> content type — {@link NonNullList} of {@link ItemStack} for
+ *            most v1 factories; {@link ItemContainerContents} for
+ *            {@link #itemContainer(int)}; consumer-defined for custom specs
+ */
+public abstract class StorageAttachment<O, C> {
+
+    /** Number of slots this attachment's content holds. */
+    public abstract int slotCount();
+
+    /**
+     * Binds this attachment to a specific owner instance. Returns a
+     * {@link Storage} view that reads/writes the attachment's content for
+     * that owner.
+     *
+     * <p>For owners with stable references during the menu lifetime
+     * (Player, BlockEntity, Entity), pass the reference directly.
+     */
+    public abstract Storage bind(O owner);
+
+    /**
+     * Binds via a live supplier for owners whose reference can change
+     * during the menu lifetime (notably {@link ItemStack}, which vanilla
+     * may replace during interactions). The library calls the supplier on
+     * every read/write.
+     */
+    public Storage bind(Supplier<O> ownerSupplier) {
+        // Default: a thin adapter that re-resolves the owner on every call
+        // and delegates to bind(O). Specific factories may override if they
+        // can cache state across calls.
+        StorageAttachment<O, C> self = this;
+        return new Storage() {
+            @Override public ItemStack getStack(int i) {
+                return self.bind(ownerSupplier.get()).getStack(i);
+            }
+            @Override public void setStack(int i, ItemStack s) {
+                self.bind(ownerSupplier.get()).setStack(i, s);
+            }
+            @Override public int size() { return self.slotCount(); }
+            @Override public void markDirty() {
+                self.bind(ownerSupplier.get()).markDirty();
+            }
+        };
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Player-anchored subtype
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * The death-handling-capable specialization of {@link StorageAttachment}, returned
+     * only by player-anchored factories ({@link #playerAttached} and
+     * {@link #customPlayerAttached}). Death handling is only meaningful on player
+     * content — content attached to a block / item / entity / ephemeral storage has no
+     * player-death lifecycle — so {@code dropsOnDeath(DropRule)} lives here, not on the
+     * base type. A non-player attachment therefore CANNOT call {@code dropsOnDeath} at
+     * all: it is a compile error, not the old runtime
+     * {@link UnsupportedOperationException}.
+     *
+     * @param <C> content type (carried through from the base)
+     */
+    public abstract static class PlayerStorageAttachment<C>
+            extends StorageAttachment<Player, C> {
+
+        /**
+         * Sets this player attachment's death-drop policy. Player content attachments
+         * are enrolled in death handling at {@link DropRule#DEFAULT} (vanilla parity)
+         * on creation; call this to override — {@code KEEP} (soulbound),
+         * {@code DESTROY} (cursed), or {@code DROP} (always drop even with
+         * {@code keepInventory} on). Fluent:
+         * {@code playerAttached(...).dropsOnDeath(KEEP)}.
+         */
+        public abstract PlayerStorageAttachment<C> dropsOnDeath(DropRule rule);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Factories
+    // ══════════════════════════════════════════════════════════════════════
+
+    /**
+     * Session-scoped, in-memory storage. Content dies when the menu closes
+     * unless the handler's close-drop policy captures it. Equivalent to
+     * wrapping an {@link EphemeralStorage} — {@code StorageAttachment}
+     * presents it through the unified API.
+     *
+     * <p>Owner type is {@link Void}; callers pass {@code null} to {@link #bind}.
+     */
+    public static StorageAttachment<Void, NonNullList<ItemStack>> ephemeral(int slotCount) {
+        return new EphemeralAttachment(slotCount);
+    }
+
+    /**
+     * Persists slot-group content on a {@link Player} via a Fabric attachment.
+     * Content travels with the player across sessions and dimensions.
+     *
+     * <h4>Death handling</h4>
+     *
+     * Player content attachments are enrolled in death handling at
+     * {@link DropRule#DEFAULT} — zero-config vanilla parity: on death the content
+     * <b>drops</b> at the death spot when {@code keepInventory} is off (Curse of
+     * Vanishing destroys instead) and is <b>kept</b> across respawn when
+     * {@code keepInventory} is on. Override per attachment with
+     * {@code dropsOnDeath(DropRule)} — e.g. {@code KEEP} for a soulbound slot.
+     * (The attachment registers {@code copyOnDeath} so the kept path carries
+     * across respawn; the library owns the gamerule-gated drop.)
+     *
+     * @param namespace attachment-id namespace (consumer's mod id)
+     * @param path      attachment-id path (unique per consumer-declared attachment)
+     * @param slotCount number of item slots the content holds
+     */
+    public static PlayerStorageAttachment<NonNullList<ItemStack>> playerAttached(
+            String namespace, String path, int slotCount) {
+        Identifier id = Identifier.fromNamespaceAndPath(namespace, path);
+        AttachmentType<ItemContainerContents> type =
+                StorageAttachments.registerPlayerContentAttachment(id, slotCount);
+        return new PlayerAttachment(slotCount, type);
+    }
+
+    /**
+     * Persists slot-group content on a {@link BlockEntity} via a Fabric
+     * attachment. Content dies with the block — breaking destroys the
+     * attachment. Intended for dies-with-block containers (chest, furnace,
+     * hopper, etc.).
+     *
+     * @param namespace attachment-id namespace (consumer's mod id)
+     * @param path      attachment-id path (unique per consumer-declared attachment)
+     * @param slotCount number of item slots the content holds
+     */
+    public static StorageAttachment<BlockEntity, NonNullList<ItemStack>> blockScoped(
+            String namespace, String path, int slotCount) {
+        Identifier id = Identifier.fromNamespaceAndPath(namespace, path);
+        // registerBlockScopedAttachment enrolls the attachment in the
+        // block-scoped registry that the drop-on-break mixin dispatches
+        // against (see BlockScopedDropHandler) — this is what fulfills
+        // M7's vanilla-container drop-on-break contract.
+        AttachmentType<ItemContainerContents> type =
+                StorageAttachments.registerBlockScopedAttachment(id, slotCount);
+        return new BlockScopedAttachment(slotCount, type);
+    }
+
+    /**
+     * Persists slot-group content on a generic {@link Entity} via a Fabric
+     * attachment. Content saves with the entity in its NBT and dies with it —
+     * no respawn carry (unlike {@link #playerAttached}, which has death handling;
+     * an entity is not a player). For entity-owned containers (minecart with
+     * chest, donkey/llama/mule, future entity-scoped slots).
+     *
+     * <p>Server-persistent; the client view is kept current by the menu's vanilla
+     * slot protocol (the registered slots write the client-side attachment on each
+     * {@code ContainerSetSlot}), the same way {@link #playerAttached} content
+     * displays without a separate attachment sync.
+     *
+     * @param namespace attachment-id namespace (consumer's mod id)
+     * @param path      attachment-id path (unique per consumer-declared attachment)
+     * @param slotCount number of item slots the content holds
+     */
+    public static StorageAttachment<Entity, NonNullList<ItemStack>> entityAttached(
+            String namespace, String path, int slotCount) {
+        Identifier id = Identifier.fromNamespaceAndPath(namespace, path);
+        // A plain persistent attachment (no copyOnDeath, no block-drop enrollment) —
+        // the generic factory works for any Fabric AttachmentTarget, Entity included.
+        AttachmentType<ItemContainerContents> type =
+                StorageAttachments.registerContainerAttachment(id, slotCount);
+        return new EntityAttachment(slotCount, type);
+    }
+
+    /**
+     * Persists slot-group content on an {@link ItemStack} via vanilla's
+     * {@link DataComponents#CONTAINER} component ({@link ItemContainerContents}).
+     * Content travels with the item through menus, pickup, drop, throw.
+     *
+     * <p>v1 hardcodes {@code DataComponents.CONTAINER} as the component
+     * type — the canonical vanilla surface for item-backed slot groups
+     * (shulker items, bundles). A fully-generic
+     * {@code itemAttached(DataComponentType<C>, ...)} factory is a
+     * follow-on when a concrete consumer surfaces needing a non-CONTAINER
+     * component.
+     *
+     * <p>Because ItemStacks can be replaced by vanilla during interactions
+     * (e.g., when a slot is vacated), prefer {@link #bind(Supplier)} over
+     * {@link #bind(Object)} for item-backed storage.
+     */
+    public static StorageAttachment<ItemStack, ItemContainerContents> itemContainer(int slotCount) {
+        return new ItemContainerAttachment(slotCount);
+    }
+
+    /**
+     * Wraps a {@link CustomAttachmentSpec} as a {@code StorageAttachment}.
+     * Used for owner types outside the four v1 factories AND as the
+     * decorator-path escape hatch for consumers whose save/load doesn't
+     * route through a MenuKit handler.
+     *
+     * <p>This is the NON-player path: the returned base {@code StorageAttachment} has
+     * no {@code dropsOnDeath} (death handling is player-only). For a player-anchored
+     * custom spec that needs death handling, use {@link #customPlayerAttached} — it
+     * returns a {@link PlayerStorageAttachment} so {@code dropsOnDeath} is reachable.
+     *
+     * @param <O> owner type
+     * @param <C> content type
+     */
+    public static <O, C> StorageAttachment<O, C> custom(CustomAttachmentSpec<O, C> spec) {
+        return new CustomAttachmentWrapper<>(spec);
+    }
+
+    /**
+     * Wraps a <b>player-anchored</b> {@link CustomAttachmentSpec} as a
+     * {@link PlayerStorageAttachment}, so it can opt into death handling via
+     * {@link PlayerStorageAttachment#dropsOnDeath(DropRule)} (§0052). The spec's owner
+     * type MUST be {@link Player}; that is what the typed factory asserts statically
+     * (unlike the old base {@code dropsOnDeath}, which threw at runtime on a non-player
+     * spec).
+     *
+     * <p>The library owns the gamerule-gated DROP/DESTROY at the death site;
+     * KEEP-across-respawn is the consumer storage's own responsibility — set
+     * {@code copyOnDeath} on your Fabric attachment (or use a persistent store). The
+     * library cannot set {@code copyOnDeath} on storage it does not own (the whole
+     * point of a custom spec).
+     *
+     * @param <C> content type
+     */
+    public static <C> PlayerStorageAttachment<C> customPlayerAttached(
+            CustomAttachmentSpec<Player, C> spec) {
+        return new CustomPlayerAttachmentWrapper<>(spec);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // Internal implementations (package-private subclasses live alongside)
+    // ══════════════════════════════════════════════════════════════════════
+
+    /** In-memory ephemeral. Owner is Void; bind(null) returns a fresh EphemeralStorage. */
+    private static final class EphemeralAttachment
+            extends StorageAttachment<Void, NonNullList<ItemStack>> {
+        private final int slotCount;
+        EphemeralAttachment(int slotCount) { this.slotCount = slotCount; }
+        @Override public int slotCount() { return slotCount; }
+        @Override public Storage bind(Void ignored) { return EphemeralStorage.of(slotCount); }
+    }
+
+    /** Player-attached via Fabric attachment, with death handling ({@link DropRule}). */
+    private static final class PlayerAttachment
+            extends PlayerStorageAttachment<NonNullList<ItemStack>> {
+        private final int slotCount;
+        private final AttachmentType<ItemContainerContents> type;
+        PlayerAttachment(int slotCount, AttachmentType<ItemContainerContents> type) {
+            this.slotCount = slotCount;
+            this.type = type;
+        }
+        @Override public int slotCount() { return slotCount; }
+        @Override public Storage bind(Player player) {
+            // Wrap in a PlayerStorage-implementing adapter so shift-click
+            // routing (MKCScreenHandler) sees this as player-side.
+            return new PlayerFabricStorage(slotCount,
+                    () -> player.hasAttached(type)
+                            ? player.getAttached(type)
+                            : StorageAttachments.defaultEmpty(slotCount),
+                    contents -> player.setAttached(type, contents),
+                    () -> { /* Players auto-persist via Fabric; no setChanged */ });
+        }
+
+        @Override
+        public PlayerStorageAttachment<NonNullList<ItemStack>> dropsOnDeath(DropRule rule) {
+            StorageAttachments.setDeathDropRule(type, rule);
+            return this;
+        }
+    }
+
+    /** FabricAttachmentStorage variant that implements the PlayerStorage
+     *  marker for shift-click routing. Same logic as the base class. */
+    private static final class PlayerFabricStorage implements PlayerStorage {
+        private final FabricAttachmentStorage delegate;
+        PlayerFabricStorage(int slotCount,
+                             Supplier<ItemContainerContents> reader,
+                             java.util.function.Consumer<ItemContainerContents> writer,
+                             Runnable dirtyMarker) {
+            this.delegate = new FabricAttachmentStorage(slotCount, reader, writer, dirtyMarker);
+        }
+        @Override public ItemStack getStack(int i) { return delegate.getStack(i); }
+        @Override public void setStack(int i, ItemStack s) { delegate.setStack(i, s); }
+        @Override public int size() { return delegate.size(); }
+        @Override public void markDirty() { delegate.markDirty(); }
+    }
+
+    /** BlockEntity-attached via Fabric attachment. */
+    private static final class BlockScopedAttachment
+            extends StorageAttachment<BlockEntity, NonNullList<ItemStack>> {
+        private final int slotCount;
+        private final AttachmentType<ItemContainerContents> type;
+        BlockScopedAttachment(int slotCount, AttachmentType<ItemContainerContents> type) {
+            this.slotCount = slotCount;
+            this.type = type;
+        }
+        @Override public int slotCount() { return slotCount; }
+        @Override public Storage bind(BlockEntity be) {
+            return new FabricAttachmentStorage(slotCount,
+                    () -> be.hasAttached(type)
+                            ? be.getAttached(type)
+                            : StorageAttachments.defaultEmpty(slotCount),
+                    contents -> be.setAttached(type, contents),
+                    be::setChanged);
+        }
+    }
+
+    /** Generic Entity-attached via Fabric attachment (server-persistent; the menu
+     *  slot protocol carries the client view, like player content). */
+    private static final class EntityAttachment
+            extends StorageAttachment<Entity, NonNullList<ItemStack>> {
+        private final int slotCount;
+        private final AttachmentType<ItemContainerContents> type;
+        EntityAttachment(int slotCount, AttachmentType<ItemContainerContents> type) {
+            this.slotCount = slotCount;
+            this.type = type;
+        }
+        @Override public int slotCount() { return slotCount; }
+        @Override public Storage bind(Entity entity) {
+            return new FabricAttachmentStorage(slotCount,
+                    () -> entity.hasAttached(type)
+                            ? entity.getAttached(type)
+                            : StorageAttachments.defaultEmpty(slotCount),
+                    contents -> entity.setAttached(type, contents),
+                    () -> { /* Entities auto-persist via Fabric; no setChanged */ });
+        }
+    }
+
+    /** ItemStack-attached via DataComponents.CONTAINER. */
+    private static final class ItemContainerAttachment
+            extends StorageAttachment<ItemStack, ItemContainerContents> {
+        private final int slotCount;
+        ItemContainerAttachment(int slotCount) { this.slotCount = slotCount; }
+        @Override public int slotCount() { return slotCount; }
+        @Override public Storage bind(ItemStack stack) {
+            return new Storage() {
+                @Override public ItemStack getStack(int i) {
+                    if (stack.isEmpty()) return ItemStack.EMPTY;
+                    ItemContainerContents c = stack.get(DataComponents.CONTAINER);
+                    if (c == null) return ItemStack.EMPTY;
+                    NonNullList<ItemStack> list =
+                            StorageAttachments.contentsToList(c, slotCount);
+                    return list.get(i);
+                }
+                @Override public void setStack(int i, ItemStack s) {
+                    if (stack.isEmpty()) return;
+                    ItemContainerContents c = stack.get(DataComponents.CONTAINER);
+                    NonNullList<ItemStack> list =
+                            StorageAttachments.contentsToList(c, slotCount);
+                    list.set(i, s);
+                    stack.set(DataComponents.CONTAINER,
+                            StorageAttachments.listToContents(list));
+                }
+                @Override public int size() { return slotCount; }
+                @Override public void markDirty() {
+                    // DataComponents are inherently dirty on set; no separate call.
+                }
+            };
+        }
+    }
+
+    /** Consumer-supplied spec via {@link CustomAttachmentSpec} (NON-player owner). */
+    private static final class CustomAttachmentWrapper<O, C>
+            extends StorageAttachment<O, C> {
+        private final CustomAttachmentSpec<O, C> spec;
+        CustomAttachmentWrapper(CustomAttachmentSpec<O, C> spec) { this.spec = spec; }
+        @Override public int slotCount() { return spec.slotCount(); }
+        @Override public Storage bind(O owner) { return bindCustomSpec(spec, owner); }
+    }
+
+    /**
+     * Player-anchored consumer-supplied spec — the death-handling-capable custom
+     * wrapper. Returned by {@link #customPlayerAttached}; carries {@code dropsOnDeath}
+     * (§0052) since its owner is statically {@link Player}.
+     */
+    private static final class CustomPlayerAttachmentWrapper<C>
+            extends PlayerStorageAttachment<C> {
+        private final CustomAttachmentSpec<Player, C> spec;
+        CustomPlayerAttachmentWrapper(CustomAttachmentSpec<Player, C> spec) { this.spec = spec; }
+        @Override public int slotCount() { return spec.slotCount(); }
+        @Override public Storage bind(Player owner) { return bindCustomSpec(spec, owner); }
+
+        @Override
+        public PlayerStorageAttachment<C> dropsOnDeath(DropRule rule) {
+            // §0052 — opt a PLAYER-anchored custom spec into death handling. The
+            // typed customPlayerAttached(...) factory guarantees the owner is
+            // Player, so this can never be reached on a non-player spec. The library
+            // owns the gamerule-gated DROP/DESTROY at the death site;
+            // KEEP-across-respawn is the consumer storage's own responsibility (set
+            // copyOnDeath on your Fabric attachment / use a persistent store — the
+            // library cannot set copyOnDeath on storage it does not own).
+            StorageAttachments.registerCustomPlayerDeathSpec(spec, rule);
+            return this;
+        }
+    }
+
+    /** Shared bind body for both custom-spec wrappers (re-resolves content per call). */
+    private static <O, C> Storage bindCustomSpec(CustomAttachmentSpec<O, C> spec, O owner) {
+        return new Storage() {
+            @Override public ItemStack getStack(int i) {
+                C content = spec.read(owner);
+                return spec.toItemList(content).get(i);
+            }
+            @Override public void setStack(int i, ItemStack s) {
+                C content = spec.read(owner);
+                NonNullList<ItemStack> list = spec.toItemList(content);
+                list.set(i, s);
+                spec.write(owner, spec.fromItemList(list));
+                spec.markDirty(owner);
+            }
+            @Override public int size() { return spec.slotCount(); }
+            @Override public void markDirty() { spec.markDirty(owner); }
+        };
+    }
+
+    /**
+     * Shared Storage implementation backed by a Fabric attachment supplier/sink.
+     * Reads by pulling a fresh view on every getStack; writes by creating a
+     * new ItemContainerContents and calling the sink.
+     */
+    private static final class FabricAttachmentStorage implements Storage {
+        private final int slotCount;
+        private final Supplier<ItemContainerContents> reader;
+        private final java.util.function.Consumer<ItemContainerContents> writer;
+        private final Runnable dirtyMarker;
+
+        FabricAttachmentStorage(int slotCount,
+                                 Supplier<ItemContainerContents> reader,
+                                 java.util.function.Consumer<ItemContainerContents> writer,
+                                 Runnable dirtyMarker) {
+            this.slotCount = slotCount;
+            this.reader = reader;
+            this.writer = writer;
+            this.dirtyMarker = dirtyMarker;
+        }
+
+        @Override public ItemStack getStack(int i) {
+            NonNullList<ItemStack> list =
+                    StorageAttachments.contentsToList(reader.get(), slotCount);
+            return list.get(i);
+        }
+
+        @Override public void setStack(int i, ItemStack s) {
+            NonNullList<ItemStack> list =
+                    StorageAttachments.contentsToList(reader.get(), slotCount);
+            list.set(i, s);
+            writer.accept(StorageAttachments.listToContents(list));
+            dirtyMarker.run();
+        }
+
+        @Override public int size() { return slotCount; }
+        @Override public void markDirty() { dirtyMarker.run(); }
+    }
+}

@@ -23,7 +23,7 @@ plugins {
 }
 
 version = property('menukit_version')
-group   = property('maven_group')
+group   = 'com.trevlar'
 
 base.archivesName = 'menukit-containers'
 
@@ -109,7 +109,7 @@ loom {
 }
 
 jar {
-    from('LICENSE') { rename { "${it}_${project.name}" } }
+    from('../LICENSE') { rename { "${it}_${project.name}" } }
 }
 
 // ── Modrinth Publishing ────────────────────────────────────────────────
@@ -125,7 +125,7 @@ modrinth {
     // overwritten each release (git keeps the history). Hardcoding it here went stale.
     changelog = file('changelog.md').text
     // ci-cd.md stage 7: the README is the public description; `modrinthSyncBody` pushes it.
-    syncBodyFrom = file('README.md').text
+    syncBodyFrom = file('MODRINTH.md').text
     // 26.x: no remap step — `jar` IS the shippable artifact (remapJar is gone).
     uploadFile = jar
     gameVersions = [property('minecraft_version')]
@@ -160,11 +160,15 @@ build.dependsOn verifyJarVersion
 // `missing` and `html` are off because getter @return tags and heading
 // levels are noise, not defects.
 javadoc {
-    exclude 'com/trevorschoeny/menukit/mixin/**'
-    exclude 'com/trevorschoeny/menukit/network/**'
-    exclude 'com/trevorschoeny/menukit/state/**'
+    // One reference for both artifacts: this task also takes the :menukit sources,
+    // so links from MenuKit types to Containers types resolve. Published to Pages.
+    source += project(':menukit').sourceSets.main.allJava
+    classpath += project(':menukit').sourceSets.main.compileClasspath
+    exclude 'com/trevlar/menukit/mixin/**'
+    exclude 'com/trevlar/menukit/network/**'
+    exclude 'com/trevlar/menukit/state/**'
     options.addBooleanOption('Xdoclint:all,-missing,-html,-accessibility', true)
     options.tags = ['implNote:a:Implementation note:', 'implSpec:a:Implementation requirements:', 'apiNote:a:API note:']
     options.encoding = 'UTF-8'
-    options.windowTitle = "${base.archivesName.get()} ${project.version}"
+    options.windowTitle = "MenuKit ${project.version}"
 }

@@ -21,7 +21,7 @@ mixin ever slips past it.
 import glob, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-WORKSPACE = os.path.abspath(os.path.join(HERE, "..", ".."))
+WORKSPACE = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 JAVAP = os.environ.get("JAVAP", "/opt/homebrew/opt/openjdk@25/bin/javap")
 
 

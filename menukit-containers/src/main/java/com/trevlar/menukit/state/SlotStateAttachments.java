@@ -1,0 +1,95 @@
+package com.trevlar.menukit.state;
+
+import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
+import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
+import net.minecraft.resources.Identifier;
+import org.jetbrains.annotations.ApiStatus;
+
+/**
+ * Library-owned Fabric attachments for M1 per-slot state. Four attachment
+ * types are registered, one per natural owner class:
+ *
+ * <ul>
+ *   <li>{@link #PLAYER_INVENTORY} — on {@code Player}, for
+ *       {@code PlayerInventory(uuid)} keys.</li>
+ *   <li>{@link #ENDER_CHEST} — on {@code Player}, for {@code EnderChest(uuid)}
+ *       keys (distinct attachment so the two don't collide).</li>
+ *   <li>{@link #BLOCK_ENTITY} — on {@code BlockEntity}, stores a per-player
+ *       bag map so each viewing player has private marks.</li>
+ *   <li>{@link #ENTITY} — on {@code Entity}, same per-player storage shape
+ *       for donkey/minecart/etc.</li>
+ * </ul>
+ *
+ * <p>No {@code syncWith(...)} — the library syncs via its own packet path
+ * (snapshot + update), not Fabric's auto-sync. Persistence uses the bag's
+ * own {@code CODEC}; no custom initializer is registered (the library's
+ * server facade lazy-creates bags on first write).
+ */
+@ApiStatus.Internal
+public final class SlotStateAttachments {
+
+    private static final String MOD_ID = "menukit";
+
+    public static final AttachmentType<SlotStateBag> PLAYER_INVENTORY =
+            AttachmentRegistry.<SlotStateBag>builder()
+                    .persistent(SlotStateBag.CODEC)
+                    .initializer(SlotStateBag::new)
+                    // §0052 metadata parity: per-slot marks are slot configuration
+                    // (e.g. a lock), not item state — they survive death like the
+                    // slot itself, independent of whether content drops.
+                    .copyOnDeath()
+                    .buildAndRegister(Identifier.fromNamespaceAndPath(
+                            MOD_ID, "slot_state_player_inventory"));
+
+    public static final AttachmentType<SlotStateBag> ENDER_CHEST =
+            AttachmentRegistry.<SlotStateBag>builder()
+                    .persistent(SlotStateBag.CODEC)
+                    .initializer(SlotStateBag::new)
+                    // Ender-chest content always survives death (vanilla); its
+                    // per-slot metadata travels with it (§0052 parity).
+                    .copyOnDeath()
+                    .buildAndRegister(Identifier.fromNamespaceAndPath(
+                            MOD_ID, "slot_state_ender_chest"));
+
+    public static final AttachmentType<PerPlayerSlotStateBag> BLOCK_ENTITY =
+            AttachmentRegistry.<PerPlayerSlotStateBag>builder()
+                    .persistent(PerPlayerSlotStateBag.CODEC)
+                    .initializer(PerPlayerSlotStateBag::new)
+                    .buildAndRegister(Identifier.fromNamespaceAndPath(
+                            MOD_ID, "slot_state_block_entity"));
+
+    public static final AttachmentType<PerPlayerSlotStateBag> ENTITY =
+            AttachmentRegistry.<PerPlayerSlotStateBag>builder()
+                    .persistent(PerPlayerSlotStateBag.CODEC)
+                    .initializer(PerPlayerSlotStateBag::new)
+                    .buildAndRegister(Identifier.fromNamespaceAndPath(
+                            MOD_ID, "slot_state_entity"));
+
+    /**
+     * On {@code Player}, for player-scoped {@code Modded} slot keys (§0045 —
+     * IP Pockets / Equipment Slots). Holds a resolver-id-namespaced map of
+     * bags so distinct slots (and distinct mods) on the same player don't
+     * collide on slot index. Distinct from {@link #PLAYER_INVENTORY} so
+     * registered-slot metadata never overwrites real-inventory metadata.
+     */
+    public static final AttachmentType<NamespacedSlotStateBag> MODDED_PLAYER =
+            AttachmentRegistry.<NamespacedSlotStateBag>builder()
+                    .persistent(NamespacedSlotStateBag.CODEC)
+                    .initializer(NamespacedSlotStateBag::new)
+                    // §0052 metadata parity: registered-slot marks (§0045 pockets /
+                    // equipment) are slot config and survive death, matching the
+                    // slot content's own copyOnDeath parity.
+                    .copyOnDeath()
+                    .buildAndRegister(Identifier.fromNamespaceAndPath(
+                            MOD_ID, "slot_state_modded_player"));
+
+    /**
+     * Triggers class loading so the static field initializers above run.
+     * Callable from both server- and client-init contexts.
+     */
+    public static void register() {
+        // No-op body — registration is driven by the static fields above.
+    }
+
+    private SlotStateAttachments() {}
+}
