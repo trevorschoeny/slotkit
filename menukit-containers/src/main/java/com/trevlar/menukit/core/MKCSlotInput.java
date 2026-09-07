@@ -23,13 +23,16 @@ import java.util.Set;
  * <h3>The gap this closes</h3>
  *
  * Registered {@link MKCSlot}s are appended <em>last</em> to {@code menu.slots},
- * so vanilla's {@code getHoveredSlot} — which returns the first hovering slot —
- * resolves to the <em>vanilla</em> slot beneath a slot, not the slot itself.
- * A revealed slot is then visually on top (its {@code SlotElement} renders it inline)
- * but would be click-through: §0037's "everything behind a panel is inert" never
- * reached it, because §0037's enforcement keys off MenuKit's panel registry and a
+ * so where a registered slot sits over a vanilla slot, vanilla's
+ * {@code getHoveredSlot} — which returns the first hovering slot — would resolve
+ * to the <em>vanilla</em> slot beneath it. The registered slot is visually on top
+ * (its panel drew the frame; vanilla drew the item at the same {@code x/y}) but
+ * would be click-through: §0058's "everything behind a panel is inert" never
+ * reached it, because that enforcement keys off MenuKit's panel registry and a
  * registered slot's hover resolution is keyed off the slot, not the panel box. This
- * helper supplies the slot-context resolution.
+ * helper supplies the slot-context resolution. Where a registered slot covers no
+ * vanilla slot, vanilla would find it by {@code x/y} on its own; the resolution
+ * here agrees with vanilla in that case.
  *
  * <h3>What it does</h3>
  *
@@ -135,9 +138,10 @@ public final class MKCSlotInput {
             if (panelFilter != null && !panelFilter.contains(mk.getPanelId())) continue;
 
             // Vanilla hover frame for an 18px slot cell: x-1 .. x+17, around the
-            // slot's (mutable, §0047) presentation position.
-            int x0 = mk.renderX() - 1, y0 = mk.renderY() - 1;
-            int x1 = mk.renderX() + 17, y1 = mk.renderY() + 17;
+            // IN-MENU slot's own x/y (the creative wrapper's on creative) — the
+            // position its panel wrote this frame, the same one vanilla draws at.
+            int x0 = slot.x - 1, y0 = slot.y - 1;
+            int x1 = slot.x + 17, y1 = slot.y + 17;
 
             if (relX >= x0 && relX < x1 && relY >= y0 && relY < y1) {
                 // Return the in-menu slot (raw slot, or the creative wrapper).

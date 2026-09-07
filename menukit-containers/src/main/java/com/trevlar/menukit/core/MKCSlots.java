@@ -125,13 +125,13 @@ public final class MKCSlots {
 
     /**
      * Off-screen sentinel for a registered slot's vanilla {@code Slot.x/y} (§0047).
-     * RegisteredSlots slots are helper-rendered, so vanilla must not draw them at a fixed
-     * coordinate — that would double-render the moment a slot's presentation
-     * position moves. Parking the vanilla coords far off-screen makes vanilla's
-     * render + hit a harmless no-op; the slot helpers own presentation via
-     * {@code MKCSlot.renderX()/renderY()}.
+     * A registered slot is born here and returns here at the start of every frame
+     * ({@link SlotElementRegistry#parkAll}); the panel that presents it writes its
+     * real {@code x/y} for the frame. Parked, vanilla's slot pass and hover
+     * resolution are harmless no-ops for it. Same coordinate the creative
+     * wrapper is parked at ({@code MKCCreativeSlotParkMixin}).
      */
-    private static final int OFFSCREEN = -10000;
+    static final int OFFSCREEN = -10000;
 
     private MKCSlots() {}
 
@@ -364,25 +364,21 @@ public final class MKCSlots {
 
             // 3. Build + append the registered slots.
             //
-            // §0047: registered slots are presented by their SlotElement on the
-            // panel pipeline (which renders the slot inline and keeps its
-            // presentation position current), so their position is mutable
-            // presentation, not frozen structure. The vanilla Slot.x/y
-            // are parked OFF-SCREEN so vanilla never draws or hit-tests them at a
-            // fixed spot (which would double-render once a slot moves); the real,
-            // runtime-movable position lives in the slot's renderX/renderY — seeded
-            // here from the layout, changeable later via setRenderPosition.
+            // §0047: a registered slot's position is mutable presentation, not
+            // frozen structure. It is born PARKED off-screen (vanilla draws and
+            // hit-tests nothing there) and the panel that presents it — its
+            // SlotElement, on the panel pipeline — writes its real position into
+            // vanilla's Slot.x/y every frame, before vanilla's slot pass. The
+            // seed layout (originX/originY/columns) is the elements' layout in
+            // renderGroup(), not the slot's.
             StorageContainerAdapter adapter = new StorageContainerAdapter(storage);
             AbstractContainerMenuInvoker inv = (AbstractContainerMenuInvoker) menu;
 
             int flatStart = menu.slots.size();
             List<MKCSlot> mkSlots = new ArrayList<>();
             for (int local = 0; local < storage.size(); local++) {
-                int x = originX + (local % columns) * SLOT_PITCH;
-                int y = originY + (local / columns) * SLOT_PITCH;
                 MKCSlot slot = new MKCSlot(
                         adapter, local, OFFSCREEN, OFFSCREEN, group, panel, groupId, local);
-                slot.setRenderPosition(x, y);     // real (mutable) presentation position
                 inv.mk$addSlot(slot);
                 mkSlots.add(slot);
             }

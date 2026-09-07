@@ -40,9 +40,9 @@ import java.util.List;
  * <h3>Client-render-only (§0047)</h3>
  *
  * The flow positions are pure presentation: each child {@link SlotElement}
- * resolves its live slot by identity and writes its render position every frame,
- * so the real synced slots' identity/sync are untouched — only where they DRAW
- * (and therefore where vanilla hit-tests them) reflows. A slot stays a
+ * resolves its live slot by identity and writes its {@code Slot.x/y} every frame,
+ * so the real synced slots' identity/sync are untouched — only where vanilla
+ * draws and hit-tests them reflows. A slot stays a
  * click-through hole; this element is too ({@link #isElementOpaque()} false).
  */
 public final class SlotFlowElement implements PanelElement {
@@ -154,8 +154,8 @@ public final class SlotFlowElement implements PanelElement {
             if (!slot.isVisible()) continue;
             int col = k % cols;
             int row = k / cols;
-            // Each child renders itself (and writes its real slot's render
-            // position, sets its tooltip, draws hover) at a per-cell shifted
+            // Each child renders itself (writes its real slot's x/y, draws the
+            // frame, sets its tooltip) at a per-cell shifted
             // origin. The child's own childX/childY are 0, so the shifted
             // origin IS its on-screen cell — the flow owns positioning.
             RenderContext cell = new RenderContext(

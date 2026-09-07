@@ -15,9 +15,15 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
  * in the hierarchy as final fields and delegates behavior to its owning
  * {@link SlotGroup}.
  *
- * <p>This is the substitutability contract in code. Every override either
- * calls {@code super} or delegates in a way that preserves vanilla's
- * behavioral contract:
+ * <p>This is the substitutability contract in code. It holds for BEHAVIOR —
+ * every override either calls {@code super} or delegates in a way that
+ * preserves vanilla's behavioral contract — and for PRESENTATION: the slot's
+ * position is vanilla's own {@code Slot.x/y}, vanilla's slot pass draws it, and
+ * vanilla's {@code getHoveredSlot} finds it (see {@code ContainerScreenLayers}
+ * in MenuKit). A third party's {@code extractSlot} mixin, or any code walking
+ * {@code menu.slots} and reading {@code x/y}, sees a created slot and a vanilla
+ * slot as the same thing because they go through the same calls. The
+ * behavioral overrides:
  * <ul>
  *   <li>{@code mayPlace} — group policy AND super (mixin chain composes)</li>
  *   <li>{@code mayPickup} — group policy AND super</li>
@@ -47,13 +53,14 @@ public class MKCSlot extends Slot {
     // ── Owning panel (final — visibility query target for inertness) ────
     private final Panel panel;
 
-    // ── Presentation position (§0047 — mutable; identity stays frozen) ──
-    // The slot render + input helpers read these instead of the final vanilla
-    // Slot.x/y, so a registered panel can move at runtime. They default to the
-    // constructed coords; for vanilla-rendered (non-slot) MKCSlots they
-    // stay equal to Slot.x/y and are dormant.
-    private int renderX;
-    private int renderY;
+    // Presentation position: vanilla's own Slot.x/y, nothing else. The panel
+    // that presents this slot (its SlotElement) writes the panel-resolved
+    // position there each frame, before vanilla's slot pass, so vanilla draws
+    // and hit-tests a created slot exactly as it does a vanilla slot — and so
+    // does every other mod's slot hook. §0047 (position is mutable
+    // presentation, identity frozen) holds: x/y are client-only and never
+    // synced. Built parked off-screen (MKCSlots.OFFSCREEN) until a panel
+    // presents it.
 
     /**
      * @param container      vanilla Container adapter (from handler construction)
@@ -69,8 +76,6 @@ public class MKCSlot extends Slot {
                        SlotGroup group, Panel panel, String groupId,
                        int localIndex) {
         super(container, containerIndex, x, y);
-        this.renderX = x;
-        this.renderY = y;
         this.group = group;
         this.panel = panel;
         this.panelId = panel.getId();
@@ -106,30 +111,6 @@ public class MKCSlot extends Slot {
             cachedAddress = a;
         }
         return a;
-    }
-
-    // ── Presentation position (§0047) ───────────────────────────────────
-
-    /**
-     * Current presentation x — where the slot render + input helpers draw and
-     * hit-test this slot. Equals the constructed x until {@link #setRenderPosition}.
-     */
-    public int renderX() { return renderX; }
-
-    /** Current presentation y. @see #renderX() */
-    public int renderY() { return renderY; }
-
-    /**
-     * Moves this slot's presentation position at runtime (§0047 — position is
-     * mutable presentation; the slot's vanilla {@code Slot.x/y} identity and its
-     * sync are untouched). Client-side: the slot render + input helpers follow
-     * this immediately. Call per frame to drive a layout that depends on runtime
-     * state — e.g. a row that re-centers as its count changes. The server neither
-     * renders nor needs it.
-     */
-    public void setRenderPosition(int x, int y) {
-        this.renderX = x;
-        this.renderY = y;
     }
 
     // ── Inertness ───────────────────────────────────────────────────────

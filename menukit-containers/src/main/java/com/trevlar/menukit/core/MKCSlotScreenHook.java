@@ -13,9 +13,11 @@ import java.util.Set;
  * MenuKit's library-owned screen dispatch (§0042). Registered with
  * {@code SlotScreenDispatcher.setHook} at MKC client init.
  *
- * <p>The input limb only. A registered slot draws itself inline as a
- * {@code SlotElement} on the panel pipeline, so this hook no longer renders anything
- * and holds no presence list. Its sole job is hover/click resolution: fed by the live
+ * <p>Input, plus the per-frame park. Vanilla draws a registered slot in its own
+ * slot pass at the {@code Slot.x/y} its presenting {@code SlotElement} wrote, so
+ * this hook renders nothing and holds no presence list. {@link #beginFrame} parks
+ * every attached slot before the panels re-place the ones they present; the rest
+ * is hover/click resolution: fed by the live
  * {@link SlotElementRegistry} (the set of panel ids that currently host a
  * {@code SlotElement}), it asks {@link MKCSlotInput} which {@code MKCSlot} a screen
  * point covers, so vanilla's {@code getHoveredSlot} routes hover/click to the
@@ -28,6 +30,12 @@ import java.util.Set;
 public final class MKCSlotScreenHook implements SlotScreenHook {
 
     // ── SlotScreenHook ─────────────────────────────────────────────────────
+
+    @Override
+    public void beginFrame(AbstractContainerScreen<?> screen) {
+        if (!SlotElementRegistry.hasActive()) return;
+        SlotElementRegistry.parkAll(screen.getMenu());
+    }
 
     @Override
     public SlotHoverResult resolveHover(AbstractContainerScreen<?> screen,

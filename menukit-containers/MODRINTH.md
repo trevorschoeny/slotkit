@@ -19,12 +19,12 @@ repositories {
     maven { url 'https://api.modrinth.com/maven' }
 }
 dependencies {
-    modImplementation 'maven.modrinth:menukit-containers:3.1.0+26.2'
+    modImplementation 'maven.modrinth:menukit-containers:3.2.0+26.2'
 }
 ```
 
 ```json
-"depends": { "menukit": ">=3.1.0", "menukit-containers": ">=3.1.0" }
+"depends": { "menukit": ">=3.2.0", "menukit-containers": ">=3.2.0" }
 ```
 
 ## Docs

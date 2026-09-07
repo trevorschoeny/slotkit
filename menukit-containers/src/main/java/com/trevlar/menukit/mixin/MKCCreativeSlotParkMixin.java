@@ -20,16 +20,18 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
  * indices have no creative layout slot, so vanilla would draw them overlapping the
  * hotbar. Rather than each consumer hand-placing its slots in creative (the old
  * {@code CreativeEquipmentSlotMixin} burden), the library parks <em>all</em> slot
- * wrappers off-screen here; the screen dispatcher's render + hover helpers then
- * draw and hit-test slots at their live {@code renderX/renderY} exactly as on the
- * survival inventory. One uniform model across both modes — and the wrapper still
+ * wrappers off-screen at construction; each frame the presenting
+ * {@code SlotElement} then writes the wrapper's real {@code x/y} exactly as it
+ * does the raw slot's on the survival inventory, and vanilla draws and hit-tests
+ * the wrapper there. One uniform model across both modes — and the wrapper still
  * lives in the creative menu, so a click on the slot still routes through it to
  * the real backing slot.
  *
- * <p>{@code Slot.x/y} are final, so position must be set at wrapper construction —
- * hence {@link ModifyArgs} on the {@code new SlotWrapper(target, index, x, y)} call
- * (args 2 = x, 3 = y). Vanilla itself parks its 2×2 craft slots at extreme coords
- * the same way, so this is a blessed pattern.
+ * <p>The construction-time park is set through {@link ModifyArgs} on the
+ * {@code new SlotWrapper(target, index, x, y)} call (args 2 = x, 3 = y) so the
+ * wrapper is never at vanilla's index-derived hotbar position for even one frame.
+ * Vanilla itself parks its 2×2 craft slots at extreme coords the same way, so this
+ * is a blessed pattern.
  *
  * <p>Generic: detects a slot by {@code target instanceof MKCSlot}; no
  * per-consumer knowledge. Client-only (creative screen is a client type).

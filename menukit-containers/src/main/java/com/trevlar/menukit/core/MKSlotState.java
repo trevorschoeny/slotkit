@@ -3,7 +3,6 @@ package com.trevlar.menukit.core;
 import com.mojang.serialization.Codec;
 import com.trevlar.menukit.mixin.CompoundContainerAccessor;
 import com.trevlar.menukit.window.Address;
-import com.trevlar.menukit.window.CreatedSlotResolver;
 import com.trevlar.menukit.network.SlotStateSnapshotS2CPayload;
 import com.trevlar.menukit.state.ResolvedSlot;
 import com.trevlar.menukit.state.SlotStateClientCache;
@@ -253,9 +252,7 @@ public final class MKSlotState {
         if (menu == null) return null;
         switch (address.kind()) {
             case CREATED_SLOT -> {
-                CreatedSlotResolver.CreatedResolution r =
-                        CreatedSlotAdapter.INSTANCE.resolve(menu, address);
-                return r != null ? r.slot() : null;
+                return CreatedSlotAdapter.INSTANCE.resolve(menu, address);
             }
             case VANILLA_SLOT -> {
                 for (Slot s : menu.slots) {

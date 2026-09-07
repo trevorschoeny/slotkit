@@ -53,6 +53,21 @@ public final class SlotElementRegistry {
     }
 
     /**
+     * Parks every attached element's slot off-screen for this frame — the
+     * start of layer 1 ({@code ContainerScreenLayers}). A panel that presents a
+     * slot this frame re-places it during its render; anything not presented
+     * (panel hidden, origin unresolved, element hidden by the window) stays
+     * parked, so vanilla neither draws nor hit-tests it at a stale position.
+     */
+    static void parkAll(net.minecraft.world.inventory.AbstractContainerMenu menu) {
+        synchronized (ACTIVE) {
+            for (SlotElement element : ACTIVE) {
+                element.park(menu);
+            }
+        }
+    }
+
+    /**
      * The panel ids that currently have at least one attached {@link SlotElement}.
      * The screen hook unions these with its presence panel ids and passes the
      * result as the resolution filter, so panel-hosted slots resolve alongside

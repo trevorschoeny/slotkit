@@ -9,6 +9,7 @@ import com.trevlar.menukit.window.PanelAddressing;
 import com.trevlar.menukit.window.Token;
 
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.Slot;
 
 import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
@@ -20,8 +21,8 @@ import java.util.WeakHashMap;
 
 /**
  * MKC's implementation of MK's {@link CreatedSlotResolver} port — resolves a
- * {@code CREATED_SLOT} {@link Address} to its live {@code MKCSlot} and frame
- * position. This is the MKC half of THE ONE WINDOW Phase 2, and the home of the
+ * {@code CREATED_SLOT} {@link Address} to its live in-menu slot (position is
+ * read off that slot's own {@code x/y}, like a vanilla slot's). This is the MKC half of THE ONE WINDOW Phase 2, and the home of the
  * canonical created-slot {@link #addressOf} encoding that mint and resolve share.
  *
  * <h2>Created-slot identity is MENU-INDEPENDENT</h2>
@@ -44,8 +45,7 @@ import java.util.WeakHashMap;
  * instance. A reopen produces a NEW menu instance, so the cache is invalidated
  * for free (and a GC'd menu drops its entry via the {@link WeakHashMap}). The
  * cache holds only {@code int} indices — NO {@code Slot} or container reference
- * (§3.7) — and the mutable draw position ({@code renderX/renderY}, §0047) is read
- * fresh on every resolve. Client-thread only.
+ * (§3.7). Client-thread only.
  */
 public final class CreatedSlotAdapter implements CreatedSlotResolver {
 
@@ -64,7 +64,7 @@ public final class CreatedSlotAdapter implements CreatedSlotResolver {
             Collections.synchronizedMap(new WeakHashMap<>());
 
     @Override
-    public @Nullable CreatedResolution resolve(AbstractContainerMenu menu, Address address) {
+    public @Nullable Slot resolve(AbstractContainerMenu menu, Address address) {
         Map<Address, Integer> bindings = CACHE.computeIfAbsent(menu, m -> new HashMap<>());
 
         // Fast path: a cached index, re-validated against the live slot's identity.
@@ -72,21 +72,23 @@ public final class CreatedSlotAdapter implements CreatedSlotResolver {
         if (cachedIndex != null) {
             MKCSlot mk = mkcAt(menu, cachedIndex);
             if (mk != null && addressOf(mk).equals(address)) {
-                return resolution(menu, cachedIndex, mk);
+                return menu.slots.get(cachedIndex);
             }
             bindings.remove(address); // stale — fall through to rescan
         }
 
         // Scan once, populating the full binding map (every created slot, free),
-        // and return the requested match if present.
-        CreatedResolution hit = null;
+        // and return the requested match if present. The IN-MENU slot (the
+        // creative wrapper on creative) — the one vanilla draws, hit-tests, and
+        // routes a click through.
+        Slot hit = null;
         for (int i = 0; i < menu.slots.size(); i++) {
             MKCSlot mk = mkcAt(menu, i);
             if (mk == null) continue;
             Address a = addressOf(mk);
             bindings.put(a, i);
             if (a.equals(address)) {
-                hit = resolution(menu, i, mk);
+                hit = menu.slots.get(i);
             }
         }
         return hit;
@@ -142,12 +144,6 @@ public final class CreatedSlotAdapter implements CreatedSlotResolver {
                 Token.reg(PanelAddressing.regKey(panelId)));
         String declId = groupId + SEP + localIndex;
         return new Address(owner, Token.decl(declId), KindTag.CREATED_SLOT);
-    }
-
-    private static CreatedResolution resolution(AbstractContainerMenu menu, int index, MKCSlot mk) {
-        // The in-menu slot (the creative wrapper on creative) for correct click
-        // routing; the position from the unwrapped slot's mutable renderX/renderY.
-        return new CreatedResolution(menu.slots.get(index), mk.renderX(), mk.renderY());
     }
 
     private static @Nullable MKCSlot mkcAt(AbstractContainerMenu menu, int index) {
