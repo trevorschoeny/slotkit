@@ -28,10 +28,11 @@ import java.util.function.Supplier;
  *       {@code menu.slots}. Built at menu-construction time via {@link MKCSlots};
  *       <em>untouched by this class</em>.</li>
  *   <li><b>Placement</b> — where it sits on screen. <em>This is what
- *       {@code SlotElement} owns.</em> Each frame, in layer 1 of
- *       {@code ContainerScreenLayers} (before vanilla's slot pass), it resolves
+ *       {@code SlotElement} owns.</em> Each frame, in layer 2 of
+ *       {@code ContainerScreenLayers}, it resolves
  *       its panel-relative position to screen space and writes it into the live
- *       slot's own {@code Slot.x/y}. It also draws the recessed 18×18 frame,
+ *       slot's own {@code Slot.x/y}. (Layer 2: after vanilla has drawn the
+ *       vanilla slots, before it draws the created ones.) It also draws the recessed 18×18 frame,
  *       which is panel chrome.</li>
  * </ul>
  *
@@ -60,14 +61,15 @@ import java.util.function.Supplier;
  *
  * <h3>Parked when not presented</h3>
  *
- * {@link SlotElementRegistry#parkAll} moves every attached element's slot
- * off-screen at the start of each frame; only the elements a panel actually
- * renders this frame put theirs back. So a slot whose panel is hidden, out of
- * region, or hidden by the window is at a position vanilla neither draws nor
- * hit-tests, rather than wherever it was last frame. ({@link MKCSlot#isActive}
+ * At the end of each frame ({@link SlotElementRegistry#parkUnpresented}) every
+ * attached element whose panel did not render it this frame moves its slot
+ * off-screen. So a slot whose panel is hidden, out of region, or hidden by the
+ * window is at a position vanilla neither draws nor hit-tests next frame, rather
+ * than wherever it was last drawn; one that was presented keeps its position, so
+ * hover between frames agrees with the picture. ({@link MKCSlot#isActive}
  * covers the panel-hidden case on its own; parking covers the rest.)
  *
- * <p>An element in an <b>overlay</b>-positioned panel (layer 3) writes its
+ * <p>An element in an <b>overlay</b>-positioned panel (layer 4) writes its
  * position after vanilla's slot pass, so vanilla draws it one frame late and
  * under the overlay's chrome. Created slots belong in flow panels; nothing
  * places them in overlays today.
@@ -92,6 +94,9 @@ public final class SlotElement implements PanelElement {
     private final Address address;
     private final int childX;
     private final int childY;
+
+    /** Whether a panel presented (placed) this element's slot this frame. Render thread only. */
+    private boolean presented = false;
 
     /** Optional hover tooltip — slots are direct PanelElement implementors,
      *  so they carry their own supplier rather than inheriting one. */
@@ -172,6 +177,7 @@ public final class SlotElement implements PanelElement {
         place(slot,
                 screenX + SlotRendering.ITEM_INSET - acc.mk$getLeftPos(),
                 screenY + SlotRendering.ITEM_INSET - acc.mk$getTopPos());
+        presented = true;
 
         // The frame is panel chrome — the only thing drawn here.
         SlotRendering.drawSlotBackground(ctx.graphics(), screenX, screenY,
@@ -187,11 +193,14 @@ public final class SlotElement implements PanelElement {
     }
 
     /**
-     * Parks this element's slot off-screen for the frame. Called for every
-     * attached element at the start of layer 1; {@link #render} re-places the
-     * slot if its panel presents it. No-op when the slot isn't on {@code menu}.
+     * End of frame: parks this element's slot off-screen unless {@link #render}
+     * placed it this frame; clears the mark either way. No-op when the slot isn't
+     * on {@code menu}.
      */
-    void park(AbstractContainerMenu menu) {
+    void endFrame(AbstractContainerMenu menu) {
+        boolean wasPresented = presented;
+        presented = false;
+        if (wasPresented) return;
         Slot slot = CreatedSlotAdapter.INSTANCE.resolve(menu, address);
         if (slot != null) place(slot, PARKED, PARKED);
     }

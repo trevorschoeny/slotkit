@@ -53,16 +53,17 @@ public final class SlotElementRegistry {
     }
 
     /**
-     * Parks every attached element's slot off-screen for this frame — the
-     * start of layer 1 ({@code ContainerScreenLayers}). A panel that presents a
-     * slot this frame re-places it during its render; anything not presented
-     * (panel hidden, origin unresolved, element hidden by the window) stays
-     * parked, so vanilla neither draws nor hit-tests it at a stale position.
+     * End of frame: parks every attached element's slot that no panel presented
+     * this frame, and clears the presented marks for the next one. A slot whose
+     * panel is hidden, out of region, or hidden by the window is therefore at a
+     * position vanilla neither draws nor hit-tests; one a panel did present keeps
+     * the position that panel wrote, so between frames input agrees with the
+     * picture.
      */
-    static void parkAll(net.minecraft.world.inventory.AbstractContainerMenu menu) {
+    static void parkUnpresented(net.minecraft.world.inventory.AbstractContainerMenu menu) {
         synchronized (ACTIVE) {
             for (SlotElement element : ACTIVE) {
-                element.park(menu);
+                element.endFrame(menu);
             }
         }
     }

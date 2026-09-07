@@ -15,9 +15,9 @@ import java.util.Set;
  *
  * <p>Input, plus the per-frame park. Vanilla draws a registered slot in its own
  * slot pass at the {@code Slot.x/y} its presenting {@code SlotElement} wrote, so
- * this hook renders nothing and holds no presence list. {@link #beginFrame} parks
- * every attached slot before the panels re-place the ones they present; the rest
- * is hover/click resolution: fed by the live
+ * this hook renders nothing and holds no presence list. {@link #isCreated} marks the
+ * layer boundary in vanilla's slot pass; {@link #endFrame} parks the attached slots
+ * no panel presented this frame; the rest is hover/click resolution: fed by the live
  * {@link SlotElementRegistry} (the set of panel ids that currently host a
  * {@code SlotElement}), it asks {@link MKCSlotInput} which {@code MKCSlot} a screen
  * point covers, so vanilla's {@code getHoveredSlot} routes hover/click to the
@@ -32,9 +32,14 @@ public final class MKCSlotScreenHook implements SlotScreenHook {
     // ── SlotScreenHook ─────────────────────────────────────────────────────
 
     @Override
-    public void beginFrame(AbstractContainerScreen<?> screen) {
+    public boolean isCreated(net.minecraft.world.inventory.Slot slot) {
+        return MKCSlotAccess.asMKCSlot(slot) != null;
+    }
+
+    @Override
+    public void endFrame(AbstractContainerScreen<?> screen) {
         if (!SlotElementRegistry.hasActive()) return;
-        SlotElementRegistry.parkAll(screen.getMenu());
+        SlotElementRegistry.parkUnpresented(screen.getMenu());
     }
 
     @Override

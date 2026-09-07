@@ -125,10 +125,10 @@ public final class MKCSlots {
 
     /**
      * Off-screen sentinel for a registered slot's vanilla {@code Slot.x/y} (§0047).
-     * A registered slot is born here and returns here at the start of every frame
-     * ({@link SlotElementRegistry#parkAll}); the panel that presents it writes its
-     * real {@code x/y} for the frame. Parked, vanilla's slot pass and hover
-     * resolution are harmless no-ops for it. Same coordinate the creative
+     * A registered slot is born here, and returns here at the end of any frame in
+     * which no panel presented it ({@link SlotElementRegistry#parkUnpresented});
+     * the panel that presents it writes its real {@code x/y} each frame. Parked,
+     * vanilla's slot pass and hover resolution are harmless no-ops for it. Same coordinate the creative
      * wrapper is parked at ({@code MKCCreativeSlotParkMixin}).
      */
     static final int OFFSCREEN = -10000;
