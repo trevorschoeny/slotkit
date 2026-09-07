@@ -1,1 +1,2 @@
+3.1.0: no changes here. Requires MenuKit 3.1.0, released alongside this version.
 3.0.0: the Java package is now com.trevlar.menukit (was com.trevorschoeny.menukit); update imports. MenuKit and MenuKit: Containers now share one repository and one set of docs at github.com/trevorschoeny/menukit. No class or method names changed.
