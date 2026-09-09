@@ -8,6 +8,7 @@ import net.minecraft.world.item.ItemStack;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -38,11 +39,11 @@ import java.util.function.Supplier;
  *
  * <h3>Inline behavior verbs are sugar over the by-address engine path</h3>
  *
- * Gating, quick-move, binding, and mending are armed in THE ONE WINDOW engine by
+ * Gating, quick-move, collect, drag-fill, binding, and mending are armed in THE ONE WINDOW engine by
  * the slot's {@link com.trevlar.menukit.window.Address} — that is where slot
  * behavior <em>lives</em>, identically for a vanilla slot and a created slot. The
  * inline verbs here ({@link #gate}, {@link #accepts}, {@link #binding},
- * {@link #mending}, {@link #quickMove}) do not introduce a second behavior store:
+ * {@link #mending}, {@link #quickMove}, {@link #collect}, {@link #dragFill}) do not introduce a second behavior store:
  * they record the consumer's intent on the spec, and
  * {@link MKCContainerPanel.Builder#register()} arms the engine by address for every
  * local index in the group — exactly {@code Window.slot(MKCContainerPanel.address(
@@ -67,6 +68,7 @@ import java.util.function.Supplier;
 public final class SlotSpec {
 
     private final String groupId;
+    private final SlotGroupCategory category;
 
     private int count = 1;                                // logical slots in this group
     private @Nullable Function<Player, Storage> storageFactory;   // required
@@ -83,9 +85,13 @@ public final class SlotSpec {
     private @Nullable TriBool binding = null;
     private @Nullable TriBool mending = null;
     private @Nullable QuickMoveParticipation quickMove = null;
+    private @Nullable TriBool collect = null;
+    private @Nullable TriBool dragFill = null;
 
-    private SlotSpec(String groupId) {
+    private SlotSpec(String groupId, SlotGroupCategory category) {
         this.groupId = groupId;
+        this.category = Objects.requireNonNull(category,
+                "SlotSpec '" + groupId + "': a SlotGroupCategory is required");
     }
 
     /**
@@ -94,10 +100,22 @@ public final class SlotSpec {
      * so a spec declares only WHAT a group is (storage, count, reveal, behavior),
      * never where it sits.
      *
-     * @param groupId slot-group id, unique within the owning {@link MKCContainerPanel}
+     * <p><b>The category is required, and it is identity.</b> It is how any other
+     * mod finds these slots ({@code SlotGroupCategories.of(menu)} lists created
+     * groups next to the vanilla ones) and decides what they are: a pocket group
+     * declared {@link SlotGroupCategory#PLAYER_INVENTORY} is player inventory to a
+     * search; an elytra slot declared under the mod's own category is not. There
+     * is no default on purpose — a group that forgot to say what it is would
+     * silently become "just storage" to every consumer, which is the dangerous
+     * outcome. A category name is a public contract once another mod depends on
+     * it; renaming one is a breaking change.
+     *
+     * @param groupId  slot-group id, unique within the owning {@link MKCContainerPanel}
+     * @param category what the group is — a vanilla category, or one the mod
+     *                 declares ({@code new SlotGroupCategory("mymod", "pockets")})
      */
-    public static SlotSpec at(String groupId) {
-        return new SlotSpec(groupId);
+    public static SlotSpec at(String groupId, SlotGroupCategory category) {
+        return new SlotSpec(groupId, category);
     }
 
     /**
@@ -233,9 +251,31 @@ public final class SlotSpec {
         return this;
     }
 
+    /**
+     * Whether vanilla's double-click collect may sweep items out of this group —
+     * sugar for {@code set(BehaviorKeys.COLLECT, ...)}. Default on (vanilla). A
+     * group that is storage but must not be raided by the bulk shortcuts declares
+     * {@code .quickMove(NONE).collect(false).dragFill(false)}.
+     */
+    public SlotSpec collect(boolean enabled) {
+        this.collect = enabled ? TriBool.TRUE : TriBool.FALSE;
+        return this;
+    }
+
+    /**
+     * Whether vanilla's drag-fill (spreading a carried stack across dragged-over
+     * slots) may place into this group — sugar for {@code set(BehaviorKeys.DRAG_FILL, ...)}.
+     * Default on (vanilla).
+     */
+    public SlotSpec dragFill(boolean enabled) {
+        this.dragFill = enabled ? TriBool.TRUE : TriBool.FALSE;
+        return this;
+    }
+
     // ── Accessors (read by MKCContainerPanel / ParitySlotRegistry) ──────
 
     String groupId()       { return groupId; }
+    SlotGroupCategory category() { return category; }
     int count()            { return count; }
     // Movement ④ — slots flow reactively (SlotFlowElement owns positions). These
     // remain only as the off-panel SEED ParitySlotRegistry hands MKCSlots; the
@@ -255,4 +295,6 @@ public final class SlotSpec {
     @Nullable TriBool bindingValue()               { return binding; }
     @Nullable TriBool mendingValue()               { return mending; }
     @Nullable QuickMoveParticipation quickMoveValue() { return quickMove; }
+    @Nullable TriBool collectValue()               { return collect; }
+    @Nullable TriBool dragFillValue()              { return dragFill; }
 }

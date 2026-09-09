@@ -9,6 +9,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BiConsumer;
 
 /**
@@ -31,6 +32,13 @@ import java.util.function.BiConsumer;
 public class SlotGroup implements SlotGroupLike {
 
     private final String id;
+    // What this group IS, in MenuKit core's registry vocabulary — required, so
+    // another mod can find these slots by name (SlotGroupCategories) and decide
+    // what to do with them, and a group can never silently become "just
+    // storage" to a search that walks the player's menu. Identity, not
+    // behaviour: the category says what the slots are; what a gesture may do
+    // to them is a window key (QUICK_MOVE, COLLECT, DRAG_FILL).
+    private final SlotGroupCategory category;
     private final Storage storage;
     private final int shiftClickPriority;
 
@@ -57,15 +65,17 @@ public class SlotGroup implements SlotGroupLike {
      * Full constructor with layout metadata.
      *
      * @param id                  unique identifier within the panel
+     * @param category            what the group is ({@link SlotGroupCategory}); required
      * @param storage             where items live
      * @param shiftClickPriority  numeric priority (higher = tried first)
      * @param columns             grid columns for slot layout (-1 = auto)
      * @param rowGapAfter         0-indexed row after which to insert a gap (-1 = none)
      * @param rowGapSize          gap size in pixels (only used if rowGapAfter >= 0)
      */
-    public SlotGroup(String id, Storage storage, int shiftClickPriority,
+    public SlotGroup(String id, SlotGroupCategory category, Storage storage, int shiftClickPriority,
                      int columns, int rowGapAfter, int rowGapSize) {
         this.id = id;
+        this.category = Objects.requireNonNull(category, "SlotGroup '" + id + "': category is required");
         this.storage = storage;
         this.shiftClickPriority = shiftClickPriority;
         // Auto-compute columns: min(9, storage size) if not specified
@@ -79,19 +89,22 @@ public class SlotGroup implements SlotGroupLike {
      * @param storage             where items live
      * @param shiftClickPriority  numeric priority (higher = tried first)
      */
-    public SlotGroup(String id, Storage storage, int shiftClickPriority) {
-        this(id, storage, shiftClickPriority, -1, -1, 0);
+    public SlotGroup(String id, SlotGroupCategory category, Storage storage, int shiftClickPriority) {
+        this(id, category, storage, shiftClickPriority, -1, -1, 0);
     }
 
     /** Convenience: default priority (100). */
-    public SlotGroup(String id, Storage storage) {
-        this(id, storage, 100);
+    public SlotGroup(String id, SlotGroupCategory category, Storage storage) {
+        this(id, category, storage, 100);
     }
 
     // ── Identity ────────────────────────────────────────────────────────
 
     /** Returns this group's unique identifier within its panel. */
     @Override public String getId() { return id; }
+
+    /** What this group is, in the registry vocabulary ({@code SlotGroupCategories}). */
+    public SlotGroupCategory getCategory() { return category; }
 
     // ── Axes ────────────────────────────────────────────────────────────
 

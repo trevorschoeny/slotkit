@@ -4,6 +4,7 @@ import com.trevlar.menukit.inject.ScreenMatcher;
 import com.trevlar.menukit.inject.ScreenOrigin;
 import com.trevlar.menukit.inject.ScreenPanelAdapter;
 import com.trevlar.menukit.window.Address;
+import com.trevlar.menukit.window.BehaviorKeys;
 import com.trevlar.menukit.window.TriBool;
 import com.trevlar.menukit.window.Window;
 
@@ -337,8 +338,11 @@ public final class MKCContainerPanel {
         TriBool binding = spec.bindingValue();
         TriBool mending = spec.mendingValue();
         QuickMoveParticipation quickMove = spec.quickMoveValue();
+        TriBool collect = spec.collectValue();
+        TriBool dragFill = spec.dragFillValue();
         // Nothing declared → nothing to arm.
-        if (gate == null && binding == null && mending == null && quickMove == null) return;
+        if (gate == null && binding == null && mending == null && quickMove == null
+                && collect == null && dragFill == null) return;
 
         for (int i = 0; i < spec.count(); i++) {
             Address a = address(containerPanelId, spec.groupId(), i);
@@ -346,6 +350,10 @@ public final class MKCContainerPanel {
             if (binding != null)   Window.slot(a).set(MKCBehaviorKeys.BINDING, binding);
             if (mending != null)   Window.slot(a).set(MKCBehaviorKeys.MENDING, mending);
             if (quickMove != null) Window.slot(a).set(MKCBehaviorKeys.QUICK_MOVE, quickMove);
+            // The bulk-gesture keys live MK-side (an MK-only mod can name them on a
+            // vanilla slot); MKC enforces them at vanilla's seams (MKCBulkGestureMixin).
+            if (collect != null)   Window.slot(a).set(BehaviorKeys.COLLECT, collect);
+            if (dragFill != null)  Window.slot(a).set(BehaviorKeys.DRAG_FILL, dragFill);
         }
     }
 

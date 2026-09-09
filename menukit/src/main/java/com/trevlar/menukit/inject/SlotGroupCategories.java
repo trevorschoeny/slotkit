@@ -5,10 +5,12 @@ import com.trevlar.menukit.core.SlotGroupCategory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 
+import org.jetbrains.annotations.ApiStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +42,15 @@ import java.util.Map;
  * extends {@code RecipeBookMenu}, but each concrete menu has its own slot
  * ordering). Modded consumers register for their own concrete menu classes.
  *
+ * <h3>Created slots publish here too</h3>
+ *
+ * Every MenuKit-Containers slot group declares a {@link SlotGroupCategory} on its
+ * spec, and Containers registers one universal resolver ({@link #extendEvery})
+ * that reports those groups on whatever menu they sit. So {@link #of} and
+ * {@link #categoriesBySlot} name created and vanilla slots alike, with nothing but
+ * MK types — the registry is the kind-blind way for one mod to find another's
+ * slots.
+ *
  * <h3>Primary vs. extensions</h3>
  *
  * Each class has at most one primary resolver (from {@link #register}) and
@@ -70,6 +81,14 @@ public final class SlotGroupCategories {
 
     private static final Map<Class<? extends AbstractContainerMenu>, List<SlotGroupResolver>> EXTENSIONS
             = new HashMap<>();
+
+    // Resolvers that run on EVERY menu class, after the class-specific ones. The
+    // seat for created slots: MenuKit-Containers appends them to any menu the
+    // player opens, so their categories can't be keyed by menu class. Their
+    // contributions MERGE into an already-present category rather than being
+    // dropped — a created group declared PLAYER_INVENTORY is player inventory,
+    // and the vanilla slots of that category stay ahead of it in the list.
+    private static final List<SlotGroupResolver> UNIVERSAL = new ArrayList<>();
 
     /**
      * Registers a resolver for a concrete menu class. First registration
@@ -136,9 +155,43 @@ public final class SlotGroupCategories {
     }
 
     /**
+     * Registers a resolver that runs on <b>every</b> menu, after the class-specific
+     * primary and extensions. Its categories merge: one the menu already resolved
+     * gains the resolver's slots appended after the existing ones; a new category is
+     * added. This is how created slots (MenuKit-Containers) publish their groups —
+     * they sit on whatever menu the player opened, so no menu class names them.
+     * Library-internal seat; consumers declare a created group's category on its
+     * {@code SlotSpec} and never call this.
+     */
+    @ApiStatus.Internal
+    public static void extendEvery(SlotGroupResolver resolver) {
+        UNIVERSAL.add(resolver);
+        LOGGER.info("[SlotGroupCategories] universal resolver #{} registered", UNIVERSAL.size());
+    }
+
+    /**
+     * The category of each slot on {@code menu}, by slot identity — the inverse of
+     * {@link #of}, for a consumer walking {@code menu.slots} and asking "what is
+     * this one?" A slot in no category is absent. Kind-blind: a vanilla slot and a
+     * created slot answer the same way, so a consumer can decide per category
+     * ("search PLAYER_INVENTORY and this mod's pockets; leave its elytra slot
+     * alone") without knowing which library put a slot there.
+     */
+    public static Map<Slot, SlotGroupCategory> categoriesBySlot(AbstractContainerMenu menu) {
+        Map<SlotGroupCategory, List<Slot>> byCategory = of(menu);
+        if (byCategory.isEmpty()) return Map.of();
+        Map<Slot, SlotGroupCategory> out = new java.util.IdentityHashMap<>();
+        for (Map.Entry<SlotGroupCategory, List<Slot>> e : byCategory.entrySet()) {
+            for (Slot slot : e.getValue()) out.putIfAbsent(slot, e.getKey());
+        }
+        return Collections.unmodifiableMap(out);
+    }
+
+    /**
      * Resolves the given menu instance's slot groups. Exact-class match on
-     * {@code menu.getClass()}; returns an empty map for menus without a
-     * registered resolver or extension.
+     * {@code menu.getClass()} for the primary and extensions, then every
+     * universal resolver ({@link #extendEvery}); returns an empty map for menus
+     * where nothing resolves.
      *
      * <p>Runs the primary resolver first (if any), then each extension in
      * registration order. Extension-emitted categories that collide with
@@ -155,19 +208,30 @@ public final class SlotGroupCategories {
         SlotGroupResolver primary = RESOLVERS.get(menuClass);
         List<SlotGroupResolver> extensions = EXTENSIONS.getOrDefault(menuClass, List.of());
 
-        if (primary == null && extensions.isEmpty()) return Map.of();
+        if (primary == null && extensions.isEmpty() && UNIVERSAL.isEmpty()) return Map.of();
 
         // Resolvers speak in indices (the consumer never holds a raw Slot); the
         // library dereferences index → Slot here, where it already has the menu.
         Map<SlotGroupCategory, List<Slot>> out = new HashMap<>();
         if (primary != null) {
-            deref(menu, primary.resolve(menu), out, /*isExtension*/ false);
+            deref(menu, primary.resolve(menu), out, Merge.DROP_COLLISION_SILENT);
         }
         for (SlotGroupResolver ext : extensions) {
-            deref(menu, ext.resolve(menu), out, /*isExtension*/ true);
+            deref(menu, ext.resolve(menu), out, Merge.DROP_COLLISION_WARN);
+        }
+        for (SlotGroupResolver universal : UNIVERSAL) {
+            deref(menu, universal.resolve(menu), out, Merge.APPEND);
         }
         return Map.copyOf(out);
     }
+
+    private static boolean containsIdentity(List<Slot> slots, Slot slot) {
+        for (Slot s : slots) if (s == slot) return true;
+        return false;
+    }
+
+    /** How a resolver's category that the menu already resolved is treated. */
+    private enum Merge { DROP_COLLISION_SILENT, DROP_COLLISION_WARN, APPEND }
 
     /**
      * Dereferences a resolver's category→index-array map onto {@code out} as
@@ -179,11 +243,12 @@ public final class SlotGroupCategories {
      */
     private static void deref(AbstractContainerMenu menu,
             Map<SlotGroupCategory, int[]> indices,
-            Map<SlotGroupCategory, List<Slot>> out, boolean isExtension) {
+            Map<SlotGroupCategory, List<Slot>> out, Merge merge) {
         int slotCount = menu.slots.size();
         for (Map.Entry<SlotGroupCategory, int[]> entry : indices.entrySet()) {
-            if (out.containsKey(entry.getKey())) {
-                if (isExtension) {
+            boolean present = out.containsKey(entry.getKey());
+            if (present && merge != Merge.APPEND) {
+                if (merge == Merge.DROP_COLLISION_WARN) {
                     LOGGER.warn("[SlotGroupCategories] extension for {} tried to redefine " +
                             "category {} — dropping (earlier entry wins)",
                             menu.getClass().getName(), entry.getKey());
@@ -193,8 +258,14 @@ public final class SlotGroupCategories {
             int[] idx = entry.getValue();
             if (idx == null || idx.length == 0) continue;   // empty omitted per contract
             List<Slot> slots = new ArrayList<>(idx.length);
+            if (present) slots.addAll(out.get(entry.getKey()));   // APPEND: existing first
             for (int i : idx) {
-                if (i >= 0 && i < slotCount) slots.add(menu.slots.get(i));
+                if (i < 0 || i >= slotCount) continue;
+                Slot slot = menu.slots.get(i);
+                // APPEND never lists a slot twice: a consumer's own class resolver may
+                // already name a created slot under the same category it declared.
+                if (present && containsIdentity(slots, slot)) continue;
+                slots.add(slot);
             }
             if (!slots.isEmpty()) out.put(entry.getKey(), List.copyOf(slots));
         }

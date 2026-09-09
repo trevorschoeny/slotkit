@@ -258,6 +258,7 @@ public final class MKCSlots {
 
         private String panelId = "menukit:slot";
         private String groupId = "slot";
+        private SlotGroupCategory category;                   // required — what the group IS
         private Storage storage;                              // required
         private int columns = 9;
         private int originX = 0;
@@ -275,6 +276,14 @@ public final class MKCSlots {
 
         /** Slot-group id within the panel. */
         public Builder group(String id) { this.groupId = id; return this; }
+
+        /**
+         * What the group is, in MenuKit core's registry vocabulary. Required — see
+         * {@link SlotSpec#at(String, SlotGroupCategory)} for why there is no
+         * default. The group is published under it in
+         * {@code SlotGroupCategories.of(menu)} on every menu it sits on.
+         */
+        public Builder category(SlotGroupCategory category) { this.category = category; return this; }
 
         /**
          * Where items live. Required. Use a {@link StorageAttachment}-bound
@@ -332,13 +341,19 @@ public final class MKCSlots {
                 throw new IllegalStateException(
                         "MKCSlots: storage() is required before register()");
             }
+            if (category == null) {
+                throw new IllegalStateException(
+                        "MKCSlots '" + panelId + "/" + groupId + "': category(SlotGroupCategory) is "
+                        + "required before register() — say what the group is (PLAYER_INVENTORY, or "
+                        + "your own category) so other mods can find it and know what it is.");
+            }
 
             // 1. Standalone SlotGroup — storage + layout only. Behavior
             //    (gating/quick-move/binding/mending) is not carried here; it
             //    resolves from the engine by each slot's address (default = vanilla),
             //    armed by the consumer via Window.slot(address).set(...).
             SlotGroup group = new SlotGroup(
-                    groupId, storage,
+                    groupId, category, storage,
                     /*shiftClickPriority*/ 100, columns, /*rowGapAfter*/ -1, /*rowGapSize*/ 0);
 
             // 2. Standalone Panel — no PanelOwner (this isn't a MKCScreenHandler).

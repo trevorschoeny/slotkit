@@ -94,6 +94,7 @@ public final class ParitySlotRegistry {
             MKCSlots.Builder b = MKCSlots.onto(menu, player)
                     .panel(e.slotPanelId())
                     .group(spec.groupId())
+                    .category(spec.category())
                     .storage(storage)
                     // Seed layout from the spec's panel-local origin; the SlotElement
                     // repositions per frame to its panel spot, so this is only the
