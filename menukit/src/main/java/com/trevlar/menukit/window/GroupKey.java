@@ -22,15 +22,50 @@ import java.util.function.Predicate;
  * Equality is by {@code id} alone (a predicate has no useful equality), so a
  * group is a stable handle you can re-declare against. Two {@code GroupKey}s with
  * the same id are the same group.
+ *
+ * <h2>Precedence — the rungs inside the per-group level</h2>
+ *
+ * Several groups can match one address, and they are not equally specific: a slot
+ * group's own declaration should outrank the inherent declarations of the category
+ * that group belongs to. {@link #precedence()} orders them, <b>higher wins</b>, with
+ * the last-declared tie-break applying only within one precedence. The library uses
+ * {@link #PRECEDENCE_CATEGORY} and {@link #PRECEDENCE_GROUP}; a consumer bulk-group
+ * defaults to {@link #PRECEDENCE_DEFAULT}, below both, because a hand-declared group
+ * is the broadest thing in the picture unless it says otherwise.
+ *
+ * <p>So the full specificity order a slot resolves through is: per-address
+ * declaration, then owner-chain ancestors, then matching groups by precedence, then
+ * the key's library default.
  */
 public final class GroupKey {
 
+    /** A consumer-declared bulk group, unless it asks for another rung. */
+    public static final int PRECEDENCE_DEFAULT = 0;
+
+    /** A category's inherent declarations, applying to every group in it. */
+    public static final int PRECEDENCE_CATEGORY = 100;
+
+    /** A slot group's own declaration — outranks the category it belongs to. */
+    public static final int PRECEDENCE_GROUP = 200;
+
     private final net.minecraft.resources.Identifier id;
     private final Predicate<Address> membership;
+    private final int precedence;
 
+    /** A group at {@link #PRECEDENCE_DEFAULT}. */
     public GroupKey(net.minecraft.resources.Identifier id, Predicate<Address> membership) {
+        this(id, membership, PRECEDENCE_DEFAULT);
+    }
+
+    public GroupKey(net.minecraft.resources.Identifier id, Predicate<Address> membership, int precedence) {
         this.id = Objects.requireNonNull(id, "id");
         this.membership = Objects.requireNonNull(membership, "membership");
+        this.precedence = precedence;
+    }
+
+    /** Where this group sits inside the per-group level; higher wins. */
+    public int precedence() {
+        return precedence;
     }
 
     public net.minecraft.resources.Identifier id() {

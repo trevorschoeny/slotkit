@@ -4,6 +4,10 @@ import com.trevlar.menukit.inject.ScreenMatcher;
 import com.trevlar.menukit.inject.ScreenOrigin;
 import com.trevlar.menukit.inject.ScreenPanelAdapter;
 import com.trevlar.menukit.window.Address;
+import com.trevlar.menukit.window.WindowEngine;
+import com.trevlar.menukit.window.GroupKey;
+import com.trevlar.menukit.window.GroupIds;
+import com.trevlar.menukit.window.Decl;
 import com.trevlar.menukit.window.BehaviorKeys;
 import com.trevlar.menukit.window.TriBool;
 import com.trevlar.menukit.window.Window;
@@ -15,6 +19,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
@@ -327,11 +332,15 @@ public final class MKCContainerPanel {
     }
 
     /**
-     * Publishes a {@link SlotSpec}'s category and arms its inline behavior onto the
-     * engine by Address, for every local index in the group. A null inline value leaves the engine default for that
-     * key (so an un-declared slot stays exactly vanilla). This is the library half of
-     * the inline sugar — identical to the consumer calling
-     * {@code Window.slot(address(panelId, groupId, i)).set(KEY, value)} themselves.
+     * Publishes a {@link SlotSpec}'s category for every local index in the group, and
+     * arms whatever behavior the spec declared at the group rung of the cascade. A
+     * null inline value leaves the engine default for that key (so an un-declared
+     * slot stays exactly vanilla).
+     *
+     * <p>Group rung, not per address: a {@code SlotSpec} <em>is</em> a group, so a
+     * consumer that overrides one slot through
+     * {@code Window.slot(address(panelId, groupId, i)).set(KEY, value)} outranks it
+     * by specificity rather than by who declared last.
      */
     private static void armInlineBehavior(String containerPanelId, SlotSpec spec) {
         SlotGate gate = spec.gateValue();
@@ -340,22 +349,34 @@ public final class MKCContainerPanel {
         QuickMoveParticipation quickMove = spec.quickMoveValue();
         TriBool collect = spec.collectValue();
         TriBool dragFill = spec.dragFillValue();
-        // The loop always runs: even a spec that declares no behavior must publish its
-        // category, which is what lets the category's inherent operations reach these
-        // slots. Explicit inline values below still win — they are per-address, and the
-        // category default sits a rung lower (per group).
+        // Every slot's category is published whether or not the spec declares
+        // behavior: that is what lets the category's inherent values reach the group.
+        Set<Address> addresses = new java.util.HashSet<>(spec.count());
         for (int i = 0; i < spec.count(); i++) {
             Address a = address(containerPanelId, spec.groupId(), i);
+            addresses.add(a);
             CreatedSlotCategories.index(a, spec.category());
-            if (gate != null)      Window.slot(a).set(MKCBehaviorKeys.GATING, gate);
-            if (binding != null)   Window.slot(a).set(MKCBehaviorKeys.BINDING, binding);
-            if (mending != null)   Window.slot(a).set(MKCBehaviorKeys.MENDING, mending);
-            if (quickMove != null) Window.slot(a).set(MKCBehaviorKeys.QUICK_MOVE, quickMove);
-            // The operation keys live MK-side (an MK-only mod can name them on a
-            // vanilla slot); MKC enforces them at vanilla's seams (MKCOperationMixin).
-            if (collect != null)   Window.slot(a).set(BehaviorKeys.COLLECT, collect);
-            if (dragFill != null)  Window.slot(a).set(BehaviorKeys.DRAG_FILL, dragFill);
         }
+        if (gate == null && binding == null && mending == null && quickMove == null
+                && collect == null && dragFill == null) return;
+
+        // Declared at the GROUP rung, not per address. A SlotSpec IS a group, so its
+        // values belong one level above a per-slot declaration: a consumer overriding
+        // one slot with Window.slot(addr).set(...) then wins outright, instead of the
+        // two colliding on the per-address level and being settled by whichever mod's
+        // init ran last. Above the group sits the category (PRECEDENCE_CATEGORY).
+        GroupKey group = new GroupKey(
+                GroupIds.of("group", containerPanelId + "/" + spec.groupId()),
+                addresses::contains,
+                GroupKey.PRECEDENCE_GROUP);
+        if (gate != null)      WindowEngine.setGroup(group, MKCBehaviorKeys.GATING, Decl.set(gate));
+        if (binding != null)   WindowEngine.setGroup(group, MKCBehaviorKeys.BINDING, Decl.set(binding));
+        if (mending != null)   WindowEngine.setGroup(group, MKCBehaviorKeys.MENDING, Decl.set(mending));
+        if (quickMove != null) WindowEngine.setGroup(group, MKCBehaviorKeys.QUICK_MOVE, Decl.set(quickMove));
+        // The operation keys live MK-side (an MK-only mod can name them on a vanilla
+        // slot); MKC enforces them at vanilla's seams (MKCOperationMixin).
+        if (collect != null)   WindowEngine.setGroup(group, BehaviorKeys.COLLECT, Decl.set(collect));
+        if (dragFill != null)  WindowEngine.setGroup(group, BehaviorKeys.DRAG_FILL, Decl.set(dragFill));
     }
 
     private static synchronized void ensureProjectionSource() {

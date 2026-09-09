@@ -20,9 +20,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *       key's {@link Tier} makes it meaningful. <em>Plugs in at Phase 3b</em> via
  *       the server-tier port; this client engine holds only client-tier decls.</li>
  *   <li><b>AXIS 2 — specificity</b> (within equal authority): per-slot override
- *       &gt; per-group default &gt; library default.</li>
- *   <li><b>Tie-break</b>: last-declared wins (here: the last registered matching
- *       group).</li>
+ *       &gt; owner-chain ancestor &gt; matching groups, by
+ *       {@link GroupKey#precedence()} &gt; library default. The group level has its
+ *       own rungs, so a slot group's own declaration outranks the inherent
+ *       declarations of the category that group belongs to.</li>
+ *   <li><b>Tie-break</b>: last-declared wins, within one group precedence.</li>
  * </ol>
  *
  * A {@link Decl.Set} stops the walk with its value; {@link Decl.Inherit} or the
@@ -143,10 +145,17 @@ public final class WindowEngine {
     @SuppressWarnings("unchecked")
     private static <V> Decl<V> declForGroups(Address address, BehaviorKey<V> key) {
         Decl<V> result = null;
+        int best = Integer.MIN_VALUE;
         for (GroupBinding b : GROUPS) {                // registration order
             if (!b.group().contains(address)) continue;
             Decl<?> d = b.decls().get(key);
-            if (d != null) result = (Decl<V>) d;       // last matching group wins
+            if (d == null) continue;
+            // Higher precedence wins (a slot group over its category); >= keeps the
+            // last-declared tie-break WITHIN one precedence.
+            if (b.group().precedence() >= best) {
+                best = b.group().precedence();
+                result = (Decl<V>) d;
+            }
         }
         return result;
     }

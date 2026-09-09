@@ -12,7 +12,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
@@ -63,13 +62,13 @@ import java.util.Objects;
  * {@link #inherent} declares what an operation does <em>by default for every slot
  * group in a category</em>. A mod that mints its own category says once that
  * nothing in it may be collected, rather than repeating {@code collect(false)} on
- * every group. A per-slot or per-group declaration still wins: the resolution order
- * is
+ * every group. Anything more specific still wins:
  *
- * <pre>per-slot declaration  &gt;  category inherent  &gt;  the key's library default</pre>
+ * <pre>per-slot declaration  &gt;  the slot's group  &gt;  the group's category  &gt;  the key's library default</pre>
  *
- * which is the window's ordinary cascade (§0055) with the category sitting at the
- * group level. Membership resolves per query, so a category's inherent operations
+ * which is the window's ordinary cascade (§0055); the group and the category are
+ * two rungs inside its per-group level, ordered by
+ * {@link GroupKey#precedence()}. Membership resolves per query, so a category's inherent operations
  * may be declared before or after the groups in it: registration order does not
  * matter.
  *
@@ -100,9 +99,6 @@ public final class SlotOperations {
 
     /** One {@link GroupKey} per category, carrying that category's inherent operations. */
     private static final Map<SlotGroupCategory, GroupKey> CATEGORY_GROUPS = new HashMap<>();
-
-    /** Group ids handed out, so two categories can never share one (GroupKey is id-equal). */
-    private static final Map<String, SlotGroupCategory> USED_IDS = new HashMap<>();
 
     // ── The category port (§0042) ──────────────────────────────────────────
 
@@ -187,25 +183,9 @@ public final class SlotOperations {
      * categories can never share a binding.
      */
     private static synchronized GroupKey groupFor(SlotGroupCategory category) {
-        GroupKey existing = CATEGORY_GROUPS.get(category);
-        if (existing != null) return existing;
-
-        String base = "category/" + sanitize(category.namespace()) + "/" + sanitize(category.path());
-        String id = base;
-        for (int n = 2; USED_IDS.containsKey(id); n++) {
-            id = base + "_" + n;   // sanitizing collapsed two distinct categories; keep them apart
-        }
-        USED_IDS.put(id, category);
-
-        GroupKey key = new GroupKey(
-                Identifier.fromNamespaceAndPath("menukit", id),
-                address -> category.equals(lookup.categoryOf(address)));
-        CATEGORY_GROUPS.put(category, key);
-        return key;
-    }
-
-    /** Identifier paths allow {@code [a-z0-9_.-/]}; a category's own strings may not. */
-    private static String sanitize(String s) {
-        return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_.-]", "_");
+        return CATEGORY_GROUPS.computeIfAbsent(category, c -> new GroupKey(
+                GroupIds.of("category", c.namespace() + "/" + c.path()),
+                address -> c.equals(lookup.categoryOf(address)),
+                GroupKey.PRECEDENCE_CATEGORY));
     }
 }
