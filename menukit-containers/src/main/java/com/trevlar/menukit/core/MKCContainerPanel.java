@@ -327,8 +327,8 @@ public final class MKCContainerPanel {
     }
 
     /**
-     * Arms a {@link SlotSpec}'s inline behavior onto the engine by Address, for every
-     * local index in the group. A null inline value leaves the engine default for that
+     * Publishes a {@link SlotSpec}'s category and arms its inline behavior onto the
+     * engine by Address, for every local index in the group. A null inline value leaves the engine default for that
      * key (so an un-declared slot stays exactly vanilla). This is the library half of
      * the inline sugar — identical to the consumer calling
      * {@code Window.slot(address(panelId, groupId, i)).set(KEY, value)} themselves.
@@ -340,18 +340,19 @@ public final class MKCContainerPanel {
         QuickMoveParticipation quickMove = spec.quickMoveValue();
         TriBool collect = spec.collectValue();
         TriBool dragFill = spec.dragFillValue();
-        // Nothing declared → nothing to arm.
-        if (gate == null && binding == null && mending == null && quickMove == null
-                && collect == null && dragFill == null) return;
-
+        // The loop always runs: even a spec that declares no behavior must publish its
+        // category, which is what lets the category's inherent operations reach these
+        // slots. Explicit inline values below still win — they are per-address, and the
+        // category default sits a rung lower (per group).
         for (int i = 0; i < spec.count(); i++) {
             Address a = address(containerPanelId, spec.groupId(), i);
+            CreatedSlotCategories.index(a, spec.category());
             if (gate != null)      Window.slot(a).set(MKCBehaviorKeys.GATING, gate);
             if (binding != null)   Window.slot(a).set(MKCBehaviorKeys.BINDING, binding);
             if (mending != null)   Window.slot(a).set(MKCBehaviorKeys.MENDING, mending);
             if (quickMove != null) Window.slot(a).set(MKCBehaviorKeys.QUICK_MOVE, quickMove);
-            // The bulk-gesture keys live MK-side (an MK-only mod can name them on a
-            // vanilla slot); MKC enforces them at vanilla's seams (MKCBulkGestureMixin).
+            // The operation keys live MK-side (an MK-only mod can name them on a
+            // vanilla slot); MKC enforces them at vanilla's seams (MKCOperationMixin).
             if (collect != null)   Window.slot(a).set(BehaviorKeys.COLLECT, collect);
             if (dragFill != null)  Window.slot(a).set(BehaviorKeys.DRAG_FILL, dragFill);
         }

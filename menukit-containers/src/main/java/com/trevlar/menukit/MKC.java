@@ -63,6 +63,12 @@ public class MKC implements ModInitializer {
      *  {@code StorageAttachment}. */
     public static void init() {
         LOGGER.info("[MenuKit-Containers] Initialized");
+        // Shift-click joins MenuKit's operations vocabulary, and created slots'
+        // declared categories become resolvable by address so a category's inherent
+        // operations reach them. Both sides: the operation seams run on the server.
+        com.trevlar.menukit.window.SlotOperations.define(
+                com.trevlar.menukit.core.MKCBehaviorKeys.QUICK_MOVE);
+        com.trevlar.menukit.core.CreatedSlotCategories.installLookup();
         // THE ONE WINDOW — install the server tier into MK's engine (DIP: MK owns
         // the ports, MKC conforms). Runs on both sides (universal init): server
         // holds authoritative bindings; client mirrors for prediction.

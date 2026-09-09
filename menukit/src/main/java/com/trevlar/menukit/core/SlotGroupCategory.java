@@ -10,12 +10,30 @@ package com.trevlar.menukit.core;
  * the identity-not-behavior design and §6 for the vanilla-v1 coverage
  * inventory this class hosts as public constants.
  *
- * <p>Modded consumers define their own via
- * {@code new SlotGroupCategory("mymod", "custom_output")} and register a
- * resolver against their menu class via
- * {@code SlotGroupCategories.register(MyMenu.class, ...)}. First-registration-
- * wins semantics; see {@link com.trevlar.menukit.inject.SlotGroupCategories}.
+ * <p><b>Mint your own freely.</b> A category is just a namespaced name, so a mod
+ * declares one with {@code new SlotGroupCategory("mymod", "pouch")} whenever no
+ * vanilla category would give another mod the right answer about its slots. Pick a
+ * vanilla category instead when you want to inherit its meaning — a pocket that
+ * should turn up in every inventory search declares {@link #PLAYER_INVENTORY}, and
+ * gets found by mods that have never heard of pockets. That choice is the whole
+ * interoperability decision, and it is the consumer's to make.
+ *
+ * <p>Every category, vanilla or minted, is listed by
+ * {@code SlotGroupCategories.all()}; the slots in one on an open menu are
+ * {@code SlotGroupCategories.of(menu)}. A created slot group declares its category
+ * on its {@code SlotSpec} and is published automatically. For a vanilla menu, a
+ * resolver maps the menu's slots to categories
+ * ({@code SlotGroupCategories.register(MyMenu.class, ...)}, first-registration-wins;
+ * see {@link com.trevlar.menukit.inject.SlotGroupCategories}).
+ *
+ * <p><b>Identity only, still.</b> A category says what a slot <em>is</em>, never
+ * what may be done to it. What a bulk shortcut may do is an
+ * {@linkplain com.trevlar.menukit.window.SlotOperations operation}, declared
+ * separately — though a category may carry inherent operation defaults for the
+ * groups in it.
  */
+import java.util.List;
+
 public record SlotGroupCategory(String namespace, String path) {
 
     // Vanilla 26.2 categories — exhaustive coverage per M8 Principle 11's
@@ -142,6 +160,60 @@ public record SlotGroupCategory(String namespace, String path) {
             new SlotGroupCategory("menukit", "mount_body_armor");
     public static final SlotGroupCategory MOUNT_STORAGE =
             new SlotGroupCategory("menukit", "mount_storage");
+
+    /**
+     * Every category MenuKit ships for vanilla's own slot groups. MenuKit declares
+     * these into the registry at init, so {@code SlotGroupCategories.all()} lists
+     * them alongside any a mod mints.
+     */
+    public static List<SlotGroupCategory> vanilla() {
+        return VANILLA;
+    }
+
+    private static final List<SlotGroupCategory> VANILLA = List.of(
+            PLAYER_INVENTORY,
+            PLAYER_HOTBAR,
+            PLAYER_ARMOR,
+            PLAYER_OFFHAND,
+            CHEST_STORAGE,
+            SHULKER_STORAGE,
+            DISPENSER_STORAGE,
+            HOPPER_STORAGE,
+            CRAFTING_INPUT,
+            CRAFTING_OUTPUT,
+            CRAFTER_GRID,
+            CRAFTER_RESULT,
+            FURNACE_INPUT,
+            FURNACE_FUEL,
+            FURNACE_OUTPUT,
+            ENCHANTING_INPUT,
+            ENCHANTING_LAPIS,
+            ANVIL_INPUT,
+            ANVIL_OUTPUT,
+            GRINDSTONE_INPUT,
+            GRINDSTONE_OUTPUT,
+            SMITHING_TEMPLATE,
+            SMITHING_BASE,
+            SMITHING_ADDITION,
+            SMITHING_OUTPUT,
+            LOOM_BANNER,
+            LOOM_DYE,
+            LOOM_PATTERN,
+            LOOM_OUTPUT,
+            STONECUTTER_INPUT,
+            STONECUTTER_OUTPUT,
+            CARTOGRAPHY_MAP,
+            CARTOGRAPHY_ADDITIONAL,
+            CARTOGRAPHY_OUTPUT,
+            BREWING_POTIONS,
+            BREWING_INGREDIENT,
+            BREWING_FUEL,
+            MERCHANT_PAYMENT,
+            MERCHANT_RESULT,
+            BEACON_PAYMENT,
+            MOUNT_SADDLE,
+            MOUNT_BODY_ARMOR,
+            MOUNT_STORAGE);
 
     @Override
     public String toString() {

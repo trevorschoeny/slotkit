@@ -94,31 +94,33 @@ public final class BehaviorKeys {
             id("on_take_observed"), ReactiveHook.class, ReactiveHook.NONE, Tier.CLIENT,
             KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
 
-    // ── Vanilla bulk gestures — every slot kind; default = vanilla (participates) ──
+    // ── Operations — every slot kind; default = vanilla (participates) ────────
     //
-    // Vanilla has two bulk shortcuts besides shift-click, each with a menu-level
-    // seam: double-click COLLECT (PICKUP_ALL sweeps every slot holding the carried
-    // type; AbstractContainerMenu.canTakeItemForPickAll) and DRAG FILL (QUICK_CRAFT
-    // spreads the carried stack across dragged-over slots; canDragTo). Shift-click
-    // itself is MKC's QUICK_MOVE key. These two are declared here, MK-side, so an
-    // MK-only consumer can name them on a vanilla slot (a locked slot that must not
-    // be swept, say); only the ENFORCEMENT needs MKC, which injects at those two
-    // vanilla seams. The vocabulary is open by construction: a mod that adds a
-    // gesture of its own declares its own BehaviorKey and consults it in its own
-    // gesture code — nothing here needs extending.
+    // An OPERATION is something done TO a slot in bulk, as opposed to a CATEGORY,
+    // which says what the slot IS. See {@link SlotOperations} for the split and for
+    // how a mod adds an operation of its own. Vanilla ships three: shift-click
+    // (MKC's QUICK_MOVE key), and the two below, each with a menu-level seam —
+    // double-click COLLECT (PICKUP_ALL sweeps every slot holding the carried type;
+    // AbstractContainerMenu.canTakeItemForPickAll) and DRAG FILL (QUICK_CRAFT
+    // spreads the carried stack across dragged-over slots; canDragTo).
+    //
+    // These two are declared here, MK-side, so an MK-only consumer can name them on
+    // a vanilla slot (a locked slot that must not be swept, say); only the
+    // ENFORCEMENT needs MKC, which injects at those two vanilla seams.
 
     /**
-     * Whether vanilla's double-click collect may take from this slot. SERVER tier
-     * (the seam runs in {@code doClick}, both sides; MKC enforces). Default
-     * {@link TriBool#TRUE}: vanilla sweeps it.
+     * Operation: whether vanilla's double-click collect may take from this slot.
+     * SERVER tier (the seam runs in {@code doClick}, both sides; MKC enforces).
+     * Default {@link TriBool#TRUE}: vanilla sweeps it.
      */
     public static final BehaviorKey<TriBool> COLLECT = BehaviorKey.of(
             id("collect"), TriBool.class, TriBool.TRUE, Tier.SERVER,
             KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
 
     /**
-     * Whether vanilla's drag-fill (spreading a carried stack across slots) may place
-     * into this slot. SERVER tier; MKC enforces. Default {@link TriBool#TRUE}.
+     * Operation: whether vanilla's drag-fill (spreading a carried stack across
+     * slots) may place into this slot. SERVER tier; MKC enforces. Default
+     * {@link TriBool#TRUE}.
      */
     public static final BehaviorKey<TriBool> DRAG_FILL = BehaviorKey.of(
             id("drag_fill"), TriBool.class, TriBool.TRUE, Tier.SERVER,

@@ -20,7 +20,7 @@
     "MKCActingPlayerMixin",
     "MKCHopperGatingMixin",
     "MKCDispenserGatingMixin",
-    "MKCBulkGestureMixin"
+    "MKCOperationMixin"
   ],
   "client": [
     "MKCCreativeSlotParkMixin",

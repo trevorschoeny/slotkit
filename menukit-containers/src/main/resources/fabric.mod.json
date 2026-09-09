@@ -20,8 +20,8 @@
     "menukit": ">=${version}"
   },
   "breaks": {
-    "inventoryplus": "<1.3.1",
-    "inventorymax": "<1.0.1",
+    "inventoryplus": "<1.5.0",
+    "inventorymax": "<1.0.2",
     "hivesight": "<1.0.1",
     "offshore": "<1.0.1",
     "keybindery": "<1.0.3"

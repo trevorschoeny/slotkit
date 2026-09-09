@@ -11,9 +11,13 @@ import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Library-owned registry of per-menu-class {@link SlotGroupResolver}s.
@@ -104,6 +108,9 @@ public final class SlotGroupCategories {
      * @param resolver  the resolver
      * @param <T>       the menu type
      */
+    /** Every category anyone has declared. Set semantics; SlotGroupCategory is a record. */
+    private static final Set<SlotGroupCategory> DECLARED = ConcurrentHashMap.newKeySet();
+
     public static <T extends AbstractContainerMenu> void register(
             Class<T> menuClass, SlotGroupResolver resolver) {
         SlotGroupResolver existing = RESOLVERS.get(menuClass);
@@ -167,6 +174,35 @@ public final class SlotGroupCategories {
     public static void extendEvery(SlotGroupResolver resolver) {
         UNIVERSAL.add(resolver);
         LOGGER.info("[SlotGroupCategories] universal resolver #{} registered", UNIVERSAL.size());
+    }
+
+    /**
+     * Publishes {@code category} to the registry so another mod can find it through
+     * {@link #all()} without a menu open. Idempotent.
+     *
+     * <p>MenuKit declares its own vanilla constants at init, and MenuKit-Containers
+     * declares a created group's category when the group registers, so a consumer
+     * that mints a category only calls this when it wants the category listed before
+     * anything is registered against it.
+     */
+    public static void declare(SlotGroupCategory category) {
+        DECLARED.add(Objects.requireNonNull(category, "category"));
+    }
+
+    /**
+     * Every category the registry knows: MenuKit's vanilla constants, every category
+     * a created slot group declared, and anything a mod {@link #declare}d. Sorted by
+     * namespace then path so the listing is stable.
+     *
+     * <p>This is the discovery half of the registry — "what kinds of slot exist?" —
+     * and it needs no open menu. The other half is per-menu: {@link #of} for the
+     * slots in each category right now, {@link #categoriesBySlot} for the inverse.
+     */
+    public static List<SlotGroupCategory> all() {
+        List<SlotGroupCategory> out = new ArrayList<>(DECLARED);
+        out.sort(Comparator.comparing(SlotGroupCategory::namespace)
+                .thenComparing(SlotGroupCategory::path));
+        return Collections.unmodifiableList(out);
     }
 
     /**

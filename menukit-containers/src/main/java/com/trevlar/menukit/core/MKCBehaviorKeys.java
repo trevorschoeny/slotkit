@@ -42,8 +42,8 @@ public final class MKCBehaviorKeys {
             KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
 
     /**
-     * How a created slot participates in shift-click (quick-move) routing on a
-     * foreign menu — exports, imports, both, or neither. Server-tier, created
+     * Operation: how a created slot participates in shift-click (quick-move) routing
+     * on a foreign menu — exports, imports, both, or neither. Server-tier, created
      * slots. Default {@link QuickMoveParticipation#BOTH} (a created slot both
      * vacuums and yields shift-clicks unless told otherwise).
      */
