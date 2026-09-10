@@ -172,3 +172,23 @@ javadoc {
     options.encoding = 'UTF-8'
     options.windowTitle = "MenuKit ${project.version}"
 }
+
+// ci-cd.md stage 2: Containers and MenuKit are one release off one version property, so
+// Containers pins MenuKit exactly rather than to a range. The literal ${version} below is
+// expanded by processResources to that same version, keeping one source of truth. An exact
+// Fabric predicate ignores build metadata, so a +26.3 rebuild of the pair still matches.
+tasks.register('verifyMenuKitRange') {
+    def src = file('src/main/resources/fabric.mod.json')
+    inputs.file src
+    doLast {
+        def declared = (new groovy.json.JsonSlurper().parse(src).depends ?: [:])['menukit']?.toString()
+        if (declared != '${version}') {
+            throw new GradleException(
+                "fabric.mod.json: 'menukit' is '${declared}', expected the literal '\${version}'. " +
+                "Containers ships in lockstep with MenuKit off one version property and pins it " +
+                "exactly. See guidelines/ci-cd.md, 'MenuKit version pinning'.")
+        }
+        println "verifyMenuKitRange: menukit pinned exactly (lockstep with MenuKit)"
+    }
+}
+build.dependsOn verifyMenuKitRange
