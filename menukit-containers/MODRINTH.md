@@ -24,7 +24,7 @@ dependencies {
 ```
 
 ```json
-"depends": { "menukit": ">=5.0.0", "menukit-containers": ">=5.0.0" }
+"depends": { "menukit": ">=5.0.0 <6.0.0", "menukit-containers": ">=5.0.0 <6.0.0" }
 ```
 
 ## Docs
