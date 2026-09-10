@@ -324,7 +324,7 @@ public class MKCHandledScreen extends AbstractContainerScreen<MKCScreenHandler> 
         java.util.List<Panel> panels = menu.getPanels();
         if (MainRegionLayout.hasMain(panels)) {
             // Movement ③ — the screen names a MAIN panel = its frame; every other
-            // panel anchors to it via MenuRegion through the SAME RegionMath path
+            // panel anchors to it via OutsideRegion through the SAME RegionMath path
             // vanilla-injected panels take against the menu frame. The bounds are
             // leftPos-relative (main at 0,0); imageWidth/Height = the main frame,
             // and recenter() recomputes the SAME leftPos/topPos from them (origin

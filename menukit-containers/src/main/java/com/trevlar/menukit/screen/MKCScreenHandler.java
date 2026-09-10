@@ -570,13 +570,13 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
 
         /**
          * Anchors this panel to the MAIN panel via {@code region} (Movement ③) —
-         * the same {@link MenuRegion} vocabulary vanilla-injected panels use against
+         * the same {@link OutsideRegion} vocabulary vanilla-injected panels use against
          * the menu frame (RIGHT_ALIGN_TOP, BOTTOM_CENTER, …), edge-aware and clamped
          * on-screen. This replaces the retired relative verbs: a side group that was
-         * {@code rightOf(MAIN)} is now {@code region(MenuRegion.RIGHT_ALIGN_TOP)},
+         * {@code rightOf(MAIN)} is now {@code region(OutsideRegion.RIGHT_ALIGN_TOP)},
          * a player inventory {@code below(MAIN)} is {@code region(BOTTOM_CENTER)}, etc.
          */
-        public PanelBuilder region(MenuRegion region) {
+        public PanelBuilder region(OutsideRegion region) {
             this.position = PanelPosition.region(region);
             return this;
         }

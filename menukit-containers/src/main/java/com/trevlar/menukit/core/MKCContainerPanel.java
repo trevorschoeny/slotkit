@@ -36,7 +36,7 @@ import java.util.function.Supplier;
  * <pre>{@code
  * // Consumer COMMON initializer (runs both sides):
  * MKCContainerPanel.define("inventory-plus:pockets")
- *     .at(MenuRegion.LEFT_ALIGN_TOP, 7)
+ *     .at(OutsideRegion.LEFT_ALIGN_TOP, 7)
  *     .style(PanelStyle.RAISED)
  *     .parity(ScreenMatcher.all())                       // default; opt out per screen
  *     .chrome(() -> List.of(new Button(...)))             // client-only, built lazily
@@ -93,7 +93,7 @@ public final class MKCContainerPanel {
      *  {@code placement} (region anchor) / {@code pixelOrigin} (per-frame
      *  pixel-precision supplier, §0057 Revision) is non-null. */
     private record Definition(String panelId,
-                              @Nullable RegionAnchor<MenuRegion> placement,
+                              @Nullable RegionAnchor<OutsideRegion> placement,
                               @Nullable Supplier<ScreenOrigin> pixelOrigin,
                               int padding,
                               PanelStyle style,
@@ -113,7 +113,7 @@ public final class MKCContainerPanel {
     /** Fluent configuration; terminates in {@code register()}. */
     public static final class Builder {
         private final String panelId;
-        private @Nullable RegionAnchor<MenuRegion> placement = null;   // one of placement/pixelOrigin required
+        private @Nullable RegionAnchor<OutsideRegion> placement = null;   // one of placement/pixelOrigin required
         private @Nullable Supplier<ScreenOrigin> pixelOrigin = null;   // §0057 Revision — the precision escape
         private int padding = ScreenPanelAdapter.DEFAULT_PADDING;
         private PanelStyle style = PanelStyle.NONE;
@@ -130,14 +130,14 @@ public final class MKCContainerPanel {
         }
 
         /** Region placement + explicit content padding (default-priority stacking). */
-        public Builder at(MenuRegion region, int padding) {
+        public Builder at(OutsideRegion region, int padding) {
             this.placement = new RegionAnchor<>(region, RegionAnchor.DEFAULT_PRIORITY);
             this.padding = padding;
             return this;
         }
 
         /** Region placement with an explicit stacking priority + padding. */
-        public Builder at(RegionAnchor<MenuRegion> anchor, int padding) {
+        public Builder at(RegionAnchor<OutsideRegion> anchor, int padding) {
             this.placement = anchor;
             this.padding = padding;
             return this;

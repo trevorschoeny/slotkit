@@ -8,8 +8,8 @@ import com.trevlar.menukit.core.RegionAnchor;
 import com.trevlar.menukit.core.RegionConstants;
 import com.trevlar.menukit.core.RenderContext;
 import com.trevlar.menukit.core.SlotGroupCategory;
-import com.trevlar.menukit.core.SlotGroupRegion;
-import com.trevlar.menukit.core.SlotGroupRegionMath;
+import com.trevlar.menukit.core.OutsideRegion;
+import com.trevlar.menukit.core.RegionMath;
 import com.trevlar.menukit.window.ClientWindowVisibility;
 
 import net.minecraft.client.Minecraft;
@@ -25,7 +25,7 @@ import java.util.Optional;
  * Adapter that anchors a {@link Panel} to a slot group's bounding box.
  * Parallel to {@link ScreenPanelAdapter} in shape — same background-render +
  * content-padding + origin + render + click machinery — but the bounds
- * input is a {@link SlotGroupBounds} (the bounding box of a category's
+ * input is a {@link Reference} (the bounding box of a category's
  * slots within a screen) rather than a screen frame.
  *
  * <p>See {@code Design Docs/Phase 12.5/M8_FOUR_CONTEXT_MODEL.md} §5 for
@@ -53,7 +53,7 @@ public final class SlotGroupPanelAdapter {
     public static final int DEFAULT_PADDING = ScreenPanelAdapter.DEFAULT_PADDING;
 
     private final Panel panel;
-    private final SlotGroupRegion region;
+    private final OutsideRegion region;
     private final int padding;
     private final int priority;
 
@@ -62,10 +62,10 @@ public final class SlotGroupPanelAdapter {
 
     // ── Constructors ────────────────────────────────────────────────────
     //
-    // Phase 5 (B2) — RegionAnchor<SlotGroupRegion> overloads added so
-    // SlotGroupRegion.priority(int) reaches a real adapter/registry pathway,
-    // mirroring ScreenPanelAdapter(RegionAnchor<MenuRegion>) /
-    // VanillaScreenPanelAdapter(RegionAnchor<ScreenRegion>). All four
+    // Phase 5 (B2) — RegionAnchor<OutsideRegion> overloads added so
+    // OutsideRegion.priority(int) reaches a real adapter/registry pathway,
+    // mirroring ScreenPanelAdapter(RegionAnchor<OutsideRegion>) /
+    // VanillaScreenPanelAdapter(RegionAnchor<InsideRegion>). All four
     // region enums now behave identically.
 
     /**
@@ -82,20 +82,20 @@ public final class SlotGroupPanelAdapter {
      * who want a different value pass it via the explicit-padding
      * constructor overload.
      */
-    public SlotGroupPanelAdapter(Panel panel, SlotGroupRegion region) {
+    public SlotGroupPanelAdapter(Panel panel, OutsideRegion region) {
         this(panel, region, panel.interiorPadding(), RegionAnchor.DEFAULT_PRIORITY);
     }
 
     /** Constructor with explicit content padding. Uses
      *  {@link RegionAnchor#DEFAULT_PRIORITY} for sibling ordering. */
-    public SlotGroupPanelAdapter(Panel panel, SlotGroupRegion region, int padding) {
+    public SlotGroupPanelAdapter(Panel panel, OutsideRegion region, int padding) {
         this(panel, region, padding, RegionAnchor.DEFAULT_PRIORITY);
     }
 
     /**
      * Region-aware constructor accepting a {@link RegionAnchor} — a slot-group
      * region paired with an explicit stacking priority (e.g.
-     * {@code SlotGroupRegion.RIGHT_ALIGN_TOP.priority(50)}). Use when sibling
+     * {@code OutsideRegion.RIGHT_ALIGN_TOP.priority(50)}). Use when sibling
      * slot-group panels in the same (category, region) pair need deterministic
      * ordering relative to each other.
      *
@@ -104,18 +104,18 @@ public final class SlotGroupPanelAdapter {
      * {@link ScreenPanelAdapter}/{@link VanillaScreenPanelAdapter}
      * {@code RegionAnchor} constructors.
      */
-    public SlotGroupPanelAdapter(Panel panel, RegionAnchor<SlotGroupRegion> anchor) {
+    public SlotGroupPanelAdapter(Panel panel, RegionAnchor<OutsideRegion> anchor) {
         this(panel, anchor.region(), panel.interiorPadding(), anchor.priority());
     }
 
     /** Region-aware constructor with both explicit padding and priority. */
-    public SlotGroupPanelAdapter(Panel panel, RegionAnchor<SlotGroupRegion> anchor,
+    public SlotGroupPanelAdapter(Panel panel, RegionAnchor<OutsideRegion> anchor,
                                   int padding) {
         this(panel, anchor.region(), padding, anchor.priority());
     }
 
     /** Internal canonical constructor — public overloads delegate here. */
-    private SlotGroupPanelAdapter(Panel panel, SlotGroupRegion region, int padding,
+    private SlotGroupPanelAdapter(Panel panel, OutsideRegion region, int padding,
                                    int priority) {
         this.panel = panel;
         this.region = region;
@@ -197,7 +197,7 @@ public final class SlotGroupPanelAdapter {
     // ── Accessors ──────────────────────────────────────────────────────
 
     public Panel getPanel() { return panel; }
-    public SlotGroupRegion getRegion() { return region; }
+    public OutsideRegion getRegion() { return region; }
     public int getPadding() { return padding; }
 
     /** Returns declared target groups; null before {@link #on} is called. */
@@ -230,14 +230,14 @@ public final class SlotGroupPanelAdapter {
      * bounds anchored to {@code group}, or empty when the panel is
      * invisible or the region overflows the slot group's extent.
      */
-    public Optional<ScreenOrigin> getOrigin(SlotGroupBounds bounds,
+    public Optional<ScreenOrigin> getOrigin(Reference bounds,
                                              SlotGroupId group,
                                              AbstractContainerScreen<?> screen) {
         if (!ClientWindowVisibility.panelShown(panel)) return Optional.empty();
         // Pass 3 — feed the screen-edge content-width budget BEFORE measuring,
         // so a slot-group-anchored panel wraps rather than sailing off-screen.
         // Single chokepoint: both render() and the input path call getOrigin.
-        int availOuter = SlotGroupRegionMath.availableSlotGroupWidth(
+        int availOuter = RegionMath.availableMenuWidth(
                 region, bounds, guiScaledWidth(), RegionConstants.SCREEN_EDGE_MARGIN);
         panel.setAvailableContentWidth(availOuter - 2 * padding);
         int pw = panel.getWidth() + 2 * padding;
@@ -246,7 +246,7 @@ public final class SlotGroupPanelAdapter {
         // Stale reference after unregister() — skip this panel this frame.
         if (prefix == RegionRegistry.NOT_REGISTERED) return Optional.empty();
         Optional<ScreenOrigin> result =
-                SlotGroupRegionMath.resolveSlotGroup(region, bounds, pw, ph, prefix,
+                RegionMath.resolveMenu(region, bounds, pw, ph, prefix,
                         guiScaledWidth(), guiScaledHeight());
         if (result.isEmpty()) {
             SlotGroupRegionRegistry.warnSlotGroupOverflowOnce(panel, group, region,
@@ -263,7 +263,7 @@ public final class SlotGroupPanelAdapter {
      * {@link SlotGroupPanelRegistry}'s dispatch — once per matching (adapter,
      * category) pair per frame.
      */
-    public void render(GuiGraphicsExtractor graphics, SlotGroupBounds bounds,
+    public void render(GuiGraphicsExtractor graphics, Reference bounds,
                        SlotGroupId group,
                        int mouseX, int mouseY,
                        AbstractContainerScreen<?> screen) {
@@ -303,7 +303,7 @@ public final class SlotGroupPanelAdapter {
      * hit-test logic as {@link ScreenPanelAdapter#mouseClicked}. Returns
      * whether any element consumed the click.
      */
-    public boolean mouseClicked(SlotGroupBounds bounds, SlotGroupId group,
+    public boolean mouseClicked(Reference bounds, SlotGroupId group,
                                 double mouseX, double mouseY, int button,
                                 AbstractContainerScreen<?> screen) {
         Optional<ScreenOrigin> originOpt = getOrigin(bounds, group, screen);

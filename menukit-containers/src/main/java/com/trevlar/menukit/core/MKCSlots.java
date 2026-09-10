@@ -115,7 +115,7 @@ import java.util.function.BooleanSupplier;
  * // Client init (ONCE, NOT per menu construction) — wire the PRESENTATION half.
  * // register() above added the synced slot data; this draws the slots:
  * MKCSlots.renderGroup("inventory-plus:pockets", "pockets", 3, 3,
- *         MenuRegion.RIGHT_ALIGN_TOP, ScreenPanelAdapter.DEFAULT_PADDING,
+ *         OutsideRegion.RIGHT_ALIGN_TOP, ScreenPanelAdapter.DEFAULT_PADDING,
  *         ScreenMatcher.all());
  * }</pre>
  */
@@ -159,7 +159,7 @@ public final class MKCSlots {
      *
      * <p>{@code register()} adds only the synced slot DATA. To make the slots
      * actually draw + take input, call
-     * {@link MKCSlots#renderGroup(String, String, int, int, MenuRegion, int, ScreenMatcher)}
+     * {@link MKCSlots#renderGroup(String, String, int, int, OutsideRegion, int, ScreenMatcher)}
      * ONCE at client init with the same {@code panelId} / {@code groupId} —
      * that is the PRESENTATION half this handle's {@code register()} omits.
      */
@@ -187,7 +187,7 @@ public final class MKCSlots {
      * frame, so one registration works on every screen the slots appear on.
      */
     public static void renderGroup(String panelId, String groupId, int count, int columns,
-            RegionAnchor<MenuRegion> anchor, int padding, ScreenMatcher screens) {
+            RegionAnchor<OutsideRegion> anchor, int padding, ScreenMatcher screens) {
         renderGroup(panelId, groupId, count, columns, anchor, padding, screens, /*tooltip*/ null);
     }
 
@@ -201,7 +201,7 @@ public final class MKCSlots {
      * {@code null} for no tooltip.
      */
     public static void renderGroup(String panelId, String groupId, int count, int columns,
-            RegionAnchor<MenuRegion> anchor, int padding, ScreenMatcher screens,
+            RegionAnchor<OutsideRegion> anchor, int padding, ScreenMatcher screens,
             @Nullable Component tooltip) {
         // One SlotElement per logical slot, laid out from the panel origin on the
         // standard 18px pitch — matching the seed layout register() handed each
@@ -244,20 +244,20 @@ public final class MKCSlots {
     }
 
     /**
-     * Bare-{@link MenuRegion} convenience overload of
+     * Bare-{@link OutsideRegion} convenience overload of
      * {@link #renderGroup(String, String, int, int, RegionAnchor, int, ScreenMatcher)} —
      * wraps the region in a {@link RegionAnchor} at {@link RegionAnchor#DEFAULT_PRIORITY}
      * for consumers who don't care about sibling stacking order within the region.
      */
     public static void renderGroup(String panelId, String groupId, int count, int columns,
-            MenuRegion region, int padding, ScreenMatcher screens) {
+            OutsideRegion region, int padding, ScreenMatcher screens) {
         renderGroup(panelId, groupId, count, columns,
                 new RegionAnchor<>(region, RegionAnchor.DEFAULT_PRIORITY), padding, screens);
     }
 
-    /** Bare-{@link MenuRegion} convenience overload that also carries a per-slot tooltip. */
+    /** Bare-{@link OutsideRegion} convenience overload that also carries a per-slot tooltip. */
     public static void renderGroup(String panelId, String groupId, int count, int columns,
-            MenuRegion region, int padding, ScreenMatcher screens, @Nullable Component tooltip) {
+            OutsideRegion region, int padding, ScreenMatcher screens, @Nullable Component tooltip) {
         renderGroup(panelId, groupId, count, columns,
                 new RegionAnchor<>(region, RegionAnchor.DEFAULT_PRIORITY), padding, screens, tooltip);
     }
