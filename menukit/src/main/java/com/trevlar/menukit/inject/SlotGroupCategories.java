@@ -13,6 +13,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -92,7 +94,7 @@ public final class SlotGroupCategories {
     // contributions MERGE into an already-present category rather than being
     // dropped — a created group declared PLAYER_INVENTORY is player inventory,
     // and the vanilla slots of that category stay ahead of it in the list.
-    private static final List<SlotGroupResolver> UNIVERSAL = new ArrayList<>();
+    private static final List<CreatedGroupResolver> UNIVERSAL = new ArrayList<>();
 
     /**
      * Registers a resolver for a concrete menu class. First registration
@@ -167,11 +169,13 @@ public final class SlotGroupCategories {
      * gains the resolver's slots appended after the existing ones; a new category is
      * added. This is how created slots (MenuKit-Containers) publish their groups —
      * they sit on whatever menu the player opened, so no menu class names them.
-     * Library-internal seat; consumers declare a created group's category on its
-     * {@code SlotSpec} and never call this.
+     * Each contribution becomes its own {@link ResolvedSlotGroup}, never folded into
+     * the category it declares — several created groups can share one category and
+     * they do not share a bounding box. Library-internal seat; consumers declare a
+     * created group's category on its {@code SlotSpec} and never call this.
      */
     @ApiStatus.Internal
-    public static void extendEvery(SlotGroupResolver resolver) {
+    public static void extendEvery(CreatedGroupResolver resolver) {
         UNIVERSAL.add(resolver);
         LOGGER.info("[SlotGroupCategories] universal resolver #{} registered", UNIVERSAL.size());
     }
@@ -224,86 +228,113 @@ public final class SlotGroupCategories {
     }
 
     /**
-     * Resolves the given menu instance's slot groups. Exact-class match on
-     * {@code menu.getClass()} for the primary and extensions, then every
-     * universal resolver ({@link #extendEvery}); returns an empty map for menus
-     * where nothing resolves.
+     * Every slot group on {@code menu}, each with its own identity and its own
+     * slots — the ANCHOR view, the one with geometry in it. A panel anchors to one
+     * of these; a group has a bounding box and a category does not.
      *
-     * <p>Runs the primary resolver first (if any), then each extension in
-     * registration order. Extension-emitted categories that collide with
-     * the accumulated output are dropped with a warn log per
-     * {@link #extend}'s collision policy.
+     * <p>Resolution order: the primary resolver for {@code menu.getClass()} (if
+     * any), then each extension in registration order, then every universal
+     * resolver ({@link #extendEvery}). Each vanilla category yields one group;
+     * an extension category that collides with an already-claimed one is dropped
+     * with a warn log per {@link #extend}'s policy. Each created contribution
+     * yields its own group.
      *
-     * <p>Called per-screen-open from
-     * {@link ScreenPanelRegistry#onScreenInit}. The result is effectively
-     * cached for the screen's lifetime.
+     * <p>Empty for menus where nothing resolves.
      */
-    public static Map<SlotGroupCategory, List<Slot>> of(AbstractContainerMenu menu) {
-        if (menu == null) return Map.of();
+    public static List<ResolvedSlotGroup> groups(AbstractContainerMenu menu) {
+        if (menu == null) return List.of();
         Class<?> menuClass = menu.getClass();
         SlotGroupResolver primary = RESOLVERS.get(menuClass);
         List<SlotGroupResolver> extensions = EXTENSIONS.getOrDefault(menuClass, List.of());
 
-        if (primary == null && extensions.isEmpty() && UNIVERSAL.isEmpty()) return Map.of();
+        if (primary == null && extensions.isEmpty() && UNIVERSAL.isEmpty()) return List.of();
 
-        // Resolvers speak in indices (the consumer never holds a raw Slot); the
-        // library dereferences index → Slot here, where it already has the menu.
-        Map<SlotGroupCategory, List<Slot>> out = new HashMap<>();
+        List<ResolvedSlotGroup> out = new ArrayList<>();
+        Set<SlotGroupCategory> claimed = new HashSet<>();
         if (primary != null) {
-            deref(menu, primary.resolve(menu), out, Merge.DROP_COLLISION_SILENT);
+            addVanillaGroups(menu, primary.resolve(menu), out, claimed, false);
         }
         for (SlotGroupResolver ext : extensions) {
-            deref(menu, ext.resolve(menu), out, Merge.DROP_COLLISION_WARN);
+            addVanillaGroups(menu, ext.resolve(menu), out, claimed, true);
         }
-        for (SlotGroupResolver universal : UNIVERSAL) {
-            deref(menu, universal.resolve(menu), out, Merge.APPEND);
+        for (CreatedGroupResolver universal : UNIVERSAL) {
+            addCreatedGroups(menu, universal.resolve(menu), out);
         }
-        return Map.copyOf(out);
+        return List.copyOf(out);
+    }
+
+    /**
+     * Every category on {@code menu} with its slots — the SEARCH view, which unions
+     * a category's groups because "find me every inventory slot" wants the union.
+     * Vanilla slots first, created ones appended, never listed twice.
+     *
+     * <p>For geometry use {@link #groups} instead: a category's union spans
+     * scattered rectangles, so its bounding box means nothing.
+     */
+    public static Map<SlotGroupCategory, List<Slot>> of(AbstractContainerMenu menu) {
+        List<ResolvedSlotGroup> resolved = groups(menu);
+        if (resolved.isEmpty()) return Map.of();
+        Map<SlotGroupCategory, List<Slot>> acc = new LinkedHashMap<>();
+        for (ResolvedSlotGroup group : resolved) {
+            List<Slot> slots = acc.computeIfAbsent(group.category(), k -> new ArrayList<>());
+            for (Slot slot : group.slots()) {
+                if (!containsIdentity(slots, slot)) slots.add(slot);
+            }
+        }
+        Map<SlotGroupCategory, List<Slot>> frozen = new LinkedHashMap<>();
+        acc.forEach((k, v) -> frozen.put(k, List.copyOf(v)));
+        return Collections.unmodifiableMap(frozen);
+    }
+
+    /**
+     * One group per category a vanilla resolver contributes. A category already
+     * claimed is dropped — an extension may add categories, never redefine one.
+     */
+    private static void addVanillaGroups(AbstractContainerMenu menu,
+            Map<SlotGroupCategory, int[]> indices, List<ResolvedSlotGroup> out,
+            Set<SlotGroupCategory> claimed, boolean warnOnCollision) {
+        for (Map.Entry<SlotGroupCategory, int[]> entry : indices.entrySet()) {
+            SlotGroupCategory category = entry.getKey();
+            if (claimed.contains(category)) {
+                if (warnOnCollision) {
+                    LOGGER.warn("[SlotGroupCategories] extension for {} tried to redefine " +
+                            "category {} — dropping (earlier entry wins)",
+                            menu.getClass().getName(), category);
+                }
+                continue;
+            }
+            List<Slot> slots = deref(menu, entry.getValue());
+            if (slots.isEmpty()) continue;      // absent, per the resolver contract
+            claimed.add(category);
+            out.add(new ResolvedSlotGroup(SlotGroupId.vanilla(category), category, slots));
+        }
+    }
+
+    /** One group per created contribution, named by its own declaration. */
+    private static void addCreatedGroups(AbstractContainerMenu menu,
+            List<CreatedGroupResolver.Contribution> contributions, List<ResolvedSlotGroup> out) {
+        for (CreatedGroupResolver.Contribution c : contributions) {
+            List<Slot> slots = deref(menu, c.slotIndices());
+            if (slots.isEmpty()) continue;
+            out.add(new ResolvedSlotGroup(
+                    SlotGroupId.created(c.panelId(), c.groupId()), c.category(), slots));
+        }
+    }
+
+    /** Index array to slots, skipping out-of-range indices defensively. */
+    private static List<Slot> deref(AbstractContainerMenu menu, int[] indices) {
+        if (indices == null || indices.length == 0) return List.of();
+        int slotCount = menu.slots.size();
+        List<Slot> slots = new ArrayList<>(indices.length);
+        for (int i : indices) {
+            if (i < 0 || i >= slotCount) continue;
+            slots.add(menu.slots.get(i));
+        }
+        return slots;
     }
 
     private static boolean containsIdentity(List<Slot> slots, Slot slot) {
         for (Slot s : slots) if (s == slot) return true;
         return false;
-    }
-
-    /** How a resolver's category that the menu already resolved is treated. */
-    private enum Merge { DROP_COLLISION_SILENT, DROP_COLLISION_WARN, APPEND }
-
-    /**
-     * Dereferences a resolver's category→index-array map onto {@code out} as
-     * category→{@code List<Slot>}, applying the additive collision policy: an
-     * extension category that collides with an already-accumulated one is dropped
-     * with a warn log (earlier entry wins). Out-of-range and empty index arrays
-     * are skipped defensively, matching {@link SlotGroupResolver}'s contract that
-     * categories the menu doesn't contain are simply absent.
-     */
-    private static void deref(AbstractContainerMenu menu,
-            Map<SlotGroupCategory, int[]> indices,
-            Map<SlotGroupCategory, List<Slot>> out, Merge merge) {
-        int slotCount = menu.slots.size();
-        for (Map.Entry<SlotGroupCategory, int[]> entry : indices.entrySet()) {
-            boolean present = out.containsKey(entry.getKey());
-            if (present && merge != Merge.APPEND) {
-                if (merge == Merge.DROP_COLLISION_WARN) {
-                    LOGGER.warn("[SlotGroupCategories] extension for {} tried to redefine " +
-                            "category {} — dropping (earlier entry wins)",
-                            menu.getClass().getName(), entry.getKey());
-                }
-                continue;
-            }
-            int[] idx = entry.getValue();
-            if (idx == null || idx.length == 0) continue;   // empty omitted per contract
-            List<Slot> slots = new ArrayList<>(idx.length);
-            if (present) slots.addAll(out.get(entry.getKey()));   // APPEND: existing first
-            for (int i : idx) {
-                if (i < 0 || i >= slotCount) continue;
-                Slot slot = menu.slots.get(i);
-                // APPEND never lists a slot twice: a consumer's own class resolver may
-                // already name a created slot under the same category it declared.
-                if (present && containsIdentity(slots, slot)) continue;
-                slots.add(slot);
-            }
-            if (!slots.isEmpty()) out.put(entry.getKey(), List.copyOf(slots));
-        }
     }
 }

@@ -57,8 +57,8 @@ public final class SlotGroupPanelAdapter {
     private final int padding;
     private final int priority;
 
-    /** Declared targets; null until {@link #on} is called. */
-    private @Nullable List<SlotGroupCategory> targets = null;
+    /** Declared targets, as GROUP identities; null until {@link #on} is called. */
+    private @Nullable List<SlotGroupId> targets = null;
 
     // ── Constructors ────────────────────────────────────────────────────
     //
@@ -140,20 +140,40 @@ public final class SlotGroupPanelAdapter {
      * {@link IllegalStateException}.
      */
     public SlotGroupPanelAdapter on(SlotGroupCategory... categories) {
-        if (targets != null) {
-            throw new IllegalStateException(
-                    "SlotGroupPanelAdapter for panel '" + panel.getId() +
-                    "' already declared targeting. Call .on(...) exactly once.");
-        }
         if (categories.length == 0) {
             throw new IllegalArgumentException(
                     "SlotGroupPanelAdapter for panel '" + panel.getId() +
                     "': .on() requires at least one category. SlotGroupContext " +
                     "has no .onAny() — 'any slot group' isn't a meaningful target.");
         }
-        this.targets = List.of(categories);
-        for (SlotGroupCategory category : this.targets) {
-            SlotGroupRegionRegistry.registerSlotGroup(panel, category, region, padding, priority);
+        SlotGroupId[] ids = new SlotGroupId[categories.length];
+        for (int i = 0; i < categories.length; i++) ids[i] = SlotGroupId.vanilla(categories[i]);
+        return onGroup(ids);
+    }
+
+    /**
+     * Anchors to specific slot GROUPS, including created ones. The
+     * {@link #on(SlotGroupCategory...)} overload is sugar for the vanilla group of
+     * each category; this is how a panel anchors to a group MenuKit-Containers
+     * created, whose identity is its {@code (panelId, groupId)}.
+     *
+     * <p>Call exactly once per adapter, like {@code on}. Duplicate declarations
+     * throw {@link IllegalStateException}.
+     */
+    public SlotGroupPanelAdapter onGroup(SlotGroupId... groups) {
+        if (targets != null) {
+            throw new IllegalStateException(
+                    "SlotGroupPanelAdapter for panel '" + panel.getId() +
+                    "' already declared targeting. Call .on(...) exactly once.");
+        }
+        if (groups.length == 0) {
+            throw new IllegalArgumentException(
+                    "SlotGroupPanelAdapter for panel '" + panel.getId() +
+                    "': .onGroup() requires at least one group.");
+        }
+        this.targets = List.of(groups);
+        for (SlotGroupId id : this.targets) {
+            SlotGroupRegionRegistry.registerSlotGroup(panel, id, region, padding, priority);
         }
         SlotGroupPanelRegistry.markTargetingDeclared(this);
         return this;
@@ -180,15 +200,15 @@ public final class SlotGroupPanelAdapter {
     public SlotGroupRegion getRegion() { return region; }
     public int getPadding() { return padding; }
 
-    /** Returns declared targets; null before {@link #on} is called. */
-    public @Nullable List<SlotGroupCategory> getTargets() { return targets; }
+    /** Returns declared target groups; null before {@link #on} is called. */
+    public @Nullable List<SlotGroupId> getTargets() { return targets; }
 
     public boolean isTargetingDeclared() { return targets != null; }
 
-    /** True iff {@code category} is one of this adapter's declared targets. */
-    public boolean matches(SlotGroupCategory category) {
+    /** True iff {@code group} is one of this adapter's declared targets. */
+    public boolean matches(SlotGroupId group) {
         if (targets == null) return false;
-        return targets.contains(category);
+        return targets.contains(group);
     }
 
     /** GUI-scaled window width (Pass 3 screen-edge reference); large fallback
@@ -207,11 +227,11 @@ public final class SlotGroupPanelAdapter {
 
     /**
      * Returns the panel's screen-space origin for the given slot-group
-     * bounds anchored in {@code category}, or empty when the panel is
+     * bounds anchored to {@code group}, or empty when the panel is
      * invisible or the region overflows the slot group's extent.
      */
     public Optional<ScreenOrigin> getOrigin(SlotGroupBounds bounds,
-                                             SlotGroupCategory category,
+                                             SlotGroupId group,
                                              AbstractContainerScreen<?> screen) {
         if (!ClientWindowVisibility.panelShown(panel)) return Optional.empty();
         // Pass 3 — feed the screen-edge content-width budget BEFORE measuring,
@@ -222,14 +242,14 @@ public final class SlotGroupPanelAdapter {
         panel.setAvailableContentWidth(availOuter - 2 * padding);
         int pw = panel.getWidth() + 2 * padding;
         int ph = panel.getHeight() + 2 * padding;
-        int prefix = SlotGroupRegionRegistry.axialPrefix(panel, category, region);
+        int prefix = SlotGroupRegionRegistry.axialPrefix(panel, group, region);
         // Stale reference after unregister() — skip this panel this frame.
         if (prefix == RegionRegistry.NOT_REGISTERED) return Optional.empty();
         Optional<ScreenOrigin> result =
                 SlotGroupRegionMath.resolveSlotGroup(region, bounds, pw, ph, prefix,
                         guiScaledWidth(), guiScaledHeight());
         if (result.isEmpty()) {
-            SlotGroupRegionRegistry.warnSlotGroupOverflowOnce(panel, category, region,
+            SlotGroupRegionRegistry.warnSlotGroupOverflowOnce(panel, group, region,
                     pw, ph, prefix, bounds);
         }
         return result;
@@ -244,10 +264,10 @@ public final class SlotGroupPanelAdapter {
      * category) pair per frame.
      */
     public void render(GuiGraphicsExtractor graphics, SlotGroupBounds bounds,
-                       SlotGroupCategory category,
+                       SlotGroupId group,
                        int mouseX, int mouseY,
                        AbstractContainerScreen<?> screen) {
-        Optional<ScreenOrigin> originOpt = getOrigin(bounds, category, screen);
+        Optional<ScreenOrigin> originOpt = getOrigin(bounds, group, screen);
         if (originOpt.isEmpty()) return;
         ScreenOrigin origin = originOpt.get();
 
@@ -283,10 +303,10 @@ public final class SlotGroupPanelAdapter {
      * hit-test logic as {@link ScreenPanelAdapter#mouseClicked}. Returns
      * whether any element consumed the click.
      */
-    public boolean mouseClicked(SlotGroupBounds bounds, SlotGroupCategory category,
+    public boolean mouseClicked(SlotGroupBounds bounds, SlotGroupId group,
                                 double mouseX, double mouseY, int button,
                                 AbstractContainerScreen<?> screen) {
-        Optional<ScreenOrigin> originOpt = getOrigin(bounds, category, screen);
+        Optional<ScreenOrigin> originOpt = getOrigin(bounds, group, screen);
         if (originOpt.isEmpty()) return false;
         ScreenOrigin origin = originOpt.get();
 

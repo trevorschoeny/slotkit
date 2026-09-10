@@ -3,7 +3,7 @@ package com.trevlar.menukit.core;
 import com.trevlar.menukit.inject.SlotGroupCategories;
 import com.trevlar.menukit.window.Address;
 import com.trevlar.menukit.window.SlotOperations;
-import com.trevlar.menukit.inject.SlotGroupResolver;
+import com.trevlar.menukit.inject.CreatedGroupResolver;
 
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
@@ -13,6 +13,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -80,19 +81,47 @@ public final class CreatedSlotCategories {
         return BY_ADDRESS.get(address);
     }
 
-    private static Map<SlotGroupCategory, int[]> resolve(AbstractContainerMenu menu) {
-        Map<SlotGroupCategory, List<Integer>> byCategory = new HashMap<>();
+    /**
+     * Every created group with a live slot on {@code menu}, each reported as its
+     * own contribution. Bucketed by {@code (panelId, groupId)}, NOT by category:
+     * several created groups can declare the same category, and folding them
+     * together would hand the anchor layer one bounding box spanning all of them —
+     * the 2026-09-09 regression this split fixes. Inert groups are absent (§0058:
+     * a hidden thing is invisible on every surface).
+     */
+    private static List<CreatedGroupResolver.Contribution> resolve(AbstractContainerMenu menu) {
+        Map<String, GroupAccumulator> byGroup = new LinkedHashMap<>();
         for (int i = 0; i < menu.slots.size(); i++) {
             Slot slot = menu.slots.get(i);
             MKCSlot mk = MKCSlotAccess.asMKCSlot(slot);
             if (mk == null || mk.isInert()) continue;
-            byCategory.computeIfAbsent(mk.getGroup().getCategory(), k -> new ArrayList<>()).add(i);
+            // NUL separator — never appears in a normal id, so the composite key is
+            // injective over distinct (panelId, groupId) pairs.
+            String key = mk.getPanelId() + '\0' + mk.getGroupId();
+            byGroup.computeIfAbsent(key, k -> new GroupAccumulator(
+                            mk.getPanelId(), mk.getGroupId(), mk.getGroup().getCategory()))
+                    .indices.add(i);
         }
-        if (byCategory.isEmpty()) return Map.of();
-        Map<SlotGroupCategory, int[]> out = new HashMap<>();
-        for (Map.Entry<SlotGroupCategory, List<Integer>> e : byCategory.entrySet()) {
-            out.put(e.getKey(), e.getValue().stream().mapToInt(Integer::intValue).toArray());
+        if (byGroup.isEmpty()) return List.of();
+        List<CreatedGroupResolver.Contribution> out = new ArrayList<>(byGroup.size());
+        for (GroupAccumulator g : byGroup.values()) {
+            out.add(new CreatedGroupResolver.Contribution(g.panelId, g.groupId, g.category,
+                    g.indices.stream().mapToInt(Integer::intValue).toArray()));
         }
         return out;
+    }
+
+    /** One group's slots, gathered as the menu is walked. */
+    private static final class GroupAccumulator {
+        final String panelId;
+        final String groupId;
+        final SlotGroupCategory category;
+        final List<Integer> indices = new ArrayList<>();
+
+        GroupAccumulator(String panelId, String groupId, SlotGroupCategory category) {
+            this.panelId = panelId;
+            this.groupId = groupId;
+            this.category = category;
+        }
     }
 }

@@ -3,6 +3,7 @@ package com.trevlar.menukit.core;
 import com.trevlar.menukit.inject.ScreenMatcher;
 import com.trevlar.menukit.inject.ScreenOrigin;
 import com.trevlar.menukit.inject.ScreenPanelAdapter;
+import com.trevlar.menukit.inject.SlotGroupId;
 import com.trevlar.menukit.window.Address;
 import com.trevlar.menukit.window.WindowEngine;
 import com.trevlar.menukit.window.GroupKey;
@@ -432,6 +433,20 @@ public final class MKCContainerPanel {
      */
     public static Address address(String containerPanelId, String groupId, int localIndex) {
         return CreatedSlotAdapter.addressOf(slotPanelId(containerPanelId, groupId), groupId, localIndex);
+    }
+
+    /**
+     * The {@link SlotGroupId} naming one of this panel's slot groups — what a
+     * {@code SlotGroupPanelAdapter.onGroup(...)} anchors to, so another mod can
+     * place a panel against these slots.
+     *
+     * <p>Minted here rather than by hand for the same reason
+     * {@link #address(String, String, int)} is: the container-parity path derives
+     * its own slot panel id ({@code containerPanelId:groupId}), so building the
+     * identity from the raw ids would silently name a group that never resolves.
+     */
+    public static SlotGroupId groupId(String containerPanelId, String groupId) {
+        return SlotGroupId.created(slotPanelId(containerPanelId, groupId), groupId);
     }
 
     // ── Client chrome wiring ────────────────────────────────────────────

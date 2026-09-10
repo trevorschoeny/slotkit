@@ -1,6 +1,7 @@
 package com.trevlar.menukit.core;
 
 import com.trevlar.menukit.inject.ScreenMatcher;
+import com.trevlar.menukit.inject.SlotGroupId;
 import com.trevlar.menukit.inject.ScreenPanelAdapter;
 import com.trevlar.menukit.mixin.AbstractContainerMenuInvoker;
 import com.trevlar.menukit.window.SlotNames;
@@ -134,6 +135,16 @@ public final class MKCSlots {
     static final int OFFSCREEN = -10000;
 
     private MKCSlots() {}
+
+    /**
+     * The {@link SlotGroupId} naming a group registered through
+     * {@link #onto} — what a {@code SlotGroupPanelAdapter.onGroup(...)} anchors
+     * to. This path registers under the bare declared panel id, unlike the
+     * container-parity path ({@code MKCContainerPanel.groupId}), which derives one.
+     */
+    public static SlotGroupId groupId(String panelId, String groupId) {
+        return SlotGroupId.created(panelId, groupId);
+    }
 
     /** Capitalizes the first letter for a default display label from a group id. */
     private static String capitalize(String s) {
