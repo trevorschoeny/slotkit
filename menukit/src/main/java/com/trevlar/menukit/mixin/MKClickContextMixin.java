@@ -9,6 +9,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.item.ItemStack;
 
 import org.spongepowered.asm.mixin.Mixin;
 
@@ -24,6 +25,11 @@ import org.spongepowered.asm.mixin.Mixin;
  *       recorded as it sent the packet. On the client the sender's own tag is
  *       already on the thread and is left alone.</li>
  * </ul>
+ *
+ * <p>A move with no click behind it (a mod calling {@code quickMoveStack} on the
+ * server) reaches {@code moveItemStackTo} with no player on the thread. That
+ * method is wrapped too: if nothing set the player, the menu's own player
+ * ({@link ActingPlayer#ownerOf}) is acting for the duration.
  */
 @Mixin(AbstractContainerMenu.class)
 public class MKClickContextMixin {
@@ -42,6 +48,18 @@ public class MKClickContextMixin {
         } finally {
             ActingPlayer.clear();
             ClickTags.exit(outer);
+        }
+    }
+
+    @WrapMethod(method = "moveItemStackTo")
+    private boolean mk$menuOwnerActs(ItemStack stack, int start, int end, boolean backwards,
+                                     Operation<Boolean> original) {
+        if (ActingPlayer.current() != null) return original.call(stack, start, end, backwards); // a click set it
+        ActingPlayer.set(ActingPlayer.ownerOf((AbstractContainerMenu) (Object) this));
+        try {
+            return original.call(stack, start, end, backwards);
+        } finally {
+            ActingPlayer.clear();
         }
     }
 }
