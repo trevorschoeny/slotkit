@@ -4,6 +4,8 @@ Shift-click routing on a foreign menu now asks MenuKit's `SHIFT_CLICK_OUT` on th
 
 Deprecated, gone in 6.0.0: `MKCBehaviorKeys.QUICK_MOVE` and `SlotSpec.quickMove(...)`. The verb still works and now declares both shift-click keys at the group rung. The key is still honoured, ANDed with the two, but is no longer listed in `SlotOperations.all()`. Declare `BehaviorKeys.SHIFT_CLICK_OUT` and `SHIFT_CLICK_IN` instead.
 
+Created groups declare themselves into MenuKit's menu-free group list. A container-panel group is declared at `register()`, at init. An `MKCSlots.onto` group is declared when the first menu carrying it is built; declare it at init with `SlotGroups.declare` to list it before that.
+
 Internal: enforcement of the vanilla operations and the acting-player capture moved into MenuKit. `MKCOperationMixin` and `MKCActingPlayerMixin` are deleted; `GatingContext.current()` reads MenuKit's `ActingPlayer`.
 
 5.0.0: Every created slot group declares what it is. Requires MenuKit 5.0.0, released alongside it.

@@ -359,6 +359,9 @@ public final class MKCContainerPanel {
             addresses.add(a);
             CreatedSlotCategories.index(a, spec.category());
         }
+        // Listed with no menu open (SlotGroups): this path registers at init, so the
+        // group shows from the title screen.
+        com.trevlar.menukit.inject.SlotGroups.declare(groupId(containerPanelId, spec.groupId()), spec.category());
         if (gate == null && binding == null && mending == null && quickMove == null
                 && collect == null && dragFill == null) return;
 
