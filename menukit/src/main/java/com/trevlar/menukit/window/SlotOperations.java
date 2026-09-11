@@ -75,6 +75,20 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * A missing line shows the key itself, Minecraft's own fallback.
  *
+ * <h2>Role</h2>
+ *
+ * {@link #define(BehaviorKey, Role)} records whether an operation takes items out
+ * of a slot, puts items in, or both ({@link #role}). A lock that protects an item
+ * already in a slot only cares about what takes it out, so a settings screen can
+ * hide the rest for any mod's operations, not just vanilla's. An operation that
+ * moves items between two slots is two keys, one {@code TAKE} and one {@code PUT}.
+ *
+ * <h2>With no screen open</h2>
+ *
+ * Q, Ctrl-Q and F while playing are the same {@code DROP}, {@code DROP_STACK} and
+ * {@code OFFHAND_SWAP} operations, on the selected hotbar slot; an offhand swap
+ * also needs the offhand slot to allow it. To the player Q is Q, screen or not.
+ *
  * <h2>Who says what a slot allows</h2>
  *
  * Two mechanisms, one subtractive:
@@ -128,8 +142,24 @@ public final class SlotOperations {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("menukit");
 
-    /** Operation keys anyone has defined, in definition order. */
-    private static final Map<Identifier, BehaviorKey<?>> DEFINED =
+    /**
+     * What an operation does to the slot it acts on. A settings screen reads it to
+     * know which operations matter for which kind of lock: a lock that protects an
+     * item already in a slot cares what takes it out, and not what puts things in.
+     */
+    public enum Role {
+        /** Takes items out of the slot: a click pickup, shift-click out, a drop. */
+        TAKE,
+        /** Puts items into the slot: a click place, shift-click in, a pickup landing. */
+        PUT,
+        /** Both, as a swap or a rotation does; also what an operation that does not say is taken to do. */
+        BOTH
+    }
+
+    private record Definition(BehaviorKey<?> key, Role role) {}
+
+    /** Operations anyone has defined, in definition order. */
+    private static final Map<Identifier, Definition> DEFINED =
             Collections.synchronizedMap(new LinkedHashMap<>());
 
     /** One {@link GroupKey} per category, carrying that category's inherent operations. */
@@ -161,38 +191,68 @@ public final class SlotOperations {
 
     /**
      * Publishes {@code operation} so other mods can discover it through
-     * {@link #all()}. Idempotent per id; a second definition of the same id with a
-     * different key is refused rather than silently replacing the first, because
-     * mods resolve against whichever key they were compiled with.
+     * {@link #all()}, with the {@link Role} it plays on a slot. Idempotent per id;
+     * a second definition of the same id with a different key or a different role
+     * is refused rather than silently replacing the first, because mods resolve
+     * against whichever key they were compiled with.
      *
      * <p>Defining is not required to <em>use</em> a key — the window resolves any
      * {@link BehaviorKey} — it is how an operation becomes part of the shared
      * vocabulary instead of a private one.
      */
-    public static void define(BehaviorKey<?> operation) {
+    public static void define(BehaviorKey<?> operation, Role role) {
         Objects.requireNonNull(operation, "operation");
+        Objects.requireNonNull(role, "role");
         synchronized (DEFINED) {
-            BehaviorKey<?> existing = DEFINED.get(operation.id());
-            if (existing != null && !existing.equals(operation)) {
+            Definition existing = DEFINED.get(operation.id());
+            if (existing != null && !existing.key().equals(operation)) {
                 throw new IllegalStateException(
                         "SlotOperations: operation '" + operation.id() + "' is already defined by a "
                         + "different key. Two mods have claimed the same operation id; one of them "
                         + "must change its namespace.");
             }
-            DEFINED.putIfAbsent(operation.id(), operation);
+            if (existing != null && existing.role() != role) {
+                throw new IllegalStateException(
+                        "SlotOperations: operation '" + operation.id() + "' is already defined with role "
+                        + existing.role() + ", not " + role + ".");
+            }
+            DEFINED.putIfAbsent(operation.id(), new Definition(operation, role));
+        }
+    }
+
+    /**
+     * {@link #define(BehaviorKey, Role)} for an operation that does not say what it
+     * does to a slot, which is read as {@link Role#BOTH}. A no-op for an operation
+     * already defined, whatever its role.
+     */
+    public static void define(BehaviorKey<?> operation) {
+        Objects.requireNonNull(operation, "operation");
+        synchronized (DEFINED) {
+            Definition existing = DEFINED.get(operation.id());
+            if (existing != null && existing.key().equals(operation)) return;
+            define(operation, Role.BOTH);
         }
     }
 
     /** Every defined operation, in definition order. */
     public static Collection<BehaviorKey<?>> all() {
         synchronized (DEFINED) {
-            return List.copyOf(DEFINED.values());
+            List<BehaviorKey<?>> out = new java.util.ArrayList<>(DEFINED.size());
+            for (Definition d : DEFINED.values()) out.add(d.key());
+            return List.copyOf(out);
         }
     }
 
     /** The defined operation with this id, or {@code null}. */
     public static @Nullable BehaviorKey<?> byId(Identifier id) {
-        return DEFINED.get(id);
+        Definition d = DEFINED.get(id);
+        return d == null ? null : d.key();
+    }
+
+    /** The role {@code operation} was defined with, or {@code null} if it was never defined. */
+    public static @Nullable Role role(BehaviorKey<?> operation) {
+        Definition d = DEFINED.get(operation.id());
+        return d != null && d.key().equals(operation) ? d.role() : null;
     }
 
     // ── Name and description ───────────────────────────────────────────────

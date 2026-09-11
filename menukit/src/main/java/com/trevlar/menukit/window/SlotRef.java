@@ -5,6 +5,7 @@ import com.trevlar.menukit.inject.SlotGroupCategories;
 import com.trevlar.menukit.inject.Slots;
 
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
@@ -51,6 +52,23 @@ public record SlotRef(Container container, int containerSlot, @Nullable Slot slo
         Slot target = Slots.target(slot); // identity off the creative wrapper, as everywhere
         return new SlotRef(target.container, target.getContainerSlot(), slot, menu, player,
                 categoryOf(menu, slot));
+    }
+
+    /**
+     * The player's inventory slot {@code index} as it sits on {@code menu}, so it
+     * resolves with its category there; the bare container form when {@code menu}
+     * does not show it. For the selected hotbar slot with no screen open, pass
+     * {@code player.inventoryMenu}.
+     */
+    public static SlotRef inventory(AbstractContainerMenu menu, Player player, int index) {
+        Inventory inventory = player.getInventory();
+        for (Slot s : menu.slots) {
+            Slot target = Slots.target(s);
+            if (target.container == inventory && target.getContainerSlot() == index) {
+                return of(menu, s, player);
+            }
+        }
+        return of(inventory, index, player);
     }
 
     /** A slot reached with no menu open: world pickup into an inventory. */

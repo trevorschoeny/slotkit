@@ -1,7 +1,5 @@
 package com.trevlar.menukit.window;
 
-import com.trevlar.menukit.inject.Slots;
-
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -60,7 +58,7 @@ public final class ClickOperations {
                         : Inventory.isHotbarSlot(button) ? BehaviorKeys.HOTBAR_SWAP
                         : null; // vanilla ignores any other button, and so does this
                 yield op != null && (!allows(menu, slot, player, op)
-                        || !SlotOperations.allowsGesture(inventorySlot(menu, player, button), op));
+                        || !SlotOperations.allowsGesture(SlotRef.inventory(menu, player, button), op));
             }
             case QUICK_CRAFT -> AbstractContainerMenu.getQuickcraftHeader(button) == 1
                     && !allows(menu, slot, player, BehaviorKeys.DRAG_FILL);
@@ -70,22 +68,5 @@ public final class ClickOperations {
 
     private static boolean allows(AbstractContainerMenu menu, Slot slot, Player player, BehaviorKey<TriBool> gesture) {
         return SlotOperations.allowsGesture(SlotRef.of(menu, slot, player), gesture);
-    }
-
-    /**
-     * The player-inventory slot at {@code index} as it sits on this menu, so it
-     * resolves with its menu category; the bare container form when the menu does
-     * not show it (vanilla swaps against the inventory directly, so the swap works
-     * on such a menu too).
-     */
-    private static SlotRef inventorySlot(AbstractContainerMenu menu, Player player, int index) {
-        Inventory inventory = player.getInventory();
-        for (Slot s : menu.slots) {
-            Slot target = Slots.target(s);
-            if (target.container == inventory && target.getContainerSlot() == index) {
-                return SlotRef.of(menu, s, player);
-            }
-        }
-        return SlotRef.of(inventory, index, player);
     }
 }

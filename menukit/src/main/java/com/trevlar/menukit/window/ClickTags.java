@@ -1,5 +1,6 @@
 package com.trevlar.menukit.window;
 
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.world.inventory.ContainerInput;
 
 import org.jetbrains.annotations.ApiStatus;
@@ -8,7 +9,6 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -31,8 +31,9 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  *
  * An operation that moves items has two sides, the slot being emptied and the
  * slot being filled, so a tag is a pair: the operation for taking and the one for
- * putting. Every vanilla gesture has a role, and a tagged gesture is judged by the
- * tag's operation for that role; a swap takes and puts, so it is judged by both.
+ * putting. Every vanilla gesture is defined with its {@link SlotOperations.Role},
+ * and a tagged gesture is judged by the tag's operation for that role; a swap
+ * takes and puts, so it is judged by both.
  *
  * <h2>Two threads</h2>
  *
@@ -58,22 +59,6 @@ public final class ClickTags {
             Objects.requireNonNull(put, "put");
         }
     }
-
-    private enum Role { TAKE, PUT, BOTH }
-
-    /** Every vanilla gesture's role. A key not listed is not a gesture and is never translated. */
-    private static final Map<BehaviorKey<?>, Role> ROLES = Map.ofEntries(
-            Map.entry(BehaviorKeys.CLICK_TAKE, Role.TAKE),
-            Map.entry(BehaviorKeys.CLICK_PUT, Role.PUT),
-            Map.entry(BehaviorKeys.SHIFT_CLICK_OUT, Role.TAKE),
-            Map.entry(BehaviorKeys.SHIFT_CLICK_IN, Role.PUT),
-            Map.entry(BehaviorKeys.COLLECT, Role.TAKE),
-            Map.entry(BehaviorKeys.DRAG_FILL, Role.PUT),
-            Map.entry(BehaviorKeys.HOTBAR_SWAP, Role.BOTH),
-            Map.entry(BehaviorKeys.OFFHAND_SWAP, Role.BOTH),
-            Map.entry(BehaviorKeys.DROP, Role.TAKE),
-            Map.entry(BehaviorKeys.DROP_STACK, Role.TAKE),
-            Map.entry(BehaviorKeys.WORLD_PICKUP, Role.PUT));
 
     private static final ThreadLocal<Tag> CURRENT = new ThreadLocal<>();
 
@@ -120,7 +105,8 @@ public final class ClickTags {
      * about plainly, tag or no tag).
      */
     static @Nullable List<BehaviorKey<TriBool>> carriedFor(Tag tag, BehaviorKey<TriBool> gesture) {
-        Role role = ROLES.get(gesture);
+        if (!BehaviorKeys.VANILLA_OPERATIONS.contains(gesture)) return null;
+        SlotOperations.Role role = SlotOperations.role(gesture); // one source for roles: the definition
         if (role == null) return null;
         return switch (role) {
             case TAKE -> List.of(tag.take());
@@ -131,12 +117,12 @@ public final class ClickTags {
 
     // ── Client → integrated server ─────────────────────────────────────────
 
-    private record Pending(UUID player, int containerId, int slotId, int button, ContainerInput input,
-                           Tag tag, long atNanos) {
-        boolean matches(UUID p, int c, int s, int b, ContainerInput i) {
-            return player.equals(p) && containerId == c && slotId == s && button == b && input == i;
-        }
-    }
+    // A tag is recorded under the key the server will know the action by: a click
+    // by (player, menu, slot, button, input), a player action (Q, Ctrl-Q, F with no
+    // screen open) by (player, action).
+    private record ClickKey(UUID player, int containerId, int slotId, int button, ContainerInput input) {}
+    private record ActionKey(UUID player, ServerboundPlayerActionPacket.Action action) {}
+    private record Pending(Object key, Tag tag, long atNanos) {}
 
     // The server handles a click packet within a tick or two. A tag older than this
     // belongs to a packet the server dropped (its menu closed in between) and must
@@ -149,7 +135,12 @@ public final class ClickTags {
 
     /** Client: a tagged click is about to be sent to the integrated server. */
     public static void record(UUID player, int containerId, int slotId, int button, ContainerInput input, Tag tag) {
-        PENDING.add(new Pending(player, containerId, slotId, button, input, tag, System.nanoTime()));
+        PENDING.add(new Pending(new ClickKey(player, containerId, slotId, button, input), tag, System.nanoTime()));
+    }
+
+    /** Client: a tagged player action (Q, Ctrl-Q, F with no screen open) is about to be sent. */
+    public static void recordAction(UUID player, ServerboundPlayerActionPacket.Action action, Tag tag) {
+        PENDING.add(new Pending(new ActionKey(player, action), tag, System.nanoTime()));
     }
 
     /**
@@ -157,8 +148,16 @@ public final class ClickTags {
      * once, or {@code null}. Clicks arrive in the order they were sent, so the
      * first match is this click's. Expired entries are dropped on the way.
      */
-    public static synchronized @Nullable Tag claim(UUID player, int containerId, int slotId, int button,
-                                                   ContainerInput input) {
+    public static @Nullable Tag claim(UUID player, int containerId, int slotId, int button, ContainerInput input) {
+        return claimKey(new ClickKey(player, containerId, slotId, button, input));
+    }
+
+    /** Server: the tag the client recorded for this player action, once, or {@code null}. */
+    public static @Nullable Tag claimAction(UUID player, ServerboundPlayerActionPacket.Action action) {
+        return claimKey(new ActionKey(player, action));
+    }
+
+    private static synchronized @Nullable Tag claimKey(Object key) {
         long now = System.nanoTime();
         for (Iterator<Pending> it = PENDING.iterator(); it.hasNext(); ) {
             Pending p = it.next();
@@ -166,7 +165,7 @@ public final class ClickTags {
                 it.remove();
                 continue;
             }
-            if (p.matches(player, containerId, slotId, button, input)) {
+            if (p.key().equals(key)) {
                 it.remove();
                 return p.tag();
             }
