@@ -101,7 +101,7 @@ public final class BehaviorKeys {
     // mod adds an operation of its own, and for how one is blocked. Vanilla's
     // operations are split as far as they go, one key per thing a player can do
     // to a slot, so a mod that blocks them can block each on its own; a settings
-    // screen groups them however it likes. All nine are TriBool, default TRUE
+    // screen groups them however it likes. All eleven are TriBool, default TRUE
     // (vanilla), SERVER tier, every slot kind, and enforced at vanilla's own seams
     // by MenuKit's MKOperationsMixin and MKWorldPickupMixin.
 
@@ -125,6 +125,16 @@ public final class BehaviorKeys {
         return BehaviorKey.of(id(path), TriBool.class, TriBool.TRUE, Tier.SERVER,
                 KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
     }
+
+    /**
+     * Operation: whether a plain click may pick up this slot's items. A click that
+     * swaps the cursor's items for different ones in the slot takes and puts, so
+     * it needs this and {@link #CLICK_PUT}.
+     */
+    public static final BehaviorKey<TriBool> CLICK_TAKE = operation("click_take");
+
+    /** Operation: whether a plain click may put the cursor's items into this slot, all or one. */
+    public static final BehaviorKey<TriBool> CLICK_PUT = operation("click_put");
 
     /** Operation: whether shift-clicking this slot may send its stack elsewhere. */
     public static final BehaviorKey<TriBool> SHIFT_CLICK_OUT = operation("shift_click_out");
@@ -156,6 +166,6 @@ public final class BehaviorKeys {
 
     /** Every operation vanilla ships, in the order a settings list would show them. */
     public static final java.util.List<BehaviorKey<TriBool>> VANILLA_OPERATIONS = java.util.List.of(
-            SHIFT_CLICK_OUT, SHIFT_CLICK_IN, COLLECT, DRAG_FILL,
+            CLICK_TAKE, CLICK_PUT, SHIFT_CLICK_OUT, SHIFT_CLICK_IN, COLLECT, DRAG_FILL,
             HOTBAR_SWAP, OFFHAND_SWAP, DROP, DROP_STACK, WORLD_PICKUP);
 }

@@ -55,8 +55,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * An operation is named by a {@link BehaviorKey}, so <b>any mod can add one</b>: it
  * declares its own key, {@link #define(BehaviorKey) defines} it here so other mods
- * can discover it, ships a name and a description for it (below), and asks
- * {@link #allows} in its own code before acting. MenuKit needs no change for a new
+ * can discover it, ships a name and a description for it (below), asks
+ * {@link #allows} in its own code before acting, and sends any clicks it performs
+ * under {@link #as}. MenuKit needs no change for a new
  * operation to exist. Vanilla's own operations are {@link BehaviorKeys#VANILLA_OPERATIONS},
  * split one key per thing a player can do to a slot, and enforced at vanilla's seams
  * by MenuKit itself.
@@ -95,6 +96,22 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * </ol>
  *
  * {@link #allows} is the one question: the cascade says yes and no veto says no.
+ *
+ * <h2>Simulated clicks</h2>
+ *
+ * A mod that performs its operation by sending vanilla clicks wraps them:
+ *
+ * <pre>SlotOperations.as(RESTOCK_TAKE, RESTOCK_PUT, () -&gt; sendClicks());</pre>
+ *
+ * Each click sent inside the block carries the operation it serves: the first for
+ * the slot it takes from, the second for the slot it puts into. The vetoes judge
+ * the carried operation, so a lock that refuses shift-click but allows restock lets
+ * the restock's shift-click through. The slot's author still judges the gesture:
+ * a group that sits out shift-click refuses a restock that arrives as a shift-click.
+ * A mod that wants to know first asks {@code allows} about both. The tag reaches
+ * the integrated server too. Clicks must be sent inside the block, on the calling
+ * thread; a click scheduled for later is not tagged. A simulated click that is not
+ * wrapped counts as the gesture it looks like, a manual click included.
  *
  * <p><b>Init-time reads are the one exception to "declare anywhere".</b> Every
  * built-in operation is SERVER tier, and MenuKit-Containers installs the server
@@ -253,6 +270,22 @@ public final class SlotOperations {
         VETOES.add(Objects.requireNonNull(veto, "veto"));
     }
 
+    // ── Simulated clicks ───────────────────────────────────────────────────
+
+    /** Sends {@code clicks} as {@code operation}, for both the slots they take from and put into. */
+    public static void as(BehaviorKey<TriBool> operation, Runnable clicks) {
+        as(operation, operation, clicks);
+    }
+
+    /**
+     * Sends {@code clicks} as the operation pair: {@code take} for the slots they
+     * take from, {@code put} for the slots they put into. See the class doc.
+     */
+    public static void as(BehaviorKey<TriBool> take, BehaviorKey<TriBool> put, Runnable clicks) {
+        Objects.requireNonNull(clicks, "clicks");
+        ClickTags.run(new ClickTags.Tag(take, put), clicks);
+    }
+
     // ── The one question ───────────────────────────────────────────────────
 
     /**
@@ -286,6 +319,32 @@ public final class SlotOperations {
     public static boolean allows(Container container, int containerSlot, @Nullable Player player,
                                  BehaviorKey<TriBool> operation) {
         return allows(SlotRef.of(container, containerSlot, player), operation);
+    }
+
+    /**
+     * What a vanilla seam asks for the gesture it is running: {@link #allows}, or,
+     * when the click on this thread carries an operation ({@link #as}), the slot's
+     * cascade on the gesture and {@code allows} on the carried operation for the
+     * gesture's role. Library seams only; a mod asks {@link #allows} about its own
+     * operation.
+     */
+    @ApiStatus.Internal
+    public static boolean allowsGesture(SlotRef ref, BehaviorKey<TriBool> gesture) {
+        ClickTags.Tag tag = ClickTags.current();
+        List<BehaviorKey<TriBool>> carried = tag == null ? null : ClickTags.carriedFor(tag, gesture);
+        if (carried == null) return allows(ref, gesture);
+        if (!cascade(ref, gesture)) return false; // the slot's author judges the gesture
+        for (BehaviorKey<TriBool> op : carried) {
+            if (!allows(ref, op)) return false;   // everyone else judges the operation it serves
+        }
+        return true;
+    }
+
+    /** {@link #allowsGesture(SlotRef, BehaviorKey)} for a slot on an open menu. */
+    @ApiStatus.Internal
+    public static boolean allowsGesture(AbstractContainerMenu menu, Slot slot, @Nullable Player player,
+                                        BehaviorKey<TriBool> gesture) {
+        return allowsGesture(SlotRef.of(menu, slot, player), gesture);
     }
 
     /**

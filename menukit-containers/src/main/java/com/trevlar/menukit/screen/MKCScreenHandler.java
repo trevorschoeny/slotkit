@@ -367,14 +367,14 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
     @SuppressWarnings("removal")
     private boolean exports(MKCSlot slot, Player player) {
         return WindowEngine.resolve(slot.address(), MKCBehaviorKeys.QUICK_MOVE).exports()
-                && SlotOperations.allows(this, slot, player, BehaviorKeys.SHIFT_CLICK_OUT);
+                && SlotOperations.allowsGesture(this, slot, player, BehaviorKeys.SHIFT_CLICK_OUT);
     }
 
     /** Whether a created slot takes a shift-click: the SHIFT_CLICK_IN operation, and the deprecated key. */
     @SuppressWarnings("removal")
     private boolean imports(MKCSlot slot, Player player) {
         return WindowEngine.resolve(slot.address(), MKCBehaviorKeys.QUICK_MOVE).imports()
-                && SlotOperations.allows(this, slot, player, BehaviorKeys.SHIFT_CLICK_IN);
+                && SlotOperations.allowsGesture(this, slot, player, BehaviorKeys.SHIFT_CLICK_IN);
     }
 
     /** One representative live MKCSlot per group present in this menu (first wins). */
