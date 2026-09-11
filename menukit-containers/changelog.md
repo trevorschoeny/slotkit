@@ -1,3 +1,11 @@
+5.1.0: Shift-click is two operations, and MenuKit enforces them. Requires MenuKit 5.1.0, released alongside it. Adds API and breaks nothing.
+
+Shift-click routing on a foreign menu now asks MenuKit's `SHIFT_CLICK_OUT` on the source and `SHIFT_CLICK_IN` on each candidate group, through `SlotOperations.allows`, so a veto from a locking mod reaches created slots the same way it reaches vanilla ones.
+
+Deprecated, gone in 6.0.0: `MKCBehaviorKeys.QUICK_MOVE` and `SlotSpec.quickMove(...)`. The verb still works and now declares both shift-click keys at the group rung. The key is still honoured, ANDed with the two, but is no longer listed in `SlotOperations.all()`. Declare `BehaviorKeys.SHIFT_CLICK_OUT` and `SHIFT_CLICK_IN` instead.
+
+Internal: enforcement of the vanilla operations and the acting-player capture moved into MenuKit. `MKCOperationMixin` and `MKCActingPlayerMixin` are deleted; `GatingContext.current()` reads MenuKit's `ActingPlayer`.
+
 5.0.0: Every created slot group declares what it is. Requires MenuKit 5.0.0, released alongside it.
 
 A group takes a `SlotGroupCategory` at creation, and MenuKit's slot group registry lists the group under that category on every menu it sits on. Another mod finds the group and knows what it is with MenuKit types only. `SlotSpec.at(groupId, category)` and `MKCSlots.onto(...).category(...)` are the two entry points.

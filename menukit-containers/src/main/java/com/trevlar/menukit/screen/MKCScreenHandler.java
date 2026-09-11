@@ -2,6 +2,8 @@ package com.trevlar.menukit.screen;
 
 import com.trevlar.menukit.core.*;
 import com.trevlar.menukit.window.Address;
+import com.trevlar.menukit.window.BehaviorKeys;
+import com.trevlar.menukit.window.SlotOperations;
 import com.trevlar.menukit.window.WindowEngine;
 
 import net.minecraft.world.Container;
@@ -283,9 +285,9 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
 
         SlotGroup sourceGroup = sourceSlot.getGroup();
 
-        // Source must export — QUICK_MOVE resolved from the engine by the source
-        // slot's address (no longer the group's retired qmp knob).
-        if (!qmpOf(sourceSlot).exports()) return ItemStack.EMPTY;
+        // Source must allow shift-click out (the SHIFT_CLICK_OUT operation, ANDed
+        // with the deprecated QUICK_MOVE key for 5.0.0 declarations).
+        if (!exports(sourceSlot, player)) return ItemStack.EMPTY;
 
         ItemStack originalStack = sourceSlot.getItem().copy();
         ItemStack workingStack = sourceSlot.getItem();
@@ -302,7 +304,7 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
                 if (group == sourceGroup) continue; // don't route to self
                 MKCSlot rep = reps.get(group);
                 if (rep == null) continue;                       // no live slot — can't resolve
-                if (!qmpOf(rep).imports()) continue;             // must import (engine)
+                if (!imports(rep, player)) continue;             // must allow shift-click in
                 if (!rep.mayPlace(workingStack)) continue;       // accepts (engine GATING + inertness)
                 candidates.add(group);
             }
@@ -361,9 +363,18 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
         return workingStack.getCount() < originalStack.getCount() ? originalStack : ItemStack.EMPTY;
     }
 
-    /** A created slot's quick-move participation, resolved from the engine by its address. */
-    private static QuickMoveParticipation qmpOf(MKCSlot slot) {
-        return WindowEngine.resolve(slot.address(), MKCBehaviorKeys.QUICK_MOVE);
+    /** Whether a created slot yields to a shift-click: the SHIFT_CLICK_OUT operation, and the deprecated key. */
+    @SuppressWarnings("removal")
+    private boolean exports(MKCSlot slot, Player player) {
+        return WindowEngine.resolve(slot.address(), MKCBehaviorKeys.QUICK_MOVE).exports()
+                && SlotOperations.allows(this, slot, player, BehaviorKeys.SHIFT_CLICK_OUT);
+    }
+
+    /** Whether a created slot takes a shift-click: the SHIFT_CLICK_IN operation, and the deprecated key. */
+    @SuppressWarnings("removal")
+    private boolean imports(MKCSlot slot, Player player) {
+        return WindowEngine.resolve(slot.address(), MKCBehaviorKeys.QUICK_MOVE).imports()
+                && SlotOperations.allows(this, slot, player, BehaviorKeys.SHIFT_CLICK_IN);
     }
 
     /** One representative live MKCSlot per group present in this menu (first wins). */

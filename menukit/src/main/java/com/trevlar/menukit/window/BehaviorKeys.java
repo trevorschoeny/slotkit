@@ -96,22 +96,18 @@ public final class BehaviorKeys {
 
     // ── Operations — every slot kind; default = vanilla (participates) ────────
     //
-    // An OPERATION is something done TO a slot in bulk, as opposed to a CATEGORY,
-    // which says what the slot IS. See {@link SlotOperations} for the split and for
-    // how a mod adds an operation of its own. Vanilla ships three: shift-click
-    // (MKC's QUICK_MOVE key), and the two below, each with a menu-level seam —
-    // double-click COLLECT (PICKUP_ALL sweeps every slot holding the carried type;
-    // AbstractContainerMenu.canTakeItemForPickAll) and DRAG FILL (QUICK_CRAFT
-    // spreads the carried stack across dragged-over slots; canDragTo).
-    //
-    // These two are declared here, MK-side, so an MK-only consumer can name them on
-    // a vanilla slot (a locked slot that must not be swept, say); only the
-    // ENFORCEMENT needs MKC, which injects at those two vanilla seams.
+    // An OPERATION is something done TO a slot, as opposed to a CATEGORY, which
+    // says what the slot IS. See {@link SlotOperations} for the split, for how a
+    // mod adds an operation of its own, and for how one is blocked. Vanilla's
+    // operations are split as far as they go, one key per thing a player can do
+    // to a slot, so a mod that blocks them can block each on its own; a settings
+    // screen groups them however it likes. All nine are TriBool, default TRUE
+    // (vanilla), SERVER tier, every slot kind, and enforced at vanilla's own seams
+    // by MenuKit's MKOperationsMixin and MKWorldPickupMixin.
 
     /**
-     * Operation: whether vanilla's double-click collect may take from this slot.
-     * SERVER tier (the seam runs in {@code doClick}, both sides; MKC enforces).
-     * Default {@link TriBool#TRUE}: vanilla sweeps it.
+     * Operation: whether vanilla's double-click collect may take from this slot
+     * ({@code canTakeItemForPickAll}). Default {@link TriBool#TRUE}: vanilla sweeps it.
      */
     public static final BehaviorKey<TriBool> COLLECT = BehaviorKey.of(
             id("collect"), TriBool.class, TriBool.TRUE, Tier.SERVER,
@@ -119,10 +115,47 @@ public final class BehaviorKeys {
 
     /**
      * Operation: whether vanilla's drag-fill (spreading a carried stack across
-     * slots) may place into this slot. SERVER tier; MKC enforces. Default
-     * {@link TriBool#TRUE}.
+     * slots) may place into this slot ({@code canDragTo}). Default {@link TriBool#TRUE}.
      */
     public static final BehaviorKey<TriBool> DRAG_FILL = BehaviorKey.of(
             id("drag_fill"), TriBool.class, TriBool.TRUE, Tier.SERVER,
             KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
+
+    private static BehaviorKey<TriBool> operation(String path) {
+        return BehaviorKey.of(id(path), TriBool.class, TriBool.TRUE, Tier.SERVER,
+                KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
+    }
+
+    /** Operation: whether shift-clicking this slot may send its stack elsewhere. */
+    public static final BehaviorKey<TriBool> SHIFT_CLICK_OUT = operation("shift_click_out");
+
+    /** Operation: whether a shift-click elsewhere may land items in this slot. */
+    public static final BehaviorKey<TriBool> SHIFT_CLICK_IN = operation("shift_click_in");
+
+    /**
+     * Operation: whether a number key may swap this slot with a hotbar slot. Both
+     * slots of a swap must allow it.
+     */
+    public static final BehaviorKey<TriBool> HOTBAR_SWAP = operation("hotbar_swap");
+
+    /** Operation: whether the offhand key may swap this slot with the offhand. Both slots must allow it. */
+    public static final BehaviorKey<TriBool> OFFHAND_SWAP = operation("offhand_swap");
+
+    /** Operation: whether Q may drop one item out of this slot. */
+    public static final BehaviorKey<TriBool> DROP = operation("drop");
+
+    /** Operation: whether Ctrl-Q may drop this slot's whole stack. */
+    public static final BehaviorKey<TriBool> DROP_STACK = operation("drop_stack");
+
+    /**
+     * Operation: whether an item picked up from the world may land in this slot,
+     * including topping up a partial stack already there. Off-menu seam: resolves
+     * from the slot's own declaration or the default, then the vetoes.
+     */
+    public static final BehaviorKey<TriBool> WORLD_PICKUP = operation("world_pickup");
+
+    /** Every operation vanilla ships, in the order a settings list would show them. */
+    public static final java.util.List<BehaviorKey<TriBool>> VANILLA_OPERATIONS = java.util.List.of(
+            SHIFT_CLICK_OUT, SHIFT_CLICK_IN, COLLECT, DRAG_FILL,
+            HOTBAR_SWAP, OFFHAND_SWAP, DROP, DROP_STACK, WORLD_PICKUP);
 }

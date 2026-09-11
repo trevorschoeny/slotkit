@@ -88,11 +88,24 @@ public final class WindowEngine {
 
     /** The fully-resolved value of {@code key} at {@code address} — never null. */
     public static <V> V resolve(Address address, BehaviorKey<V> key) {
+        return resolve(address, key, java.util.List.of());
+    }
+
+    /**
+     * {@link #resolve(Address, BehaviorKey)} with memberships the caller knows and
+     * the address alone does not say. A group's membership is a predicate over the
+     * address, which is all a created slot needs: its category travels with its
+     * address. A vanilla slot's category depends on the menu it sits in, so the
+     * seam that has the menu in hand ({@link SlotOperations#allows}) states the
+     * slot's category group here and the group and category rungs reach vanilla
+     * slots too. Explicit data from the caller, not hidden context.
+     */
+    public static <V> V resolve(Address address, BehaviorKey<V> key, java.util.Collection<GroupKey> alsoMemberOf) {
         // AXIS 1 — server authority (above the client tier), for SERVER-tier keys.
         // MKC absent => NoServerTier returns Inherit, so the key falls through to
         // the client tier and finally the library default (the safe no-op).
         if (key.tier() == Tier.SERVER) {
-            Decl<V> auth = ServerTier.declarations().resolve(address, key);
+            Decl<V> auth = ServerTier.declarations().resolve(address, key, alsoMemberOf);
             if (auth instanceof Decl.Set<V> s) return s.value();
         }
         // AXIS 2 — client tier specificity: per-address > per-owner-ancestor >
@@ -109,7 +122,7 @@ public final class WindowEngine {
             Decl<V> a = declAt(ancestor, key);
             if (a instanceof Decl.Set<V> s) return s.value();
         }
-        Decl<V> group = declForGroups(address, key);
+        Decl<V> group = declForGroups(address, key, alsoMemberOf);
         if (group instanceof Decl.Set<V> s) return s.value();
         return key.libraryDefault();
     }
@@ -143,11 +156,12 @@ public final class WindowEngine {
     }
 
     @SuppressWarnings("unchecked")
-    private static <V> Decl<V> declForGroups(Address address, BehaviorKey<V> key) {
+    private static <V> Decl<V> declForGroups(Address address, BehaviorKey<V> key,
+                                             java.util.Collection<GroupKey> alsoMemberOf) {
         Decl<V> result = null;
         int best = Integer.MIN_VALUE;
         for (GroupBinding b : GROUPS) {                // registration order
-            if (!b.group().contains(address)) continue;
+            if (!b.group().contains(address) && !alsoMemberOf.contains(b.group())) continue;
             Decl<?> d = b.decls().get(key);
             if (d == null) continue;
             // Higher precedence wins (a slot group over its category); >= keeps the

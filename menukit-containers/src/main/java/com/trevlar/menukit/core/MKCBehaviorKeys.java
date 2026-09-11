@@ -42,11 +42,18 @@ public final class MKCBehaviorKeys {
             KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
 
     /**
-     * Operation: how a created slot participates in shift-click (quick-move) routing
-     * on a foreign menu — exports, imports, both, or neither. Server-tier, created
-     * slots. Default {@link QuickMoveParticipation#BOTH} (a created slot both
-     * vacuums and yields shift-clicks unless told otherwise).
+     * How a created slot participates in shift-click routing on a foreign menu —
+     * exports, imports, both, or neither. Server-tier, created slots. Default
+     * {@link QuickMoveParticipation#BOTH}.
+     *
+     * <p>Since MenuKit 5.1.0 shift-click is two operations,
+     * {@code BehaviorKeys.SHIFT_CLICK_OUT} and {@code SHIFT_CLICK_IN}, on every slot
+     * kind. This key is still honoured (the routing ANDs it with the two) but no
+     * longer published to the vocabulary, and goes in 6.0.0.
+     *
+     * @deprecated declare {@code SHIFT_CLICK_OUT} / {@code SHIFT_CLICK_IN} instead.
      */
+    @Deprecated(since = "5.1.0", forRemoval = true)
     public static final BehaviorKey<QuickMoveParticipation> QUICK_MOVE = BehaviorKey.of(
             id("quick_move"), QuickMoveParticipation.class, QuickMoveParticipation.BOTH,
             Tier.SERVER, KindTag.CREATED_SLOT);

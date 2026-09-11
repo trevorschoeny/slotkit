@@ -17,10 +17,8 @@
     "ExperienceOrbMendMixin",
     "MKCGatingMixin",
     "MKCVanillaSlotGatingMixin",
-    "MKCActingPlayerMixin",
     "MKCHopperGatingMixin",
-    "MKCDispenserGatingMixin",
-    "MKCOperationMixin"
+    "MKCDispenserGatingMixin"
   ],
   "client": [
     "MKCCreativeSlotParkMixin",

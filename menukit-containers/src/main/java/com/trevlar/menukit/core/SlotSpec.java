@@ -242,10 +242,17 @@ public final class SlotSpec {
     }
 
     /**
-     * Sets how every slot in this group participates in shift-click (quick-move)
-     * routing on a foreign menu — sugar for {@code set(MKCBehaviorKeys.QUICK_MOVE, p)}.
-     * Default {@link QuickMoveParticipation#BOTH}.
+     * Sets how every slot in this group participates in shift-click routing.
+     * Since MenuKit 5.1.0 shift-click is two operations, and this is sugar for
+     * declaring both at the group rung: {@code exports()} becomes
+     * {@link com.trevlar.menukit.window.BehaviorKeys#SHIFT_CLICK_OUT} and
+     * {@code imports()} becomes {@link com.trevlar.menukit.window.BehaviorKeys#SHIFT_CLICK_IN}.
+     * Prefer {@code set(BehaviorKeys.SHIFT_CLICK_OUT, ...)} / {@code SHIFT_CLICK_IN}
+     * directly; this verb and {@code MKCBehaviorKeys.QUICK_MOVE} go in 6.0.0.
+     *
+     * @deprecated use the two shift-click operation keys.
      */
+    @Deprecated(since = "5.1.0", forRemoval = true)
     public SlotSpec quickMove(QuickMoveParticipation participation) {
         this.quickMove = participation;
         return this;
