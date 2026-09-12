@@ -40,23 +40,23 @@ def mapped_jar(ver):
     return hits[0]
 
 
-_cache = {}
+_declared_cache = {}
+_members_cache = {}
 
 
-def members(jar, cls):
-    """-> (methods: {name: [descriptors]}, fields: {name: descriptor}) or None if class missing."""
-    if cls in _cache:
-        return _cache[cls]
+def declared(jar, cls):
+    """-> ({method: [descriptors]}, {field: descriptor}, superclass|None) DECLARED on cls itself."""
+    if cls in _declared_cache:
+        return _declared_cache[cls]
     out = subprocess.run([JAVAP, "-cp", jar, "-p", "-s", cls], capture_output=True, text=True)
     if out.returncode != 0:
-        _cache[cls] = None
+        _declared_cache[cls] = None
         return None
     methods, fields = {}, {}
     lines = out.stdout.splitlines()
     decl_line = re.sub(r"<[^<>]*>", "", re.sub(r"<[^<>]*>", "", lines[1] if len(lines) > 1 else ""))  # drop generics (2 levels)
     sup = re.search(r"\bextends\s+([\w.$]+)", decl_line)
     superclass = sup.group(1) if sup and sup.group(1).startswith("net.minecraft") and sup.group(1) != cls else None
-    _cache[cls] = (methods, fields)  # placeholder first so a cyclic chain can never recurse forever
     for i, line in enumerate(lines):
         line = line.strip()
         m = re.match(r"descriptor: (.*)", line)
@@ -73,16 +73,46 @@ def members(jar, cls):
             methods.setdefault(name, []).append(desc)
         else:
             fields[decl.split()[-1]] = desc
-    if superclass:  # fold inherited members in; the constant pool may name the subclass as owner
-        parent = members(jar, superclass)
+    _declared_cache[cls] = (methods, fields, superclass)
+    return _declared_cache[cls]
+
+
+def members(jar, cls):
+    """Declared AND inherited, for the checks where inheritance is legal: an @At
+    target names whatever the call site's constant pool names (often a subclass),
+    and @Shadow / @Accessor reach a supertype's members."""
+    if cls in _members_cache:
+        return _members_cache[cls]
+    own = declared(jar, cls)
+    if own is None:
+        _members_cache[cls] = None
+        return None
+    methods = {n: list(ds) for n, ds in own[0].items()}
+    fields = dict(own[1])
+    _members_cache[cls] = (methods, fields)  # placeholder first so a cyclic chain can never recurse forever
+    if own[2]:
+        parent = members(jar, own[2])
         if parent:
             for n, ds in parent[0].items():
                 if n != "<init>":
                     methods.setdefault(n, []).extend(d for d in ds if d not in methods.get(n, []))
             for n, d in parent[1].items():
                 fields.setdefault(n, d)
-    _cache[cls] = (methods, fields)
-    return _cache[cls]
+    return _members_cache[cls]
+
+
+def declaring(jar, cls, mname, desc=None):
+    """The nearest class in cls's chain that DECLARES mname (matching desc, if given)."""
+    cur = cls
+    while cur:
+        own = declared(jar, cur)
+        if own is None:
+            return None
+        descs = own[0].get(mname, [])
+        if descs and (desc is None or desc in descs):
+            return cur
+        cur = own[2]
+    return None
 
 
 def resolve(simple, imports, pkg):
@@ -163,6 +193,32 @@ def check_file(path, jar, report):
             return "ok" if desc in found else f"desc-mismatch (have {found})"
         return "ambiguous" if len(set(found)) > 1 else "ok"
 
+    def check_injector_target(mname, desc=None):
+        """Mixin resolves an injector's target method on the class @Mixin names, so a
+        method the target only INHERITS is not a target: the client dies during mixin
+        apply with "could not find any targets matching". MenuKit 5.1.0 shipped
+        exactly that against ClientPacketListener.send, which
+        ClientCommonPacketListenerImpl declares (2026-09-12), so this is checked
+        against declared members only, unlike @Shadow and @At below."""
+        verdicts = []
+        for fqn in infos:
+            own = declared(jar, fqn)[0]
+            descs = own.get(mname, [])
+            if descs and (desc is None or desc in descs):
+                verdicts.append("ambiguous" if desc is None and len(set(descs)) > 1 else "ok")
+            elif descs:
+                verdicts.append(f"desc-mismatch (have {descs})")
+            else:
+                owner = declaring(jar, fqn, mname, desc)
+                verdicts.append(
+                    f"inherited from {owner}, not declared on {fqn}: an injector's target must be declared "
+                    f"by the class @Mixin names, so this dies at mixin apply — @Mixin({owner.split('.')[-1]}.class) "
+                    f"or reach the seam another way" if owner else "missing")
+        for v in verdicts:
+            if v not in ("ok", "ambiguous"):
+                return v
+        return "ambiguous" if "ambiguous" in verdicts else "ok"
+
     def find_field(fname):
         return any(fname in flds for _, flds in infos.values())
 
@@ -171,7 +227,7 @@ def check_file(path, jar, report):
         for lit in re.findall(r'"([^"]+)"', m.group(1)):
             mname, _, rest = lit.partition("(")
             desc = "(" + rest if rest else None
-            r = find_method(mname, desc)
+            r = check_injector_target(mname, desc)
             if r == "ok":
                 report("OK", name, mname, "")
             elif r == "ambiguous":

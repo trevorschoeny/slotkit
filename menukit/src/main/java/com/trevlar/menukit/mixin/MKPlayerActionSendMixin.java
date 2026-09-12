@@ -4,7 +4,7 @@ import com.trevlar.menukit.window.ClickTags;
 import com.trevlar.menukit.window.PlayerActions;
 
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.multiplayer.ClientCommonPacketListenerImpl;
 import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.world.entity.player.Player;
@@ -19,6 +19,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * operations (Q, Ctrl-Q, F with no screen open). Every such action leaves through
  * here, vanilla's key handling and a mod sending one itself alike.
  *
+ * <p><b>Why the superclass.</b> {@code send} is declared by
+ * {@code ClientCommonPacketListenerImpl}, and {@code ClientPacketListener} only
+ * inherits it. Mixin resolves an injector's target on the class {@code @Mixin}
+ * names, so targeting the subclass killed the client during mixin apply (5.1.0,
+ * 2026-09-12). The config-phase listener shares this method and never carries a
+ * play packet, so the type test below is also what keeps this to the play phase.
+ *
  * <ul>
  *   <li><b>F is refused here.</b> Vanilla predicts nothing for an offhand swap,
  *       so not sending it is the whole refusal.</li>
@@ -31,7 +38,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *       operation it serves ({@link ClickTags}).</li>
  * </ul>
  */
-@Mixin(ClientPacketListener.class)
+@Mixin(ClientCommonPacketListenerImpl.class)
 public abstract class MKPlayerActionSendMixin {
 
     @Inject(method = "send(Lnet/minecraft/network/protocol/Packet;)V", at = @At("HEAD"), cancellable = true)
