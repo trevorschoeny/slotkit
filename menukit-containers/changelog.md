@@ -1,3 +1,5 @@
+5.2.0 (unreleased): `SlotGroups.of(slotRef)` names a created slot's own group, so a veto can tell a pocket from the main inventory. Requires MenuKit 5.2.0. Adds API and breaks nothing.
+
 5.1.0: Created slots follow MenuKit's slot operations. Requires MenuKit 5.1.0. This release adds API and breaks nothing.
 
 Shift-clicking into or out of a created slot now goes through the same shift-click in and shift-click out operations as a vanilla slot. A locking mod's veto covers pockets and other created slots without any extra work from you.

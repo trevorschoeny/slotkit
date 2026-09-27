@@ -1,6 +1,9 @@
 package com.trevlar.menukit.window;
 
 import com.trevlar.menukit.core.SlotGroupCategory;
+import com.trevlar.menukit.inject.SlotGroupId;
+import com.trevlar.menukit.inject.SlotGroupSet;
+import com.trevlar.menukit.inject.SlotGroups;
 
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
@@ -83,6 +86,24 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * hide the rest for any mod's operations, not just vanilla's. An operation that
  * moves items between two slots is two keys, one {@code TAKE} and one {@code PUT}.
  *
+ * <h2>Where an operation applies</h2>
+ *
+ * {@link #define(BehaviorKey, Role, AppliesTo)} also records which slot groups the
+ * operation can act on at all, so a settings screen never offers a box the
+ * operation could never touch ({@link #appliesTo(BehaviorKey, SlotGroupId)},
+ * {@link #groups(BehaviorKey)}). An operation names the <em>vanilla</em> groups it
+ * applies to; every group a mod adds applies automatically, unless the operation
+ * opts out of it by id or by {@link SlotGroupSet}. An operation defined without
+ * saying applies to every group, so nothing defined before this existed changes.
+ * MenuKit declares vanilla's own operations from what vanilla does: nothing puts
+ * into an output slot, the crafter's result can't be touched at all, double-click
+ * collect skips the results vanilla's menus exclude, and a world pickup lands only
+ * in the hotbar, the main inventory and the offhand.
+ *
+ * <p>This is a declaration, not a rule MenuKit enforces: vanilla's seams already act
+ * only where vanilla does, and a mod's own operation acts where its code does. It is
+ * what a consumer reads to know where an operation <em>can</em> reach.
+ *
  * <h2>With no screen open</h2>
  *
  * Q, Ctrl-Q and F while playing are the same {@code DROP}, {@code DROP_STACK} and
@@ -156,7 +177,79 @@ public final class SlotOperations {
         BOTH
     }
 
-    private record Definition(BehaviorKey<?> key, Role role) {}
+    /**
+     * Which slot groups an operation can act on. The vanilla groups are listed; any
+     * other group applies unless it is excepted, by its id or by the set it is in.
+     * "Other" is every group that is not one of vanilla's: a created group, and a
+     * group named by a category a mod minted for its own menu.
+     *
+     * <pre>
+     * AppliesTo.EVERY_GROUP                                            // the default
+     * AppliesTo.vanilla(PLAYER_HOTBAR, PLAYER_INVENTORY)               // two vanilla groups, and every mod group
+     * AppliesTo.vanillaExcept(FURNACE_OUTPUT).except(POCKETS_SET)      // every vanilla group but one; not pockets
+     * </pre>
+     *
+     * @param vanilla      the vanilla categories whose groups this applies to
+     * @param exceptGroups groups a mod added that this does not apply to
+     * @param exceptSets   sets of groups a mod added that this does not apply to
+     */
+    public record AppliesTo(Set<SlotGroupCategory> vanilla, Set<SlotGroupId> exceptGroups,
+                            Set<SlotGroupSet> exceptSets) {
+
+        /** Every vanilla group and every group a mod adds. What an operation that does not say applies to. */
+        public static final AppliesTo EVERY_GROUP =
+                new AppliesTo(Set.copyOf(SlotGroupCategory.vanilla()), Set.of(), Set.of());
+
+        public AppliesTo {
+            vanilla = Set.copyOf(vanilla);
+            exceptGroups = Set.copyOf(exceptGroups);
+            exceptSets = Set.copyOf(exceptSets);
+            for (SlotGroupCategory c : vanilla) {
+                if (!SlotGroupCategory.vanilla().contains(c)) {
+                    throw new IllegalArgumentException("AppliesTo: " + c + " is not a vanilla category; a mod's "
+                            + "own groups apply automatically, and opt out with except(...)");
+                }
+            }
+        }
+
+        /** These vanilla groups, and every group a mod adds. */
+        public static AppliesTo vanilla(SlotGroupCategory... categories) {
+            return new AppliesTo(Set.of(categories), Set.of(), Set.of());
+        }
+
+        /** Every vanilla group but these, and every group a mod adds. */
+        public static AppliesTo vanillaExcept(SlotGroupCategory... categories) {
+            Set<SlotGroupCategory> in = new java.util.LinkedHashSet<>(SlotGroupCategory.vanilla());
+            java.util.Arrays.asList(categories).forEach(in::remove);
+            return new AppliesTo(in, Set.of(), Set.of());
+        }
+
+        /** The same, but not these groups a mod added. */
+        public AppliesTo except(SlotGroupId... groups) {
+            Set<SlotGroupId> out = new java.util.HashSet<>(exceptGroups);
+            out.addAll(java.util.Arrays.asList(groups));
+            return new AppliesTo(vanilla, out, exceptSets);
+        }
+
+        /** The same, but not the groups in these sets. */
+        public AppliesTo except(SlotGroupSet... sets) {
+            Set<SlotGroupSet> out = new java.util.HashSet<>(exceptSets);
+            out.addAll(java.util.Arrays.asList(sets));
+            return new AppliesTo(vanilla, exceptGroups, out);
+        }
+
+        /** Whether this applies to {@code group}. A set is read from what the group declared ({@link SlotGroups#setOf}). */
+        public boolean test(SlotGroupId group) {
+            if (group instanceof SlotGroupId.Vanilla v && SlotGroupCategory.vanilla().contains(v.category())) {
+                return vanilla.contains(v.category());
+            }
+            if (exceptGroups.contains(group)) return false;
+            SlotGroupSet set = SlotGroups.setOf(group);
+            return set == null || !exceptSets.contains(set);
+        }
+    }
+
+    private record Definition(BehaviorKey<?> key, Role role, AppliesTo appliesTo) {}
 
     /** Operations anyone has defined, in definition order. */
     private static final Map<Identifier, Definition> DEFINED =
@@ -201,8 +294,18 @@ public final class SlotOperations {
      * vocabulary instead of a private one.
      */
     public static void define(BehaviorKey<?> operation, Role role) {
+        define(operation, role, AppliesTo.EVERY_GROUP);
+    }
+
+    /**
+     * {@link #define(BehaviorKey, Role)} with the slot groups the operation can act
+     * on; see "Where an operation applies" in the class doc. A second definition
+     * with a different {@code appliesTo} is refused, as a different role is.
+     */
+    public static void define(BehaviorKey<?> operation, Role role, AppliesTo appliesTo) {
         Objects.requireNonNull(operation, "operation");
         Objects.requireNonNull(role, "role");
+        Objects.requireNonNull(appliesTo, "appliesTo");
         synchronized (DEFINED) {
             Definition existing = DEFINED.get(operation.id());
             if (existing != null && !existing.key().equals(operation)) {
@@ -216,7 +319,12 @@ public final class SlotOperations {
                         "SlotOperations: operation '" + operation.id() + "' is already defined with role "
                         + existing.role() + ", not " + role + ".");
             }
-            DEFINED.putIfAbsent(operation.id(), new Definition(operation, role));
+            if (existing != null && !existing.appliesTo().equals(appliesTo)) {
+                throw new IllegalStateException(
+                        "SlotOperations: operation '" + operation.id() + "' is already defined with different "
+                        + "slot groups it applies to.");
+            }
+            DEFINED.putIfAbsent(operation.id(), new Definition(operation, role, appliesTo));
         }
     }
 
@@ -253,6 +361,32 @@ public final class SlotOperations {
     public static @Nullable Role role(BehaviorKey<?> operation) {
         Definition d = DEFINED.get(operation.id());
         return d != null && d.key().equals(operation) ? d.role() : null;
+    }
+
+    /**
+     * The slot groups {@code operation} was defined to apply to; {@link AppliesTo#EVERY_GROUP}
+     * for one defined without saying, or never defined.
+     */
+    public static AppliesTo appliesTo(BehaviorKey<?> operation) {
+        Definition d = DEFINED.get(operation.id());
+        return d != null && d.key().equals(operation) ? d.appliesTo() : AppliesTo.EVERY_GROUP;
+    }
+
+    /** Whether {@code operation} can act on slots in {@code group}. */
+    public static boolean appliesTo(BehaviorKey<?> operation, SlotGroupId group) {
+        return appliesTo(operation).test(group);
+    }
+
+    /**
+     * Every declared slot group ({@link SlotGroups#all()}) that {@code operation}
+     * applies to, in that order: the list a settings screen offers for it. To filter
+     * {@link SlotGroups#listing()} instead, keep an entry when any of its groups applies.
+     */
+    public static List<SlotGroupId> groups(BehaviorKey<?> operation) {
+        AppliesTo a = appliesTo(operation);
+        List<SlotGroupId> out = new java.util.ArrayList<>();
+        for (SlotGroupId id : SlotGroups.all()) if (a.test(id)) out.add(id);
+        return List.copyOf(out);
     }
 
     // ── Name and description ───────────────────────────────────────────────

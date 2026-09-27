@@ -5,6 +5,12 @@ import com.trevlar.menukit.core.SlotGroupCategory;
 import net.fabricmc.loader.api.FabricLoader;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.Slot;
+
+import com.trevlar.menukit.window.SlotRef;
+
+import org.jetbrains.annotations.ApiStatus;
 
 import org.jspecify.annotations.Nullable;
 import org.slf4j.Logger;
@@ -76,6 +82,14 @@ import java.util.concurrent.ConcurrentHashMap;
  * namespace. The name is that mod's display name from its {@code fabric.mod.json},
  * or the namespace itself when no loaded mod has that id. A created group whose
  * panel id has no namespace has no known source, and is {@code null} too.
+ *
+ * <h2>The group a slot is in</h2>
+ *
+ * {@link #of(SlotRef)} answers for one slot, the way a {@code SlotOperations} veto
+ * sees it: the created group a mod declared for a created slot, the vanilla group
+ * of a vanilla slot's category on its menu, and for a player-inventory slot with no
+ * menu (world pickup) the vanilla group its index sits in. A veto uses it to tell a
+ * hotbar slot from a pocket.
  */
 public final class SlotGroups {
 
@@ -86,6 +100,57 @@ public final class SlotGroups {
     private record Declared(SlotGroupCategory category, @Nullable SlotGroupSet set) {}
 
     private static final Map<SlotGroupId, Declared> DECLARED = new ConcurrentHashMap<>();
+
+    // ── The group a slot is in ─────────────────────────────────────────────
+
+    /**
+     * Port (§0042): the created group a live slot belongs to, or {@code null} for a
+     * slot that is not a created one. MenuKit-Containers installs it at init; with
+     * MenuKit alone there are no created slots.
+     */
+    @FunctionalInterface
+    @ApiStatus.Internal
+    public interface CreatedGroupLookup {
+        @Nullable SlotGroupId groupOf(Slot slot);
+    }
+
+    private static volatile CreatedGroupLookup createdLookup = slot -> null;
+
+    /** MenuKit-Containers installs its created-slot group lookup here at init. */
+    @ApiStatus.Internal
+    public static void installCreatedGroupLookup(CreatedGroupLookup impl) {
+        createdLookup = Objects.requireNonNull(impl, "impl");
+    }
+
+    /**
+     * The slot group {@code ref} is in, or {@code null} when nothing is known: a
+     * created slot's own group; a vanilla slot's group on its menu, which is its
+     * category's; a player-inventory slot's group by its index when the menu does
+     * not say, or when there is no menu (world pickup). A slot in a container no
+     * menu resolver covers, reached with no menu, is {@code null}.
+     */
+    public static @Nullable SlotGroupId of(SlotRef ref) {
+        Objects.requireNonNull(ref, "ref");
+        if (ref.slot() != null) {
+            SlotGroupId created = createdLookup.groupOf(ref.slot());
+            if (created != null) return created;
+            if (ref.category() != null) return SlotGroupId.vanilla(ref.category());
+        }
+        if (ref.container() instanceof Inventory) return playerInventoryGroup(ref.containerSlot());
+        return null;
+    }
+
+    /** Vanilla's layout of the player's own inventory: hotbar, main grid, armour, offhand. */
+    private static @Nullable SlotGroupId playerInventoryGroup(int index) {
+        if (index < 0) return null;
+        SlotGroupCategory category;
+        if (index < 9) category = SlotGroupCategory.PLAYER_HOTBAR;
+        else if (index < Inventory.INVENTORY_SIZE) category = SlotGroupCategory.PLAYER_INVENTORY;
+        else if (index < Inventory.SLOT_OFFHAND) category = SlotGroupCategory.PLAYER_ARMOR;
+        else if (index == Inventory.SLOT_OFFHAND) category = SlotGroupCategory.PLAYER_OFFHAND;
+        else return null;
+        return SlotGroupId.vanilla(category);
+    }
 
     // ── Declaring ──────────────────────────────────────────────────────────
 

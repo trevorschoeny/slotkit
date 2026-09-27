@@ -68,6 +68,13 @@ public class MKC implements ModInitializer {
         // seams run on the server. (QUICK_MOVE is no longer published to the
         // vocabulary: MenuKit's SHIFT_CLICK_OUT / SHIFT_CLICK_IN are the entries.)
         com.trevlar.menukit.core.CreatedSlotCategories.installLookup();
+        // SlotGroups.of(SlotRef) answers a created slot's own group. Both sides: a
+        // veto that reads it runs wherever the operation does.
+        com.trevlar.menukit.inject.SlotGroups.installCreatedGroupLookup(slot -> {
+            com.trevlar.menukit.core.MKCSlot mk = com.trevlar.menukit.core.MKCSlotAccess.asMKCSlot(slot);
+            return mk == null ? null
+                    : com.trevlar.menukit.inject.SlotGroupId.created(mk.getPanelId(), mk.getGroupId());
+        });
         // THE ONE WINDOW — install the server tier into MK's engine (DIP: MK owns
         // the ports, MKC conforms). Runs on both sides (universal init): server
         // holds authoritative bindings; client mirrors for prediction.
