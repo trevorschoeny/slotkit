@@ -2,6 +2,8 @@ package com.trevlar.menukit.inject;
 
 import com.trevlar.menukit.core.SlotGroupCategory;
 
+import net.fabricmc.loader.api.FabricLoader;
+
 import net.minecraft.network.chat.Component;
 
 import org.jspecify.annotations.Nullable;
@@ -64,6 +66,16 @@ import java.util.concurrent.ConcurrentHashMap;
  * </pre>
  *
  * A group inside a set is listed under the set's name, so its own line is optional.
+ *
+ * <h2>Source</h2>
+ *
+ * {@link #source} names the mod a row comes from, so a screen can say "Pockets
+ * (Inventory Max)". It is {@code null} for vanilla's groups. For anything else it is
+ * the mod whose namespace the row is named in: a set's namespace, a created group's
+ * panel-id namespace (the part before the colon), or a mod's own category's
+ * namespace. The name is that mod's display name from its {@code fabric.mod.json},
+ * or the namespace itself when no loaded mod has that id. A created group whose
+ * panel id has no namespace has no known source, and is {@code null} too.
  */
 public final class SlotGroups {
 
@@ -153,9 +165,18 @@ public final class SlotGroups {
      * @param set        the set, or {@code null} for a lone group
      * @param groups     the groups the row stands for; one for a lone group
      * @param categories the distinct categories of those groups, to filter by
+     * @param source     the mod the row comes from, or {@code null} for vanilla; see {@link #source}
      */
     public record Entry(String key, Component name, @Nullable SlotGroupSet set,
-                        List<SlotGroupId> groups, List<SlotGroupCategory> categories) {}
+                        List<SlotGroupId> groups, List<SlotGroupCategory> categories,
+                        @Nullable Component source) {
+
+        /** The 5.1.0 shape, with no source; kept so code built against it still links. */
+        public Entry(String key, Component name, @Nullable SlotGroupSet set,
+                     List<SlotGroupId> groups, List<SlotGroupCategory> categories) {
+            this(key, name, set, groups, categories, null);
+        }
+    }
 
     /**
      * The player-facing list: every lone group, and every set once in place of its
@@ -169,13 +190,14 @@ public final class SlotGroups {
             if (d.set() != null) {
                 sets.computeIfAbsent(d.set(), k -> new ArrayList<>()).add(id);
             } else {
-                out.add(new Entry(id.asString(), name(id), null, List.of(id), List.of(d.category())));
+                out.add(new Entry(id.asString(), name(id), null, List.of(id), List.of(d.category()), source(id)));
             }
         }
         sets.forEach((set, ids) -> {
             LinkedHashSet<SlotGroupCategory> categories = new LinkedHashSet<>();
             for (SlotGroupId id : ids) categories.add(DECLARED.get(id).category());
-            out.add(new Entry(set.asString(), name(set), set, List.copyOf(ids), List.copyOf(categories)));
+            out.add(new Entry(set.asString(), name(set), set, List.copyOf(ids), List.copyOf(categories),
+                    source(set)));
         });
         out.sort(Comparator.comparingInt((Entry e) -> e.set() == null ? rank(e.groups().get(0)) : Integer.MAX_VALUE)
                 .thenComparing(Entry::key));
@@ -205,6 +227,33 @@ public final class SlotGroups {
     /** A set's display name. */
     public static Component name(SlotGroupSet set) {
         return Component.translatable(langKey(set));
+    }
+
+    // ── Source ─────────────────────────────────────────────────────────────
+
+    /** The mod a group comes from, or {@code null} for vanilla's; see the class doc. */
+    public static @Nullable Component source(SlotGroupId id) {
+        return switch (id) {
+            case SlotGroupId.Vanilla v -> SlotGroupCategory.vanilla().contains(v.category())
+                    ? null : modName(v.category().namespace());
+            case SlotGroupId.Created c -> {
+                int colon = c.panelId().indexOf(':');
+                yield colon > 0 ? modName(c.panelId().substring(0, colon)) : null;
+            }
+        };
+    }
+
+    /** The mod a set comes from: the one its namespace names. */
+    public static Component source(SlotGroupSet set) {
+        return modName(set.namespace());
+    }
+
+    /** A mod's display name from its metadata, or the namespace when no loaded mod has that id. */
+    private static Component modName(String namespace) {
+        String name = FabricLoader.getInstance().getModContainer(namespace)
+                .map(mod -> mod.getMetadata().getName())
+                .orElse(namespace);
+        return Component.literal(name);
     }
 
     // Lang keys are lowercase dotted words; a panel id carries a colon. Two ids that
