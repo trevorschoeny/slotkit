@@ -1,6 +1,6 @@
 6.0.0 (unreleased, in progress): one of everything. Requires MenuKit 6.0.0. Breaking; the migration guide lists every change.
 
-Containers starts on a dedicated server, and a player can join it. On the server a created slot is addressed as a created slot and its group has its category, so operations, vetoes and gates judge it the way singleplayer does. A mod that registers a slot-state channel no longer crashes the server. `MKCMenu`'s screen is set on the client with `menu.screen(MyScreen::new)` from your client initializer; `MKCMenu.Builder.screen(...)` is gone, since naming a screen class in common code crashed every dedicated server.
+Containers has its own root package, `com.trevlar.menukit.containers`; every import changes. Containers starts on a dedicated server, and a player can join it. On the server a created slot is addressed as a created slot and its group has its category, so operations, vetoes and gates judge it the way singleplayer does. A mod that registers a slot-state channel no longer crashes the server. `MKCMenu`'s screen is set on the client with `menu.screen(MyScreen::new)` from your client initializer; `MKCMenu.Builder.screen(...)` is gone, since naming a screen class in common code crashed every dedicated server.
 
 5.2.0 (unreleased): `SlotGroups.of(slotRef)` names a created slot's own group, so a veto can tell a pocket from the main inventory. Requires MenuKit 5.2.0. Adds API and breaks nothing.
 
