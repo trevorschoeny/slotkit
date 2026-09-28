@@ -1,6 +1,5 @@
 package com.trevlar.menukit.inject;
 
-import com.trevlar.menukit.mixin.SlotWrapperAccessor;
 
 import net.minecraft.world.inventory.Slot;
 
@@ -34,8 +33,8 @@ import org.jetbrains.annotations.ApiStatus;
  * hotbar-anchored slots (pockets) dark there. One unwrap path closes it for
  * everyone.
  *
- * <p>Client-only: the creative wrapper is a client type. Only client-side render
- * + input + anchoring code calls this.
+ * <p>Both sides: common code (operations, slot references) calls it, and the
+ * client installs the unwrap, since the creative wrapper is a client type.
  *
  * <p><b>Internal plumbing.</b> The creative-wrapper unwrap is a library-internal
  * detail of how MK resolves a raw vanilla {@code Slot}'s identity; it is not a
@@ -46,9 +45,6 @@ import org.jetbrains.annotations.ApiStatus;
 public final class Slots {
 
     private Slots() {}
-
-    private static final boolean CLIENT =
-            net.fabricmc.loader.api.FabricLoader.getInstance().getEnvironmentType() == net.fabricmc.api.EnvType.CLIENT;
 
     /**
      * The real vanilla {@link Slot} {@code slot} is or wraps: the slot a creative
@@ -61,13 +57,15 @@ public final class Slots {
      * coordinates.
      */
     public static Slot target(Slot slot) {
-        // SlotWrapperAccessor is a client mixin: on a dedicated server its config
-        // section is not applied and loading it throws, and there are no creative
-        // wrappers to see through anyway. The guard keeps the class unresolved there.
-        if (CLIENT && slot instanceof SlotWrapperAccessor wrapper) {
-            Slot t = wrapper.mk$getTarget();
-            if (t != null) return t;
-        }
-        return slot;
+        return unwrap.apply(slot);
+    }
+
+    // The creative wrapper is a client class, so the client installs the unwrap
+    // (MKClient); on a server there are no wrappers and a slot is its own target.
+    private static volatile java.util.function.UnaryOperator<Slot> unwrap = java.util.function.UnaryOperator.identity();
+
+    /** MKClient installs the creative-wrapper unwrap at client init. */
+    public static void installUnwrap(java.util.function.UnaryOperator<Slot> impl) {
+        unwrap = java.util.Objects.requireNonNull(impl, "impl");
     }
 }

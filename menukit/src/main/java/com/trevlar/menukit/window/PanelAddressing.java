@@ -1,8 +1,5 @@
 package com.trevlar.menukit.window;
 
-import com.trevlar.menukit.core.Panel;
-import com.trevlar.menukit.core.PanelElement;
-
 import net.minecraft.resources.Identifier;
 
 import java.util.Locale;
@@ -45,19 +42,9 @@ public final class PanelAddressing {
                 "panel/" + panelId.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_.-]", "_"));
     }
 
-    /** The {@link Address} of {@code panel} itself (its own visibility/opacity/inertness). */
-    public static Address of(Panel panel) {
-        return ofPanel(panel.getId());
-    }
-
     /** The {@link Address} of a panel by id. */
     public static Address ofPanel(String panelId) {
         return Address.panel(PANEL_FAMILY, OwnerScope.primary(), regKey(panelId));
-    }
-
-    /** The {@link Address} of {@code element} within {@code panel}. */
-    public static Address of(Panel panel, PanelElement element) {
-        return ofElement(panel.getId(), elementDeclId(panel, element));
     }
 
     /** The {@link Address} of a panel element by ids. */
@@ -65,14 +52,4 @@ public final class PanelAddressing {
         return Address.panelElement(PANEL_FAMILY, OwnerScope.primary(), regKey(panelId), elementDeclId);
     }
 
-    /**
-     * An element's durable declaration id — its explicit {@code elementDeclId} when
-     * given (Phase 0), else its registration-order position in the panel (stable
-     * across reopen as long as the element list order is). Never a runtime counter.
-     */
-    private static String elementDeclId(Panel panel, PanelElement element) {
-        String declId = element.getElementDeclId();
-        if (declId != null) return declId;
-        return "idx:" + panel.getRawElements().indexOf(element);
-    }
 }

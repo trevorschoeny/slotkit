@@ -54,6 +54,9 @@ repositories {
     maven { url 'https://maven.nucleoid.xyz' }        // UG's transitive deps (xyz.nucleoid / Polymer)
 }
 
+// MenuKit's client source set must exist before this project reads it.
+evaluationDependsOn(':menukit')
+
 dependencies {
     // 26.x: the game is unobfuscated — no mappings line, and mod deps use the
     // standard java configurations (modImplementation → implementation etc.).
@@ -71,6 +74,9 @@ dependencies {
     // (26.x: the remap layer is gone, so the `namedElements` variant no
     // longer exists — a plain project dep is THE artifact now.)
     api project(':menukit')
+    // MenuKit's client half (MenuKit splits its source sets, §0062); a published
+    // jar holds both, this is only how a project dependency sees it.
+    implementation rootProject.project(':menukit').sourceSets.client.output
 
     // @ApiStatus.Internal markers. Compile-only so consumers don't transitively
     // depend on jetbrains-annotations at runtime; the annotation is a doc/IDE
