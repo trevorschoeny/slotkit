@@ -1,12 +1,11 @@
 package com.trevlar.menukit.containers.mixin;
 
-import com.trevlar.menukit.window.BehaviorBindingTable;
+import com.trevlar.menukit.window.WindowEngine;
 import com.trevlar.menukit.containers.core.MendingCandidates;
 import com.trevlar.menukit.containers.core.MKCBehaviorKeys;
 import com.trevlar.menukit.containers.core.MKCSlot;
 import com.trevlar.menukit.window.Address;
 import com.trevlar.menukit.window.VanillaAddressing;
-import com.trevlar.menukit.window.WindowEngine;
 
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.server.level.ServerPlayer;
@@ -146,7 +145,7 @@ public class ExperienceOrbMendMixin {
         //    (commit = null, exactly like equipped gear).
         // Skip the per-slot scan entirely when no behavior is set anywhere — keeps
         // normal XP pickup (the overwhelming common case) zero-cost.
-        for (Slot slot : BehaviorBindingTable.INSTANCE.isEmpty() ? List.<Slot>of() : player.inventoryMenu.slots) {
+        for (Slot slot : !WindowEngine.hasServerDeclarations() ? List.<Slot>of() : player.inventoryMenu.slots) {
             if (slot instanceof MKCSlot mk) {
                 if (WindowEngine.resolve(mk.address(), MKCBehaviorKeys.MENDING).asBoolean()) {
                     ItemStack stack = mk.getItem();

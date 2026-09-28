@@ -1,142 +1,155 @@
 package com.trevlar.menukit.window;
 
+import java.util.Collection;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * The resolution engine of THE ONE WINDOW — MK ring-0, pure policy, no Minecraft
- * I/O. Every behavior of every addressable thing flows through one method:
- * {@link #resolve(Address, BehaviorKey)}. The engine never branches on
- * {@link KindTag}; it sorts {@link Decl}s by the frozen cascade and returns a
- * fully-resolved value, always non-null.
+ * The resolution engine of THE ONE WINDOW: one store, one cascade, one method,
+ * {@link #resolve(Address, BehaviorKey)}. It never branches on {@link KindTag}; it
+ * walks the declarations for an address and returns a fully resolved value, never
+ * null.
  *
- * <h2>The frozen two-axis cascade</h2>
+ * <h2>One store with a tier axis (§0063)</h2>
+ *
+ * Every declaration lives in the store for its key's {@link Tier}. A SERVER key
+ * (what a slot accepts, the operations, reactions with authority) is held and
+ * resolved in the server tier; a CLIENT key (visibility, opacity, observed
+ * reactions) in the client tier. The two tiers are one data structure walked by
+ * one algorithm; they differ only in which levels they have. Until 6.0.0 the
+ * server tier was a second copy of this class in Containers.
+ *
+ * <h2>The cascade</h2>
  *
  * <ol>
- *   <li><b>AXIS 1 — authority</b> (higher): server-tier authoritative declaration
- *       &gt; client-tier declaration &gt; library default. Compared only where a
- *       key's {@link Tier} makes it meaningful. <em>Plugs in at Phase 3b</em> via
- *       the server-tier port; this client engine holds only client-tier decls.</li>
- *   <li><b>AXIS 2 — specificity</b> (within equal authority): per-slot override
- *       &gt; owner-chain ancestor &gt; matching groups, by
- *       {@link GroupKey#precedence()} &gt; library default. The group level has its
- *       own rungs, so a slot group's own declaration outranks the inherent
- *       declarations of the category that group belongs to.</li>
- *   <li><b>Tie-break</b>: last-declared wins, within one group precedence.</li>
+ *   <li><b>Per address</b>: a declaration on the thing itself.</li>
+ *   <li><b>Owner chain</b> (client tier only): a declaration on an ancestor, the
+ *       panel a slot or element hangs under, nearest first. "Set opacity once on
+ *       the panel" flows to everything inside.</li>
+ *   <li><b>Groups</b>: every group the address is a member of, by
+ *       {@link GroupKey#precedence()} (a slot group over its category). A tie at
+ *       one precedence goes to the group whose id sorts last, never to the one
+ *       registered last: registration order is mod load order, which Fabric does
+ *       not define.</li>
+ *   <li>The key's {@link BehaviorKey#libraryDefault()}.</li>
  * </ol>
  *
- * A {@link Decl.Set} stops the walk with its value; {@link Decl.Inherit} or the
- * absence of a declaration falls through; the walk always terminates at the key's
- * {@link BehaviorKey#libraryDefault()} (the Null-Object bottom). So a slot nobody
- * touched resolves straight to the vanilla-equivalent default.
- *
- * <p>This client store is MK-resident and MK-alone usable. The server tier (the
- * MKC {@code BehaviorBindingTable} feeding AXIS-1) arrives in Phase 3b/3c.
+ * A {@link Decl.Set} stops the walk. {@link Decl.Inherit} is not stored: writing
+ * it removes the declaration, so clearing a slot leaves nothing behind and the
+ * store does not grow per player or per block.
  *
  * <h2>Threading</h2>
  *
- * Declaration ({@code set}/{@code setGroup}) and resolution ({@code resolve}) are
- * expected on the client thread (declare at screen/menu setup, resolve during
- * render/input). The store is nonetheless safe under incidental cross-thread
- * access: the maps are concurrent, {@code GROUPS} is copy-on-write, group
- * creation is serialized in {@link #bindingFor}, and every {@link Decl} is
- * immutable — so a {@code resolve} racing a declaration sees a consistent
- * old-or-new value, never torn state. (The Phase-3b server port supplies AXIS-1
- * declarations through the same immutable-{@code Decl} contract.)
+ * Declarations and resolution may race (the client thread and the integrated
+ * server both use the engine). The maps are concurrent, the group lists are
+ * copy-on-write, group creation is serialised, and every {@link Decl} is
+ * immutable, so a resolve racing a write sees the old value or the new one.
  */
 public final class WindowEngine {
 
     private WindowEngine() {}
 
-    // Per-address (the per-slot / per-element / per-panel specificity level).
-    private static final Map<Address, Map<BehaviorKey<?>, Decl<?>>> PER_ADDRESS = new ConcurrentHashMap<>();
-
-    // Per-group, in registration order (the last-declared tie-break reads this order).
-    private static final List<GroupBinding> GROUPS = new CopyOnWriteArrayList<>();
+    /** One tier's declarations: per address, and per group. */
+    private static final class Store {
+        final Map<Address, Map<BehaviorKey<?>, Decl<?>>> perAddress = new ConcurrentHashMap<>();
+        final List<GroupBinding> groups = new CopyOnWriteArrayList<>();
+    }
 
     private record GroupBinding(GroupKey group, Map<BehaviorKey<?>, Decl<?>> decls) {}
 
-    // ── declare (client tier) ──────────────────────────────────────────
+    private static final Map<Tier, Store> STORES = new EnumMap<>(Tier.class);
+    static {
+        for (Tier t : Tier.values()) STORES.put(t, new Store());
+    }
 
-    /** Declare a behavior on one address (the most specific level). */
+    private static Store store(BehaviorKey<?> key) {
+        return STORES.get(key.tier());
+    }
+
+    // ── declare ────────────────────────────────────────────────────────
+
+    /**
+     * Declares {@code key} on one address, the most specific level. Writing
+     * {@link Decl#inherit()} removes the declaration.
+     */
     public static <V> void set(Address address, BehaviorKey<V> key, Decl<V> decl) {
         requireApplies(key, address.kind());
-        if (key.tier() == Tier.SERVER) {
-            // Authoritative: the server tier's store, always present (§0062).
-            BehaviorBindingTable.INSTANCE.declare(address, key, decl);
+        Map<Address, Map<BehaviorKey<?>, Decl<?>>> perAddress = store(key).perAddress;
+        if (decl instanceof Decl.Inherit<V>) {
+            perAddress.computeIfPresent(address, (a, m) -> {
+                m.remove(key);
+                return m.isEmpty() ? null : m;
+            });
             return;
         }
-        PER_ADDRESS.computeIfAbsent(address, a -> new ConcurrentHashMap<>()).put(key, decl);
+        perAddress.computeIfAbsent(address, a -> new ConcurrentHashMap<>()).put(key, decl);
     }
 
-    /** Declare a behavior as a group default (the bulk level). */
+    /** Removes every declaration on {@code address}, in both tiers. */
+    public static void clear(Address address) {
+        for (Store s : STORES.values()) s.perAddress.remove(address);
+    }
+
+    /**
+     * Declares {@code key} as a group default. A group's members vary, so its kind
+     * is not checked here; the typed handles check it. Writing
+     * {@link Decl#inherit()} removes the group's declaration of that key.
+     */
     public static <V> void setGroup(GroupKey group, BehaviorKey<V> key, Decl<V> decl) {
-        // A group's members vary, so its kind can't be pre-checked here;
-        // applicability is enforced at the typed handle boundary (Phase 6).
-        if (key.tier() == Tier.SERVER) {
-            BehaviorBindingTable.INSTANCE.declareGroup(group, key, decl);
+        if (decl instanceof Decl.Inherit<V>) {
+            for (GroupBinding b : store(key).groups) {
+                if (b.group().equals(group)) b.decls().remove(key);
+            }
             return;
         }
-        bindingFor(group).put(key, decl);
+        bindingFor(store(key), group).put(key, decl);
     }
 
-    // ── resolve (the cascade) ──────────────────────────────────────────
+    // ── resolve ────────────────────────────────────────────────────────
 
-    /** The fully-resolved value of {@code key} at {@code address} — never null. */
+    /** The fully resolved value of {@code key} at {@code address}; never null. */
     public static <V> V resolve(Address address, BehaviorKey<V> key) {
-        return resolve(address, key, java.util.List.of());
+        return resolve(address, key, List.of());
     }
 
     /**
      * {@link #resolve(Address, BehaviorKey)} with memberships the caller knows and
-     * the address alone does not say. A group's membership is a predicate over the
-     * address, which is all a created slot needs: its category travels with its
-     * address. A vanilla slot's category depends on the menu it sits in, so the
-     * seam that has the menu in hand ({@link SlotOperations#allows}) states the
-     * slot's category group here and the group and category rungs reach vanilla
-     * slots too. Explicit data from the caller, not hidden context.
+     * the address alone does not say. A created slot's groups follow from its
+     * address; a vanilla slot's group depends on the menu it sits in, so a seam
+     * with the menu in hand ({@link SlotOperations#allows}) states it here.
      */
-    public static <V> V resolve(Address address, BehaviorKey<V> key, java.util.Collection<GroupKey> alsoMemberOf) {
-        // AXIS 1 — server authority (above the client tier), for SERVER-tier keys.
-        // No server declaration => Inherit, so the key falls through to the
-        // client tier and finally the library default.
-        if (key.tier() == Tier.SERVER) {
-            Decl<V> auth = BehaviorBindingTable.INSTANCE.resolve(address, key, alsoMemberOf);
-            if (auth instanceof Decl.Set<V> s) return s.value();
-            // A server-tier key is never written to the client tier: set() and
-            // setGroup() route it to the server store (or buffer it until that store
-            // installs). So the client half below can never answer for one; skip it.
-            // It ran on every operation call, for every slot a click touches.
-            return key.libraryDefault();
+    public static <V> V resolve(Address address, BehaviorKey<V> key, Collection<GroupKey> alsoMemberOf) {
+        Store s = store(key);
+        Decl<V> own = declAt(s, address, key);
+        if (own instanceof Decl.Set<V> set) return set.value();
+        if (key.tier() == Tier.CLIENT) {
+            // The owner chain is the client tier's: panels are client things, and a
+            // server declaration is only ever made on the slot itself or a group.
+            for (Address ancestor = parentAddress(address); ancestor != null; ancestor = parentAddress(ancestor)) {
+                Decl<V> a = declAt(s, ancestor, key);
+                if (a instanceof Decl.Set<V> set) return set.value();
+            }
         }
-        // AXIS 2 — client tier specificity: per-address > per-owner-ancestor >
-        // per-group > library default.
-        Decl<V> slot = declAt(address, key);
-        if (slot instanceof Decl.Set<V> s) return s.value();   // Inherit / absent => fall through
-        // Owner-chain inheritance: a default declared on an ancestor (a panel) is
-        // inherited by its children (panel elements / created slots) — nearest
-        // ancestor first. The owner nesting IS the cascade scope, so "set opacity/
-        // visibility once on the panel, it flows to everything inside" falls out
-        // here without a bespoke flag. A pure-client concern: server-tier keys live
-        // in the MKC store (AXIS-1, child-only) and ancestors are CLIENT panels.
-        for (Address ancestor = parentAddress(address); ancestor != null; ancestor = parentAddress(ancestor)) {
-            Decl<V> a = declAt(ancestor, key);
-            if (a instanceof Decl.Set<V> s) return s.value();
-        }
-        Decl<V> group = declForGroups(address, key, alsoMemberOf);
-        if (group instanceof Decl.Set<V> s) return s.value();
+        Decl<V> group = declForGroups(s, address, key, alsoMemberOf);
+        if (group instanceof Decl.Set<V> set) return set.value();
         return key.libraryDefault();
     }
 
     /**
-     * The address of {@code a}'s owning ancestor — the panel a created slot or
-     * panel element (or a nested panel) hangs under — or {@code null} once the
-     * chain bottoms out at a {@link OwnerRef.RootOwner}. The ancestor of a
-     * {@link OwnerRef.NestedOwner} is the thing its {@code (parent, parentToken)}
-     * names; that is always a {@link KindTag#PANEL} (panels are the nestable owner),
-     * reconstructed so it equals the address a {@code PanelHandle} stores against.
+     * Whether any server-tier declaration exists at all: a seam that has nothing
+     * to enforce skips its work, so a slot nobody touched stays exactly vanilla.
+     */
+    public static boolean hasServerDeclarations() {
+        Store s = STORES.get(Tier.SERVER);
+        return !s.perAddress.isEmpty() || !s.groups.isEmpty();
+    }
+
+    /**
+     * The address of {@code a}'s owning ancestor (the panel a created slot or panel
+     * element hangs under), or {@code null} once the chain reaches a root owner.
      */
     private static Address parentAddress(Address a) {
         if (a.owner() instanceof OwnerRef.NestedOwner nested) {
@@ -145,40 +158,43 @@ public final class WindowEngine {
         return null;
     }
 
-
     // ── internals ──────────────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
-    private static <V> Decl<V> declAt(Address address, BehaviorKey<V> key) {
-        Map<BehaviorKey<?>, Decl<?>> m = PER_ADDRESS.get(address);
+    private static <V> Decl<V> declAt(Store s, Address address, BehaviorKey<V> key) {
+        Map<BehaviorKey<?>, Decl<?>> m = s.perAddress.get(address);
         return m == null ? null : (Decl<V>) m.get(key);
     }
 
     @SuppressWarnings("unchecked")
-    private static <V> Decl<V> declForGroups(Address address, BehaviorKey<V> key,
-                                             java.util.Collection<GroupKey> alsoMemberOf) {
+    private static <V> Decl<V> declForGroups(Store s, Address address, BehaviorKey<V> key,
+                                             Collection<GroupKey> alsoMemberOf) {
         Decl<V> result = null;
-        int best = Integer.MIN_VALUE;
-        for (GroupBinding b : GROUPS) {                // registration order
-            if (!b.group().contains(address) && !alsoMemberOf.contains(b.group())) continue;
+        GroupKey winner = null;
+        for (GroupBinding b : s.groups) {
             Decl<?> d = b.decls().get(key);
             if (d == null) continue;
-            // Higher precedence wins (a slot group over its category); >= keeps the
-            // last-declared tie-break WITHIN one precedence.
-            if (b.group().precedence() >= best) {
-                best = b.group().precedence();
+            if (!b.group().contains(address) && !alsoMemberOf.contains(b.group())) continue;
+            if (winner == null || outranks(b.group(), winner)) {
+                winner = b.group();
                 result = (Decl<V>) d;
             }
         }
         return result;
     }
 
-    private static synchronized Map<BehaviorKey<?>, Decl<?>> bindingFor(GroupKey group) {
-        for (GroupBinding b : GROUPS) {
+    /** Higher precedence wins; at one precedence, the id that sorts last. */
+    private static boolean outranks(GroupKey a, GroupKey b) {
+        if (a.precedence() != b.precedence()) return a.precedence() > b.precedence();
+        return a.id().compareTo(b.id()) > 0;
+    }
+
+    private static synchronized Map<BehaviorKey<?>, Decl<?>> bindingFor(Store s, GroupKey group) {
+        for (GroupBinding b : s.groups) {
             if (b.group().equals(group)) return b.decls();
         }
         Map<BehaviorKey<?>, Decl<?>> m = new ConcurrentHashMap<>();
-        GROUPS.add(new GroupBinding(group, m));
+        s.groups.add(new GroupBinding(group, m));
         return m;
     }
 
