@@ -115,6 +115,7 @@ public final class SlotGroupCategories {
 
     public static <T extends AbstractContainerMenu> void register(
             Class<T> menuClass, SlotGroupResolver resolver) {
+        com.trevlar.menukit.window.Declarations.requireOpen("SlotGroupCategories.register(" + menuClass.getName() + ")");
         SlotGroupResolver existing = RESOLVERS.get(menuClass);
         if (existing != null) {
             LOGGER.warn("[SlotGroupCategories] resolver for {} already registered — ignoring " +
@@ -156,6 +157,7 @@ public final class SlotGroupCategories {
      */
     public static <T extends AbstractContainerMenu> void extend(
             Class<T> menuClass, SlotGroupResolver resolver) {
+        com.trevlar.menukit.window.Declarations.requireOpen("SlotGroupCategories.extend(" + menuClass.getName() + ")");
         List<SlotGroupResolver> list = EXTENSIONS.computeIfAbsent(
                 menuClass, k -> new ArrayList<>());
         list.add(resolver);
@@ -176,6 +178,7 @@ public final class SlotGroupCategories {
      */
     @ApiStatus.Internal
     public static void extendEvery(CreatedGroupResolver resolver) {
+        com.trevlar.menukit.window.Declarations.requireOpen("SlotGroupCategories.extendEvery");
         UNIVERSAL.add(resolver);
         LOGGER.info("[SlotGroupCategories] universal resolver #{} registered", UNIVERSAL.size());
     }
@@ -190,6 +193,12 @@ public final class SlotGroupCategories {
      * anything is registered against it.
      */
     public static void declare(SlotGroupCategory category) {
+        com.trevlar.menukit.window.Declarations.requireOpen("SlotGroupCategories.declare(" + category + ")");
+        record(category);
+    }
+
+    /** A category recorded because a group declared it; see {@link SlotGroups#declareDerived}. */
+    static void record(SlotGroupCategory category) {
         DECLARED.add(Objects.requireNonNull(category, "category"));
     }
 

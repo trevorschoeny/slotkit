@@ -218,6 +218,7 @@ public final class MKCMenu {
          * once at mod init.
          */
         public MKCMenu register() {
+    com.trevlar.menukit.window.Declarations.requireOpen("MKCMenu " + id + " register()");
             // The MenuType factory: (syncId, inv) -> handler. Used by the client to
             // reconstruct the menu from the server's open packet. The consumer's
             // factory is handed the menu's own MenuType — but the type isn't built

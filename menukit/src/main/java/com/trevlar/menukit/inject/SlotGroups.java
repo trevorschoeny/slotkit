@@ -185,6 +185,7 @@ public final class SlotGroups {
     /** MenuKit-Containers installs its created-slot group lookup here at init. */
     @ApiStatus.Internal
     public static void installCreatedGroupLookup(CreatedGroupLookup impl) {
+        com.trevlar.menukit.window.Declarations.requireOpen("SlotGroups.installCreatedGroupLookup");
         createdLookup = Objects.requireNonNull(impl, "impl");
     }
 
@@ -230,7 +231,21 @@ public final class SlotGroups {
      * none, or for "no opinion" when another declaration names the set). Declaring
      * a group declares its category in {@link SlotGroupCategories#all()} too.
      */
-    public static synchronized void declare(SlotGroupId id, SlotGroupCategory category, @Nullable SlotGroupSet set) {
+    public static void declare(SlotGroupId id, SlotGroupCategory category, @Nullable SlotGroupSet set) {
+        com.trevlar.menukit.window.Declarations.requireOpen("SlotGroups.declare(" + id.asString() + ")");
+        record(id, category, set);
+    }
+
+    /**
+     * A group declared as a menu is built ({@code MKCSlots.onto}): an index MenuKit
+     * fills, idempotent, so it stays legal after declarations freeze (§0063).
+     */
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public static void declareDerived(SlotGroupId id, SlotGroupCategory category) {
+        record(id, category, null);
+    }
+
+    private static synchronized void record(SlotGroupId id, SlotGroupCategory category, @Nullable SlotGroupSet set) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(category, "category");
         if (id instanceof SlotGroupId.Category v && !v.category().equals(category)) {
@@ -248,7 +263,7 @@ public final class SlotGroups {
             DECLARED.put(id, new Declared(category, set));
             if (id instanceof SlotGroupId.Created c) CREATED_BY_ADDRESS.put(createdKey(PanelAddressing.regKey(c.panelId()), c.groupId()), c);
             generation++;
-            SlotGroupCategories.declare(category);
+            SlotGroupCategories.record(category);
             return;
         }
         if (!was.category().equals(category)) {

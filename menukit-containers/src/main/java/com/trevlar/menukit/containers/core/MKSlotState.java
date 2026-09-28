@@ -362,6 +362,7 @@ public final class MKSlotState {
     /** MKCClient installs the client player lookup at client init. */
     @org.jetbrains.annotations.ApiStatus.Internal
     public static void installClientPlayer(java.util.function.Supplier<@Nullable Player> lookup) {
+        com.trevlar.menukit.window.Declarations.requireOpen("MKSlotState.installClientPlayer");
         clientPlayer = java.util.Objects.requireNonNull(lookup, "lookup");
     }
 

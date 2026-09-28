@@ -295,6 +295,7 @@ public final class MKCContainerPanel {
          * initializer).
          */
         public void register() {
+    com.trevlar.menukit.window.Declarations.requireOpen("MKCContainerPanel " + panelId + " register()");
             // Exactly ONE placement: a region anchor OR the pixel-precision
             // supplier (§0057 Revision). Zero or both = a declaration bug — fail
             // loudly at register() rather than resolving nothing at runtime.

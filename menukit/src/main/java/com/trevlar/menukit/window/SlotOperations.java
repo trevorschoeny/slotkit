@@ -296,6 +296,7 @@ public final class SlotOperations {
      * with a different {@code appliesTo} is refused, as a different role is.
      */
     public static void define(BehaviorKey<?> operation, Role role, AppliesTo appliesTo) {
+        com.trevlar.menukit.window.Declarations.requireOpen("SlotOperations.define(" + operation.id() + ")");
         Objects.requireNonNull(operation, "operation");
         Objects.requireNonNull(role, "role");
         Objects.requireNonNull(appliesTo, "appliesTo");
@@ -487,12 +488,14 @@ public final class SlotOperations {
 
     /** Registers a veto. Typically once, at your mod's init. */
     public static void veto(Veto veto) {
+        com.trevlar.menukit.window.Declarations.requireOpen("SlotOperations.veto");
         Objects.requireNonNull(veto, "veto");
         VETOES.add(new PlainVeto(veto));
     }
 
     /** Registers a veto that is handed the slot's group. Typically once, at your mod's init. */
     public static void veto(GroupVeto veto) {
+        com.trevlar.menukit.window.Declarations.requireOpen("SlotOperations.veto");
         VETOES.add(Objects.requireNonNull(veto, "veto"));
         anyGroupVeto = true;
     }

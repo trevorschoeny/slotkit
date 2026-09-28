@@ -136,6 +136,7 @@ public final class SlotNames {
 
     /** Registers/replaces the naming rule for a (typically consumer-defined) category. */
     public static void register(SlotGroupCategory category, String label, String... singletons) {
+        com.trevlar.menukit.window.Declarations.requireOpen("SlotNames.register(" + category + ")");
         SPECS.put(category, singletons.length == 0 ? ordinal(label) : singletons(singletons));
     }
 

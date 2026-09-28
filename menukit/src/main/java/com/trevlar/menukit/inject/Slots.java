@@ -66,6 +66,7 @@ public final class Slots {
 
     /** MKClient installs the creative-wrapper unwrap at client init. */
     public static void installUnwrap(java.util.function.UnaryOperator<Slot> impl) {
+        com.trevlar.menukit.window.Declarations.requireOpen("Slots.installUnwrap");
         unwrap = java.util.Objects.requireNonNull(impl, "impl");
     }
 }

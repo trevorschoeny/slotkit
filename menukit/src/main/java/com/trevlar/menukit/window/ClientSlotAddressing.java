@@ -38,6 +38,7 @@ public final class ClientSlotAddressing {
 
     /** MKC installs its kind-aware {@code SlotAddresses.of} here from common init, on both sides. */
     public static void install(SlotAddressFn impl) {
+        com.trevlar.menukit.window.Declarations.requireOpen("ClientSlotAddressing.install");
         fn = Objects.requireNonNull(impl, "impl");
     }
 

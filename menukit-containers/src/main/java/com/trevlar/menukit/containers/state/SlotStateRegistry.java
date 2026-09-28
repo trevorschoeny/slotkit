@@ -43,6 +43,7 @@ public final class SlotStateRegistry {
     }
 
     public static void registerChannel(SlotStateChannel<?> channel) {
+        com.trevlar.menukit.window.Declarations.requireOpen("a slot-state channel " + channel.id());
         CHANNELS.put(channel.id(), channel);
     }
 

@@ -58,6 +58,7 @@ public final class MendingCandidates {
 
     /** Registers a candidate provider. Call once at mod init. */
     public static void register(Provider provider) {
+        com.trevlar.menukit.window.Declarations.requireOpen("MendingCandidates.register");
         PROVIDERS.add(provider);
     }
 

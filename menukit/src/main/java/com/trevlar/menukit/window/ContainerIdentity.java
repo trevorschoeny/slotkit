@@ -64,18 +64,21 @@ public final class ContainerIdentity {
 
     /** A library's own containers (Containers' key-carrying storages); consulted first. */
     public static void extend(Function<Container, Optional<PersistentContainerKey>> extension) {
+        com.trevlar.menukit.window.Declarations.requireOpen("ContainerIdentity.extend");
         EXTENSIONS.add(Objects.requireNonNull(extension, "extension"));
     }
 
     /** A modded block entity class resolves through {@code resolver} instead of its position. */
     public static <T extends BlockEntity> void registerBlockEntityResolver(
             Class<T> type, Function<T, PersistentContainerKey> resolver) {
+        com.trevlar.menukit.window.Declarations.requireOpen("a block-entity container resolver for " + type.getName());
         BE_RESOLVERS.put(type, resolver);
     }
 
     /** A modded entity class resolves through {@code resolver} instead of its UUID. */
     public static <T extends Entity> void registerEntityResolver(
             Class<T> type, Function<T, PersistentContainerKey> resolver) {
+        com.trevlar.menukit.window.Declarations.requireOpen("an entity container resolver for " + type.getName());
         ENTITY_RESOLVERS.put(type, resolver);
     }
 

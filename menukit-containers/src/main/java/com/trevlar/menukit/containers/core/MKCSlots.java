@@ -377,7 +377,7 @@ public final class MKCSlots {
             // Listed with no menu open (SlotGroups), from the first menu built with
             // it on. Idempotent across menu constructions. A mod that wants the group
             // listed from the title screen declares it at init as well.
-            com.trevlar.menukit.inject.SlotGroups.declare(groupId(panelId, groupId), category);
+            com.trevlar.menukit.inject.SlotGroups.declareDerived(groupId(panelId, groupId), category);
 
             // 1. Standalone SlotGroup — storage + layout only. Behavior
             //    (gating/quick-move/binding/mending) is not carried here; it

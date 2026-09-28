@@ -91,6 +91,7 @@ public final class StorageAttachments {
      */
     public static AttachmentType<ItemContainerContents> registerContainerAttachment(
             Identifier id, int defaultSlots) {
+        com.trevlar.menukit.window.Declarations.requireOpen("a storage attachment");
         AttachmentType<ItemContainerContents> type = CACHE.computeIfAbsent(id, k ->
                 AttachmentRegistry.<ItemContainerContents>builder()
                         .persistent(ItemContainerContents.CODEC)
@@ -113,6 +114,7 @@ public final class StorageAttachments {
      */
     public static AttachmentType<ItemContainerContents> registerPlayerContentAttachment(
             Identifier id, int defaultSlots) {
+        com.trevlar.menukit.window.Declarations.requireOpen("a storage attachment");
         AttachmentType<ItemContainerContents> type = CACHE.computeIfAbsent(id, k ->
                 AttachmentRegistry.<ItemContainerContents>builder()
                         .persistent(ItemContainerContents.CODEC)
@@ -133,6 +135,7 @@ public final class StorageAttachments {
      */
     public static AttachmentType<ItemContainerContents> registerBlockScopedAttachment(
             Identifier id, int defaultSlots) {
+        com.trevlar.menukit.window.Declarations.requireOpen("a storage attachment");
         AttachmentType<ItemContainerContents> type =
                 registerContainerAttachment(id, defaultSlots);
         if (!BLOCK_SCOPED_ATTACHMENTS.contains(type)) {
@@ -175,6 +178,7 @@ public final class StorageAttachments {
      * DROP/DESTROY; the consumer's storage owns KEEP-across-respawn survival.
      */
     public static void registerCustomPlayerDeathSpec(CustomAttachmentSpec<?, ?> spec, DropRule rule) {
+        com.trevlar.menukit.window.Declarations.requireOpen("a death drop spec");
         CUSTOM_PLAYER_DEATH_DROP.put(spec, rule);
     }
 
