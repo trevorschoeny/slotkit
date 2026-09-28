@@ -2,6 +2,8 @@
 
 Containers has its own root package, `com.trevlar.menukit.containers`; every import changes. Containers starts on a dedicated server, and a player can join it. On the server a created slot is addressed as a created slot and its group has its category, so operations, vetoes and gates judge it the way singleplayer does. A mod that registers a slot-state channel no longer crashes the server. `MKCMenu`'s screen is set on the client with `menu.screen(MyScreen::new)` from your client initializer; `MKCMenu.Builder.screen(...)` is gone, since naming a screen class in common code crashed every dedicated server.
 
+A created slot's address comes from `Address.createdSlot(MKCSlots.groupId(panelId, groupId), index)`; `CreatedSlotAdapter.addressOf`, `MKCContainerPanel.address` and `MKCScreenHandler.address` are gone. Parity slots are added to a menu sorted by panel id, the same on a client and a server whatever order their mods initialised in, so the same slot always has the same index on both. Storage attachments, slot-state channels, container panels and menus are declared at init; a late one throws.
+
 `SlotGroups.of(slotRef)` names a created slot's own group, so a veto can tell a pocket from the main inventory. Adds API and breaks nothing.
 
 5.1.0: Created slots follow MenuKit's slot operations. Requires MenuKit 5.1.0. This release adds API and breaks nothing.
