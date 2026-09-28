@@ -23,7 +23,7 @@ import org.jspecify.annotations.Nullable;
  * client type, but {@link Slots#target} tests an interface in MenuKit's own jar
  * and never class-loads that client type — server-side no slot is a wrapper, so
  * it returns the slot unchanged. THE ONE WINDOW's server enforcement
- * ({@link SlotAddresses}/{@link WindowGating}) calls this on the logical server
+ * ({@link SlotAddresses}/{@link SlotGating}) calls this on the logical server
  * to detect a created slot; the render + input helpers call it on the client.
  *
  * <p><b>Internal plumbing.</b> {@link #asMKCSlot(Slot)} is the engine's

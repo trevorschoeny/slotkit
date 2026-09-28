@@ -604,14 +604,8 @@ public final class SlotOperations {
      * the category rung reaches it.
      */
     private static boolean cascade(SlotRef ref, BehaviorKey<TriBool> operation) {
-        Address address;
-        if (ref.menu() != null && ref.slot() != null) {
-            address = SlotRef.addressOf(ref.menu(), ref.slot());
-        } else {
-            Optional<Address> byIdentity = VanillaAddressing.addressOf(ref.container(), ref.containerSlot());
-            if (byIdentity.isEmpty()) return operation.libraryDefault().asBoolean();
-            address = byIdentity.get();
-        }
+        Address address = ref.address();
+        if (address == null) return operation.libraryDefault().asBoolean(); // no identity to declare on
         // A vanilla slot's group and category come from its menu, so they are
         // stated here: its group rung (the one group per category on the menu) and,
         // when anyone declared inherent operations for it, its category rung. Read,

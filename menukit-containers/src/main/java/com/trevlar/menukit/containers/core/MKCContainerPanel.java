@@ -6,7 +6,6 @@ import com.trevlar.menukit.core.Panel;
 import com.trevlar.menukit.core.PanelElement;
 import com.trevlar.menukit.core.PanelPosition;
 import com.trevlar.menukit.core.PanelStyle;
-import com.trevlar.menukit.core.QuickMoveParticipation;
 import com.trevlar.menukit.core.RegionAnchor;
 
 import com.trevlar.menukit.inject.ScreenMatcher;
@@ -19,6 +18,7 @@ import com.trevlar.menukit.window.GroupKey;
 import com.trevlar.menukit.window.GroupIds;
 import com.trevlar.menukit.window.Decl;
 import com.trevlar.menukit.window.BehaviorKeys;
+import com.trevlar.menukit.window.SlotGate;
 import com.trevlar.menukit.window.TriBool;
 import com.trevlar.menukit.window.Window;
 
@@ -358,7 +358,8 @@ public final class MKCContainerPanel {
         SlotGate gate = spec.gateValue();
         TriBool binding = spec.bindingValue();
         TriBool mending = spec.mendingValue();
-        QuickMoveParticipation quickMove = spec.quickMoveValue();
+        TriBool shiftClickOut = spec.shiftClickOutValue();
+        TriBool shiftClickIn = spec.shiftClickInValue();
         TriBool collect = spec.collectValue();
         TriBool dragFill = spec.dragFillValue();
         // Declared whether or not the spec declares behavior: the group's category,
@@ -366,8 +367,8 @@ public final class MKCContainerPanel {
         // reach its slots. This path registers at init, so the group is listed from
         // the title screen.
         com.trevlar.menukit.inject.SlotGroups.declare(groupId(containerPanelId, spec.groupId()), spec.category());
-        if (gate == null && binding == null && mending == null && quickMove == null
-                && collect == null && dragFill == null) return;
+        if (gate == null && binding == null && mending == null && shiftClickOut == null
+                && shiftClickIn == null && collect == null && dragFill == null) return;
 
         // Declared at the GROUP rung, not per address. A SlotSpec IS a group, so its
         // values belong one level above a per-slot declaration: a consumer overriding
@@ -375,21 +376,15 @@ public final class MKCContainerPanel {
         // two colliding on the per-address level and being settled by whichever mod's
         // init ran last. Above the group sits the category (PRECEDENCE_CATEGORY).
         GroupKey group = GroupKey.of(groupId(containerPanelId, spec.groupId()));   // the group's own identity
-        if (gate != null)      WindowEngine.setGroup(group, MKCBehaviorKeys.GATING, Decl.set(gate));
-        if (binding != null)   WindowEngine.setGroup(group, MKCBehaviorKeys.BINDING, Decl.set(binding));
-        if (mending != null)   WindowEngine.setGroup(group, MKCBehaviorKeys.MENDING, Decl.set(mending));
-        // quickMove(p) is deprecated sugar for the two shift-click operations. The
-        // old key is still declared so a 5.0.0 consumer reading it by key sees the
-        // same value; the routing ANDs both.
-        if (quickMove != null) {
-            WindowEngine.setGroup(group, MKCBehaviorKeys.QUICK_MOVE, Decl.set(quickMove));
-            WindowEngine.setGroup(group, BehaviorKeys.SHIFT_CLICK_OUT, Decl.set(TriBool.of(quickMove.exports())));
-            WindowEngine.setGroup(group, BehaviorKeys.SHIFT_CLICK_IN, Decl.set(TriBool.of(quickMove.imports())));
-        }
-        // The operation keys live MK-side, and MenuKit enforces them at vanilla's
-        // seams (MKOperationsMixin) for every slot kind.
-        if (collect != null)   WindowEngine.setGroup(group, BehaviorKeys.COLLECT, Decl.set(collect));
-        if (dragFill != null)  WindowEngine.setGroup(group, BehaviorKeys.DRAG_FILL, Decl.set(dragFill));
+        // The slot author's rules and the operations are MenuKit keys, enforced by
+        // MenuKit at vanilla's seams for every slot kind; mending's seam is Containers'.
+        if (gate != null)          WindowEngine.setGroup(group, BehaviorKeys.GATING, Decl.set(gate));
+        if (binding != null)       WindowEngine.setGroup(group, BehaviorKeys.BINDING, Decl.set(binding));
+        if (mending != null)       WindowEngine.setGroup(group, MKCBehaviorKeys.MENDING, Decl.set(mending));
+        if (shiftClickOut != null) WindowEngine.setGroup(group, BehaviorKeys.SHIFT_CLICK_OUT, Decl.set(shiftClickOut));
+        if (shiftClickIn != null)  WindowEngine.setGroup(group, BehaviorKeys.SHIFT_CLICK_IN, Decl.set(shiftClickIn));
+        if (collect != null)       WindowEngine.setGroup(group, BehaviorKeys.COLLECT, Decl.set(collect));
+        if (dragFill != null)      WindowEngine.setGroup(group, BehaviorKeys.DRAG_FILL, Decl.set(dragFill));
     }
 
     private static synchronized void ensureProjectionSource() {

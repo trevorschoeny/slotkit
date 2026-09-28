@@ -5,6 +5,8 @@ import net.minecraft.world.inventory.Slot;
 
 import org.jetbrains.annotations.ApiStatus;
 
+import com.trevlar.menukit.inject.Slots;
+import org.jspecify.annotations.Nullable;
 import java.util.Objects;
 
 /**
@@ -32,6 +34,16 @@ public final class ClientSlotAddressing {
     @FunctionalInterface
     public interface SlotAddressFn {
         Address addressOf(AbstractContainerMenu menu, Slot slot);
+
+        /**
+         * The address of a slot reached with no menu in hand (the slot-level gate
+         * seam), or {@code null} when its container has no identity. The default
+         * knows vanilla slots; Containers' rule answers a created slot's own address.
+         */
+        default @Nullable Address addressOf(Slot slot) {
+            Slot target = Slots.target(slot);
+            return VanillaAddressing.addressOf(target.container, target.getContainerSlot()).orElse(null);
+        }
     }
 
     private static volatile SlotAddressFn fn = VanillaAddressing::addressOf;
@@ -45,5 +57,10 @@ public final class ClientSlotAddressing {
     /** The {@link Address} of {@code slot} in {@code menu} under the installed rule. */
     public static Address addressOf(AbstractContainerMenu menu, Slot slot) {
         return fn.addressOf(menu, slot);
+    }
+
+    /** The {@link Address} of {@code slot} with no menu in hand, or {@code null}. */
+    public static @Nullable Address addressOf(Slot slot) {
+        return fn.addressOf(slot);
     }
 }

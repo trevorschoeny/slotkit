@@ -62,7 +62,7 @@ import java.util.function.Predicate;
  * Projection only puts the <em>slots</em> on the foreign menu. Drawing them is the
  * panel pipeline (each slot is a {@code SlotElement} on its {@code MKCContainerPanel},
  * which renders inline on whatever screen its parity matcher accepts); shift-click into
- * them is {@link MKCSlotQuickMove}; creative placement is the (now menu-general)
+ * them is the handler's own {@code quickMoveStack}; creative placement is the (now menu-general)
  * creative-set-slot bridge. A consumer that wants pockets on a chest registers a
  * projection source here <em>and</em> widens its panel's parity targeting to that screen.
  */

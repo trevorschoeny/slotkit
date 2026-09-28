@@ -200,7 +200,7 @@ public final class MKCMenu {
          *     .arm(() -> {
          *         for (int i = 0; i < 2; i++) {
          *             Window.slot(MKCScreenHandler.address("side", "filtered", i))
-         *                   .set(MKCBehaviorKeys.GATING, diamondsOnly);
+         *                   .set(BehaviorKeys.GATING, diamondsOnly);
          *         }
          *     })
          *     .register();

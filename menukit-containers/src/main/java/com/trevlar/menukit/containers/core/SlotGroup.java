@@ -44,7 +44,7 @@ public class SlotGroup implements SlotGroupLike {
     // what to do with them, and a group can never silently become "just
     // storage" to a search that walks the player's menu. Identity, not
     // behaviour: the category says what the slots are; what a gesture may do
-    // to them is a window key (QUICK_MOVE, COLLECT, DRAG_FILL).
+    // to them is a window key (SHIFT_CLICK_OUT, SHIFT_CLICK_IN, COLLECT, DRAG_FILL).
     private final SlotGroupCategory category;
     private final Storage storage;
     private final int shiftClickPriority;

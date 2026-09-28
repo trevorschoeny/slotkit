@@ -1,17 +1,25 @@
 package com.trevlar.menukit.window;
 
 /**
- * A typed handle on a slot (vanilla or created) — exposes the slot verbs whose
- * value type is an MK type, plus the generic substrate inherited from
- * {@link WindowHandle}. The SERVER slot behaviors whose value type is an MKC type
- * (gating, quick-move) are set through the generic {@link #set} with the MKC keys,
- * or via MKC-side sugar; MK can't name {@code SlotGate}/{@code QuickMoveParticipation}
- * (§0042), so it offers no typed sugar for them — the substrate is the truth.
- *
- * <p>Reactive verbs ({@link ReactiveHook}) and visibility ({@link TriBool}) are
- * MK types, so their sugar lives here.
+ * A typed handle on a slot, vanilla or created: the slot verbs, plus the generic
+ * {@link WindowHandle#set} substrate. The slot author's server rules are
+ * {@link #gate} and {@link #binding}; the operations are set by key
+ * ({@code set(BehaviorKeys.SHIFT_CLICK_IN, TriBool.FALSE)}). Reactive verbs
+ * ({@link ReactiveHook}) and visibility ({@link TriBool}) have sugar here too.
  */
 public final class SlotHandle extends WindowHandle {
+
+    /** What this slot accepts and releases, and how many: the author's rule ({@link BehaviorKeys#GATING}). */
+    public SlotHandle gate(SlotGate gate) {
+        set(BehaviorKeys.GATING, gate);
+        return this;
+    }
+
+    /** Whether Curse of Binding holds a bound item in this slot ({@link BehaviorKeys#BINDING}). */
+    public SlotHandle binding(boolean enforced) {
+        set(BehaviorKeys.BINDING, TriBool.of(enforced));
+        return this;
+    }
 
     SlotHandle(Address address) {
         super(address);

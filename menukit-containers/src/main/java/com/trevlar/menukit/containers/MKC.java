@@ -63,10 +63,6 @@ public class MKC implements ModInitializer {
      *  {@code StorageAttachment}. */
     public static void init() {
         LOGGER.info("[MenuKit-Containers] Initialized");
-        // Created slots' declared categories become resolvable by address so a
-        // category's inherent operations reach them. Both sides: the operation
-        // seams run on the server. (QUICK_MOVE is no longer published to the
-        // vocabulary: MenuKit's SHIFT_CLICK_OUT / SHIFT_CLICK_IN are the entries.)
         // The kind-aware slot address rule, so a created slot resolves to its
         // CREATED address, and created slot groups published into MenuKit's
         // slot-group registry. Both sides: the operation seams, vetoes and
@@ -74,7 +70,11 @@ public class MKC implements ModInitializer {
         // until 6.0.0, so a dedicated server addressed every created slot as a
         // vanilla one and saw no created groups.)
         com.trevlar.menukit.window.ClientSlotAddressing.install(
-                com.trevlar.menukit.containers.core.SlotAddresses::of);
+                com.trevlar.menukit.containers.core.SlotAddresses.RULE);
+        // The one fact a gate reads that only Containers knows: whether a server
+        // player's client can receive slot state (§0064's capability port).
+        com.trevlar.menukit.window.GatingContext.installCapability(
+                com.trevlar.menukit.containers.core.MKSlotState::isSlotStateCapable);
         com.trevlar.menukit.containers.core.CreatedSlotCategories.install();
         // SlotGroups.of(SlotRef) answers a created slot's own group. Both sides: a
         // veto that reads it runs wherever the operation does.

@@ -4,14 +4,11 @@ import com.trevlar.menukit.core.Panel;
 import com.trevlar.menukit.core.Storage;
 
 import com.trevlar.menukit.window.Address;
-import com.trevlar.menukit.window.WindowEngine;
 
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 
 /**
  * A vanilla {@link Slot} to the outside world. Carries its coordinates
@@ -121,7 +118,7 @@ public class MKCSlot extends Slot {
     /**
      * Returns true when this slot's panel is hidden. An inert slot is
      * indistinguishable from a non-existent one to the outside world:
-     * getItem returns EMPTY, canInsert returns false, quick-move skips it.
+     * getItem returns EMPTY, canInsert returns false, shift-click skips it.
      *
      * <p>Exposed for well-behaved third parties that want to check
      * explicitly rather than relying on the behavioral methods.
@@ -137,55 +134,22 @@ public class MKCSlot extends Slot {
     // behavior, never replace it.
 
     /**
-     * Can this stack be placed in this slot?
-     *
-     * <p>Resolves the {@code GATING} behavior from the engine by this slot's
-     * {@link #address()} and AND-composes with {@code super} — so a mixin on
-     * {@code Slot.mayPlace} still runs via the super call, and the most restrictive
-     * answer wins. The gate (not this slot) holds the behavior; an un-gated slot
-     * resolves to {@link SlotGate#OPEN} = pure vanilla. This is the direct-click
-     * insertion point for a created slot (the menu seams cover shift-click/automation).
+     * Can this stack be placed in this slot? An inert slot refuses; otherwise
+     * vanilla's own answer, which MenuKit's slot-level seam has already gated by
+     * this slot's created address ({@code MKSlotGateMixin}). Composes with super so
+     * a mixin on {@code Slot.mayPlace} still runs.
      */
     @Override
     public boolean mayPlace(ItemStack stack) {
         if (isInert()) return false;
-        SlotGate gate = WindowEngine.resolve(address(), MKCBehaviorKeys.GATING);
-        return gate.mayPlace(stack, GatingContext.current()) && super.mayPlace(stack);
+        return super.mayPlace(stack);
     }
 
-    /**
-     * Can items be taken from this slot?
-     *
-     * <p>Resolves {@code GATING} from the engine and AND-composes with {@code super}.
-     */
+    /** Can items be taken from this slot? Inert refuses; the gate and Curse of Binding answer in the seam. */
     @Override
     public boolean mayPickup(Player player) {
         if (isInert()) return false;
-        // Curse of Binding (BINDING engine key): a bound item (PREVENT_ARMOR_CHANGE)
-        // can't be taken out while alive — survival only; creative bypasses (the
-        // set-slot bridge never calls mayPickup). Mirrors vanilla's armor-slot check.
-        ItemStack stack = super.getItem();
-        if (WindowEngine.resolve(address(), MKCBehaviorKeys.BINDING).asBoolean()
-                && !player.hasInfiniteMaterials()
-                && EnchantmentHelper.has(stack, EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE)) {
-            return false;
-        }
-        SlotGate gate = WindowEngine.resolve(address(), MKCBehaviorKeys.GATING);
-        return gate.mayPickup(player, GatingContext.current()) && super.mayPickup(player);
-    }
-
-    /**
-     * Max stack size for this slot, given a specific item.
-     *
-     * <p>The {@code GATING} gate may cap it (absorbing the old policy stack limit);
-     * re-clamped to vanilla's own limit (including any mixin modifications via
-     * super), so a gate can lower but never raise the cap.
-     */
-    @Override
-    public int getMaxStackSize(ItemStack stack) {
-        int vanillaMax = super.getMaxStackSize(stack);
-        SlotGate gate = WindowEngine.resolve(address(), MKCBehaviorKeys.GATING);
-        return Math.min(gate.maxStackSize(stack, vanillaMax), vanillaMax);
+        return super.mayPickup(player);
     }
 
     // No override for getMaxStackSize() (no-arg). The policy's maxStackSize

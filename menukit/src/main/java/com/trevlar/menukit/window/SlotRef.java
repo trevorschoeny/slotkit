@@ -27,9 +27,12 @@ import java.util.WeakHashMap;
  * also has the live {@link Slot} and its menu, and from those the slot's
  * {@link SlotGroupCategory} on that menu. A click seam has the acting
  * {@link Player}; a per-player lock needs to know whose click this is, so a LAN
- * guest is not checked against the host's locks. Anything the seam does not have
- * is {@code null}: world pickup ({@code Inventory.getFreeSlot}) has no menu and
- * no slot, only the inventory, its index and its owner.
+ * guest is not checked against the host's locks. The slot's {@link Address} is
+ * here too, minted once by the installed rule, so a veto that keys on it never
+ * derives it itself. Anything the seam does not have is {@code null}: an inventory
+ * insert ({@code Inventory.getFreeSlot}) has no menu and no slot, only the
+ * inventory, its index and its owner, and an address only where the container has
+ * an identity.
  *
  * @param container     the container the slot reads and writes
  * @param containerSlot the slot's index within {@code container}
@@ -38,10 +41,12 @@ import java.util.WeakHashMap;
  * @param player        who is acting, or {@code null} for automation
  * @param category      the slot's category on {@code menu}, or {@code null} when
  *                      off-menu or in no category
+ * @param address       the slot's window address, or {@code null} when the seam
+ *                      cannot identify the container
  */
 public record SlotRef(Container container, int containerSlot, @Nullable Slot slot,
                       @Nullable AbstractContainerMenu menu, @Nullable Player player,
-                      @Nullable SlotGroupCategory category) {
+                      @Nullable SlotGroupCategory category, @Nullable Address address) {
 
     public SlotRef {
         Objects.requireNonNull(container, "container");
@@ -51,14 +56,14 @@ public record SlotRef(Container container, int containerSlot, @Nullable Slot slo
     public static SlotRef of(AbstractContainerMenu menu, Slot slot, @Nullable Player player) {
         Slot target = Slots.target(slot); // identity off the creative wrapper, as everywhere
         return new SlotRef(target.container, target.getContainerSlot(), slot, menu, player,
-                categoryOf(menu, slot));
+                categoryOf(menu, slot), addressOf(menu, slot));
     }
 
     /**
-     * The player's inventory slot {@code index} as it sits on {@code menu}, so it
-     * resolves with its category there; the bare container form when {@code menu}
-     * does not show it. For the selected hotbar slot with no screen open, pass
-     * {@code player.inventoryMenu}.
+     * The player-inventory slot at {@code index} as it sits on {@code menu}, so it
+     * resolves with its menu category; the bare container form when the menu does
+     * not show it (vanilla swaps against the inventory directly, so the swap works
+     * on such a menu too).
      */
     public static SlotRef inventory(AbstractContainerMenu menu, Player player, int index) {
         Inventory inventory = player.getInventory();
@@ -71,9 +76,10 @@ public record SlotRef(Container container, int containerSlot, @Nullable Slot slo
         return of(inventory, index, player);
     }
 
-    /** A slot reached with no menu open: world pickup into an inventory. */
+    /** A slot reached with no menu open: an inventory insert. */
     public static SlotRef of(Container container, int containerSlot, @Nullable Player player) {
-        return new SlotRef(container, containerSlot, null, null, player, null);
+        return new SlotRef(container, containerSlot, null, null, player, null,
+                VanillaAddressing.addressOf(container, containerSlot).orElse(null));
     }
 
     // A menu's slot list is fixed at construction (Containers appends its created
@@ -94,7 +100,6 @@ public record SlotRef(Container container, int containerSlot, @Nullable Slot slo
     private static final Map<AbstractContainerMenu, Map<Slot, Address>> ADDRESSES =
             Collections.synchronizedMap(new WeakHashMap<>());
 
-    /** The {@link Address} of a slot on a menu, under the installed addressing rule, minted once per menu. */
     @org.jetbrains.annotations.ApiStatus.Internal
     public static Address addressOf(AbstractContainerMenu menu, Slot slot) {
         Map<Slot, Address> perMenu = ADDRESSES.computeIfAbsent(menu,

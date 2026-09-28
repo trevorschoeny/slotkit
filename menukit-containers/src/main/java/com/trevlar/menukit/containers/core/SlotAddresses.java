@@ -1,48 +1,49 @@
 package com.trevlar.menukit.containers.core;
 
+import com.trevlar.menukit.inject.Slots;
 import com.trevlar.menukit.window.Address;
+import com.trevlar.menukit.window.ClientSlotAddressing;
 import com.trevlar.menukit.window.VanillaAddressing;
 
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 
 import org.jetbrains.annotations.ApiStatus;
+import org.jspecify.annotations.Nullable;
 
 /**
- * The one MKC-side entry that mints the {@link Address} of <em>any</em> live slot,
- * kind-dispatched — the server/enforcement counterpart of the client resolver.
- * THE ONE WINDOW's keystone is "one address scheme for every slot, vanilla or
- * created"; this is where the two enter through it:
+ * Containers' kind-aware slot addressing rule, installed into MenuKit at common
+ * init: a created slot ({@link MKCSlot}, or the creative wrapper around one)
+ * resolves to its menu-independent created address; a vanilla slot to its
+ * container identity, else its menu address. One rule for the client's observers,
+ * the operation seams, the vetoes and the slot-level gate, so a behaviour set on
+ * a slot's address is found whichever path reaches it.
  *
- * <ul>
- *   <li><b>Created slot</b> (an {@link MKCSlot}, or the creative wrapper around
- *       one) → its menu-independent created address ({@link CreatedSlotAdapter#addressOf}).
- *       MKC owns {@code MKCSlot}, so the detection is a direct type check — no port
- *       (the §0042 port is only needed where MK must reach an MKC type).</li>
- *   <li><b>Vanilla slot</b> → {@link VanillaAddressing#addressOf} (container
- *       identity when §0050-resolvable, else the menu-based fallback).</li>
- * </ul>
- *
- * Both the menu interaction seams ({@link WindowGating}) and a created slot's own
- * behavioral overrides ({@link MKCSlot}) resolve through the <em>same</em>
- * encoding, so a behavior set on a slot's address is found no matter which path
- * reaches it. Server-safe: {@link MKCSlotAccess#asMKCSlot} rides {@code Slots.target},
- * whose creative-wrapper unwrap is simply absent server-side.
+ * <p>Internal plumbing: consumers mint created-slot addresses by identity
+ * ({@code Address.createdSlot(group, index)}), never from a live slot.
  */
+@ApiStatus.Internal
 public final class SlotAddresses {
 
     private SlotAddresses() {}
 
-    /**
-     * The {@link Address} of {@code slot} as it sits in {@code menu}, kind-dispatched.
-     *
-     * <p><b>Internal minter.</b> Live-{@code Slot}→{@code Address} mapping is the
-     * MKC enforcement/addressing-port plumbing (installed into
-     * {@link com.trevlar.menukit.window.ClientSlotAddressing} + called by
-     * {@link WindowGating}). Consumers hold the created-slot address minted by
-     * identity ({@link CreatedSlotAdapter#addressOf}), not raw slots.
-     */
-    @ApiStatus.Internal
+    /** The rule, for {@code ClientSlotAddressing.install}. */
+    public static final ClientSlotAddressing.SlotAddressFn RULE = new ClientSlotAddressing.SlotAddressFn() {
+        @Override
+        public Address addressOf(AbstractContainerMenu menu, Slot slot) {
+            return of(menu, slot);
+        }
+
+        @Override
+        public @Nullable Address addressOf(Slot slot) {
+            MKCSlot created = MKCSlotAccess.asMKCSlot(slot);
+            if (created != null) return CreatedSlotAdapter.addressOf(created);
+            Slot target = Slots.target(slot);
+            return VanillaAddressing.addressOf(target.container, target.getContainerSlot()).orElse(null);
+        }
+    };
+
+    /** The address of {@code slot} as it sits in {@code menu}, kind-dispatched. */
     public static Address of(AbstractContainerMenu menu, Slot slot) {
         MKCSlot created = MKCSlotAccess.asMKCSlot(slot);
         if (created != null) return CreatedSlotAdapter.addressOf(created);

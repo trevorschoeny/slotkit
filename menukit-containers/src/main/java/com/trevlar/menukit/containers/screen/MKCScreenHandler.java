@@ -7,7 +7,6 @@ import com.trevlar.menukit.containers.core.*;
 import com.trevlar.menukit.window.Address;
 import com.trevlar.menukit.window.BehaviorKeys;
 import com.trevlar.menukit.window.SlotOperations;
-import com.trevlar.menukit.window.WindowEngine;
 
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
@@ -288,15 +287,14 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
 
         SlotGroup sourceGroup = sourceSlot.getGroup();
 
-        // Source must allow shift-click out (the SHIFT_CLICK_OUT operation, ANDed
-        // with the deprecated QUICK_MOVE key for 5.0.0 declarations).
+        // Source must allow shift-click out (the SHIFT_CLICK_OUT operation).
         if (!exports(sourceSlot, player)) return ItemStack.EMPTY;
 
         ItemStack originalStack = sourceSlot.getItem().copy();
         ItemStack workingStack = sourceSlot.getItem();
 
-        // One representative live MKCSlot per group, for resolving QUICK_MOVE /
-        // GATING from the engine by address.
+        // One representative live MKCSlot per group, for asking the shift-click-in
+        // operation and the gate by its address.
         Map<SlotGroup, MKCSlot> reps = groupRepresentatives();
 
         // Collect candidate groups
@@ -366,18 +364,14 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
         return workingStack.getCount() < originalStack.getCount() ? originalStack : ItemStack.EMPTY;
     }
 
-    /** Whether a created slot yields to a shift-click: the SHIFT_CLICK_OUT operation, and the deprecated key. */
-    @SuppressWarnings("removal")
+    /** Whether a created slot yields to a shift-click: the SHIFT_CLICK_OUT operation. */
     private boolean exports(MKCSlot slot, Player player) {
-        return WindowEngine.resolve(slot.address(), MKCBehaviorKeys.QUICK_MOVE).exports()
-                && SlotOperations.allowsGesture(this, slot, player, BehaviorKeys.SHIFT_CLICK_OUT);
+        return SlotOperations.allowsGesture(this, slot, player, BehaviorKeys.SHIFT_CLICK_OUT);
     }
 
-    /** Whether a created slot takes a shift-click: the SHIFT_CLICK_IN operation, and the deprecated key. */
-    @SuppressWarnings("removal")
+    /** Whether a created slot takes a shift-click: the SHIFT_CLICK_IN operation. */
     private boolean imports(MKCSlot slot, Player player) {
-        return WindowEngine.resolve(slot.address(), MKCBehaviorKeys.QUICK_MOVE).imports()
-                && SlotOperations.allowsGesture(this, slot, player, BehaviorKeys.SHIFT_CLICK_IN);
+        return SlotOperations.allowsGesture(this, slot, player, BehaviorKeys.SHIFT_CLICK_IN);
     }
 
     /** One representative live MKCSlot per group present in this menu (first wins). */
@@ -413,7 +407,7 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
      *
      * // Menu construction: bind attachments to owner instances. Groups are
      * // structure-only; arm any slot behavior (e.g. an upgrade-only gate) by
-     * // Address at init via Window.slot(address).set(MKCBehaviorKeys.GATING, gate).
+     * // Address at init via Window.slot(address).set(BehaviorKeys.GATING, gate).
      * MKCScreenHandler.builder(MY_MENU_TYPE)
      *     .panel("main", p -> p
      *         .group("container", CHEST_EXTRA.bind(blockEntity))
@@ -585,7 +579,7 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
          * (priority / columns / row gap). These stay on the builder because they are
          * group structure.
          *
-         * <p>Per-slot <b>gating / binding / mending / quick-move</b> is NOT set here —
+         * <p>Per-slot <b>gating / binding / mending / shift-click</b> is NOT set here —
          * it is armed in THE ONE WINDOW engine by each built slot's
          * {@link com.trevlar.menukit.containers.core.MKCSlot#address()}, identically to a
          * vanilla slot. On the custom-menu path arm it via
@@ -593,9 +587,9 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
          * — ideally inside the {@link com.trevlar.menukit.containers.screen.MKCMenu.Builder#arm}
          * hook so it rides the same define chain. (On the container-parity path, the
          * {@link com.trevlar.menukit.containers.core.SlotSpec} inline verbs —
-         * {@code .gate(...)}, {@code .binding()}, {@code .mending()}, {@code .quickMove(...)}
+         * {@code .gate(...)}, {@code .binding()}, {@code .mending()}, {@code .shiftClickOut(...)}
          * — arm the same keys for you.) An un-armed slot is pure vanilla (engine
-         * defaults: gating OPEN, quick-move BOTH, binding/mending off). See
+         * defaults: gating OPEN, shift-click BOTH, binding/mending off). See
          * {@code MKCBehaviorKeys}.
          */
         public PanelBuilder group(String id, SlotGroupCategory category, Storage storage) {

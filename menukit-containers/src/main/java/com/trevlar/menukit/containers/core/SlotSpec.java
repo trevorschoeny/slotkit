@@ -1,6 +1,8 @@
 package com.trevlar.menukit.containers.core;
 
-import com.trevlar.menukit.core.QuickMoveParticipation;
+import com.trevlar.menukit.window.GatingContext;
+import com.trevlar.menukit.window.SlotGate;
+
 import com.trevlar.menukit.core.SlotGroupCategory;
 import com.trevlar.menukit.core.Storage;
 
@@ -43,11 +45,11 @@ import java.util.function.Supplier;
  *
  * <h3>Inline behavior verbs are sugar over the by-address engine path</h3>
  *
- * Gating, quick-move, collect, drag-fill, binding, and mending are armed in THE ONE WINDOW engine by
+ * Gating, shift-click, collect, drag-fill, binding, and mending are armed in THE ONE WINDOW engine by
  * the slot's {@link com.trevlar.menukit.window.Address} — that is where slot
  * behavior <em>lives</em>, identically for a vanilla slot and a created slot. The
  * inline verbs here ({@link #gate}, {@link #accepts}, {@link #binding},
- * {@link #mending}, {@link #quickMove}, {@link #collect}, {@link #dragFill}) do not introduce a second behavior store:
+ * {@link #mending}, {@link #shiftClickOut}, {@link #shiftClickIn}, {@link #collect}, {@link #dragFill}) do not introduce a second behavior store:
  * they record the consumer's intent on the spec, and
  * {@link MKCContainerPanel.Builder#register()} arms the engine by address for every
  * local index in the group — exactly {@code Window.slot(MKCContainerPanel.address(
@@ -83,12 +85,13 @@ public final class SlotSpec {
     // ── Inline behavior intent (armed by Address in register(); null => default) ──
     // These hold the consumer's declared behavior so register() can arm the engine
     // by each slot's Address. null means "leave the engine default" (gating OPEN,
-    // quick-move BOTH, binding/mending FALSE), so an un-declared slot is exactly
+    // shift-click BOTH, binding/mending FALSE), so an un-declared slot is exactly
     // vanilla — same as never arming it.
     private @Nullable SlotGate gate = null;
     private @Nullable TriBool binding = null;
     private @Nullable TriBool mending = null;
-    private @Nullable QuickMoveParticipation quickMove = null;
+    private @Nullable TriBool shiftClickOut = null;
+    private @Nullable TriBool shiftClickIn = null;
     private @Nullable TriBool collect = null;
     private @Nullable TriBool dragFill = null;
 
@@ -190,7 +193,7 @@ public final class SlotSpec {
 
     /**
      * Arms a {@link SlotGate} (what every slot in this group accepts / releases /
-     * caps) — sugar for {@code Window.slot(addr).set(MKCBehaviorKeys.GATING, gate)}
+     * caps) — sugar for {@code Window.slot(addr).set(BehaviorKeys.GATING, gate)}
      * on each local index. Default (unset) is {@link SlotGate#OPEN} — pure vanilla.
      */
     public SlotSpec gate(SlotGate gate) {
@@ -219,7 +222,7 @@ public final class SlotSpec {
     /**
      * Enrolls every slot in this group in Curse-of-Binding enforcement (a bound
      * item can't be taken out while alive, survival only; creative bypasses, §0051)
-     * — sugar for {@code set(MKCBehaviorKeys.BINDING, ...)}. Default off.
+     * — sugar for {@code set(BehaviorKeys.BINDING, ...)}. Default off.
      */
     public SlotSpec binding(boolean enabled) {
         this.binding = enabled ? TriBool.TRUE : TriBool.FALSE;
@@ -246,19 +249,20 @@ public final class SlotSpec {
     }
 
     /**
-     * Sets how every slot in this group participates in shift-click routing.
-     * Since MenuKit 5.1.0 shift-click is two operations, and this is sugar for
-     * declaring both at the group rung: {@code exports()} becomes
-     * {@link com.trevlar.menukit.window.BehaviorKeys#SHIFT_CLICK_OUT} and
-     * {@code imports()} becomes {@link com.trevlar.menukit.window.BehaviorKeys#SHIFT_CLICK_IN}.
-     * Prefer {@code set(BehaviorKeys.SHIFT_CLICK_OUT, ...)} / {@code SHIFT_CLICK_IN}
-     * directly; this verb and {@code MKCBehaviorKeys.QUICK_MOVE} go in 6.0.0.
-     *
-     * @deprecated use the two shift-click operation keys.
+     * Whether shift-clicking a slot in this group may send its stack elsewhere,
+     * at the group rung ({@code BehaviorKeys.SHIFT_CLICK_OUT}). Default on.
      */
-    @Deprecated(since = "5.1.0", forRemoval = true)
-    public SlotSpec quickMove(QuickMoveParticipation participation) {
-        this.quickMove = participation;
+    public SlotSpec shiftClickOut(boolean enabled) {
+        this.shiftClickOut = enabled ? TriBool.TRUE : TriBool.FALSE;
+        return this;
+    }
+
+    /**
+     * Whether a shift-click elsewhere may land items in this group, at the group
+     * rung ({@code BehaviorKeys.SHIFT_CLICK_IN}). Default on.
+     */
+    public SlotSpec shiftClickIn(boolean enabled) {
+        this.shiftClickIn = enabled ? TriBool.TRUE : TriBool.FALSE;
         return this;
     }
 
@@ -266,7 +270,7 @@ public final class SlotSpec {
      * Whether vanilla's double-click collect may sweep items out of this group —
      * sugar for {@code set(BehaviorKeys.COLLECT, ...)}. Default on (vanilla). A
      * group that is storage but must not be raided by the bulk shortcuts declares
-     * {@code .quickMove(NONE).collect(false).dragFill(false)}.
+     * {@code .shiftClickOut(false).shiftClickIn(false).collect(false).dragFill(false)}.
      */
     public SlotSpec collect(boolean enabled) {
         this.collect = enabled ? TriBool.TRUE : TriBool.FALSE;
@@ -305,7 +309,8 @@ public final class SlotSpec {
     @Nullable SlotGate gateValue()                 { return gate; }
     @Nullable TriBool bindingValue()               { return binding; }
     @Nullable TriBool mendingValue()               { return mending; }
-    @Nullable QuickMoveParticipation quickMoveValue() { return quickMove; }
+    @Nullable TriBool shiftClickOutValue()         { return shiftClickOut; }
+    @Nullable TriBool shiftClickInValue()          { return shiftClickIn; }
     @Nullable TriBool collectValue()               { return collect; }
     @Nullable TriBool dragFillValue()              { return dragFill; }
 }

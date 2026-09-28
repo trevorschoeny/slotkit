@@ -3,26 +3,17 @@ package com.trevlar.menukit.window;
 import net.minecraft.resources.Identifier;
 
 /**
- * The library's built-in {@link BehaviorKey}s. The engine is generic, so this set
- * grows one constant at a time as each behavior's phase lands — adding a behavior
- * is adding a key here (or, for a server-tier behavior whose value type is an MKC
- * type, an equivalent constant MKC-side).
+ * The library's built-in {@link BehaviorKey}s, one constant per behaviour. The
+ * engine is generic, so a mod adds a behaviour by declaring a key of its own.
  *
- * <p><b>Phase 3a</b> defines the client-tier keys whose value types are simple
- * and known now — enough to exercise the engine MK-alone. <b>Phase 4</b> adds the
- * reactive verbs: their value type ({@link ReactiveHook}) is an MK type, so all
- * four reaction keys live here — the SERVER-tier {@code ON_INSERT}/{@code ON_TAKE}
- * and the CLIENT-tier observed variants — letting an MK-alone consumer name even
- * the server verbs (only the firing of the server ones requires MKC). Still owed
- * (added with their phases, by value type):
  * <ul>
- *   <li>client-tier, complex value: {@code HOVER}, {@code ON_CLICK},
- *       {@code PARITY} (Phase 5/6). ({@code DECORATION} is no longer owed: since
- *       4.0.0 vanilla draws every slot, so vanilla's own decoration path reaches
- *       created slots.)</li>
- *   <li>server-tier whose value type is an MKC type (so MKC-side in
- *       {@code MKCBehaviorKeys}): {@code GATING}, {@code QUICK_MOVE},
- *       {@code DROP_RULE}, {@code BINDING}, {@code MENDING}.</li>
+ *   <li>Client tier: {@link #VISIBILITY}, {@link #OPACITY}, {@link #INERTNESS}, and
+ *       the observed reactions.</li>
+ *   <li>Server tier, the slot author's rules: {@link #GATING} (what a slot accepts
+ *       and releases, and how many), {@link #BINDING} (Curse of Binding on any
+ *       slot), the server reactions, and the eleven {@linkplain SlotOperations
+ *       operations}. Containers keeps {@code MKCBehaviorKeys.MENDING}, whose seam
+ *       (the XP orb) is its own.</li>
  * </ul>
  */
 public final class BehaviorKeys {
@@ -57,7 +48,27 @@ public final class BehaviorKeys {
     public static final BehaviorKey<TriBool> INERTNESS = BehaviorKey.of(
             id("inertness"), TriBool.class, TriBool.FALSE, Tier.CLIENT, KindTag.PANEL);
 
-    // ── Reactive verbs (Phase 4) — slot kinds only; default = no-op hook ──────
+    // ── The slot author's rules (server tier, every slot kind) ─────────────────
+
+    /**
+     * What a slot accepts and releases, and its per-item stack cap: a
+     * {@link SlotGate}. Default {@link SlotGate#OPEN}, exactly vanilla. MenuKit
+     * enforces it once at each vanilla method that moves items (§0064).
+     */
+    public static final BehaviorKey<SlotGate> GATING = BehaviorKey.of(
+            id("gating"), SlotGate.class, SlotGate.OPEN, Tier.SERVER,
+            KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
+
+    /**
+     * Whether Curse of Binding is enforced on this slot: a bound item cannot be
+     * taken out while the player is alive, survival only, the rule vanilla gives
+     * armour slots. Default {@link TriBool#FALSE}.
+     */
+    public static final BehaviorKey<TriBool> BINDING = BehaviorKey.of(
+            id("binding"), TriBool.class, TriBool.FALSE, Tier.SERVER,
+            KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
+
+    // ── Reactive verbs — slot kinds only; default = no-op hook ────────────────
 
     /**
      * Fires when a slot gains content, on the server inside the menu transaction
@@ -103,7 +114,7 @@ public final class BehaviorKeys {
     // to a slot, so a mod that blocks them can block each on its own; a settings
     // screen groups them however it likes. All eleven are TriBool, default TRUE
     // (vanilla), SERVER tier, every slot kind, and enforced at vanilla's own seams
-    // by MenuKit's MKOperationsMixin and MKWorldPickupMixin.
+    // by MenuKit's MKOperationsMixin and MKInventoryInsertMixin.
 
     /**
      * Operation: whether vanilla's double-click collect may take from this slot
@@ -158,14 +169,18 @@ public final class BehaviorKeys {
     public static final BehaviorKey<TriBool> DROP_STACK = operation("drop_stack");
 
     /**
-     * Operation: whether an item picked up from the world may land in this slot,
-     * including topping up a partial stack already there. Off-menu seam: resolves
-     * from the slot's own declaration or the default, then the vetoes.
+     * Operation: whether an item given to the inventory may land in this slot,
+     * including topping up a partial stack already there. Every insertion through
+     * {@code Inventory.getFreeSlot} and {@code getSlotWithRemainingSpace}: a pickup
+     * from the ground, {@code /give}, creative pick-block, a crafting grid's
+     * returns, recipe placement. The id stays {@code menukit:world_pickup}, since
+     * consumers persist ids. Off-menu seam: resolves from the slot's own
+     * declaration or the default, then the vetoes.
      */
-    public static final BehaviorKey<TriBool> WORLD_PICKUP = operation("world_pickup");
+    public static final BehaviorKey<TriBool> INVENTORY_INSERT = operation("world_pickup");
 
     /** Every operation vanilla ships, in the order a settings list would show them. */
     public static final java.util.List<BehaviorKey<TriBool>> VANILLA_OPERATIONS = java.util.List.of(
             CLICK_TAKE, CLICK_PUT, SHIFT_CLICK_OUT, SHIFT_CLICK_IN, COLLECT, DRAG_FILL,
-            HOTBAR_SWAP, OFFHAND_SWAP, DROP, DROP_STACK, WORLD_PICKUP);
+            HOTBAR_SWAP, OFFHAND_SWAP, DROP, DROP_STACK, INVENTORY_INSERT);
 }

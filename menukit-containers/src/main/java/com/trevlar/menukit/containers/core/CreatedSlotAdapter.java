@@ -114,7 +114,7 @@ public final class CreatedSlotAdapter implements CreatedSlotResolver {
      *
      * <p>This is what lets a consumer name a created slot through the window before
      * the menu (and the slot) exist — to set its server behavior (GATING, BINDING,
-     * MENDING, QUICK_MOVE) once at mod init, by identity, honoring THE ONE WINDOW
+     * MENDING) once at mod init, by identity, honoring THE ONE WINDOW
      * thesis that behavior is keyed by address and independent of creation. The
      * {@link #addressOf(MKCSlot) live overload} delegates here, so a slot born later
      * resolves the init-declared behavior the moment it appears (identical address).

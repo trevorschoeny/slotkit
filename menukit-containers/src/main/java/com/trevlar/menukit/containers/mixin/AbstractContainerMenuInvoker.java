@@ -47,7 +47,7 @@ public interface AbstractContainerMenuInvoker {
     /**
      * Calls vanilla's {@code moveItemStackTo} — the merge-into-partials then
      * fill-empties routine vanilla's own {@code quickMoveStack} uses. Exposed so
-     * {@link com.trevlar.menukit.containers.core.MKCSlotQuickMove} can drive shift-click
+     * {@link com.trevlar.menukit.containers.core.the menu's own quickMoveStack} can drive shift-click
      * routing into / out of registered slots on a <em>foreign</em> menu (chest,
      * furnace) without reimplementing the merge logic — the library routes the
      * consumer's own slot through vanilla's exact placement, it invents no
