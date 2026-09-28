@@ -42,11 +42,11 @@ public class MKClickContextMixin {
                 ? ClickTags.claim(player.getUUID(), self.containerId, slotId, button, clickType)
                 : null;
         ClickTags.Tag outer = ClickTags.enter(claimed);
-        ActingPlayer.set(player);
+        Player outerPlayer = ActingPlayer.enter(player);
         try {
             original.call(slotId, button, clickType, player);
         } finally {
-            ActingPlayer.clear();
+            ActingPlayer.exit(outerPlayer);
             ClickTags.exit(outer);
         }
     }
@@ -55,11 +55,11 @@ public class MKClickContextMixin {
     private boolean mk$menuOwnerActs(ItemStack stack, int start, int end, boolean backwards,
                                      Operation<Boolean> original) {
         if (ActingPlayer.current() != null) return original.call(stack, start, end, backwards); // a click set it
-        ActingPlayer.set(ActingPlayer.ownerOf((AbstractContainerMenu) (Object) this));
+        Player outer = ActingPlayer.enter(ActingPlayer.ownerOf((AbstractContainerMenu) (Object) this));
         try {
             return original.call(stack, start, end, backwards);
         } finally {
-            ActingPlayer.clear();
+            ActingPlayer.exit(outer);
         }
     }
 }

@@ -39,7 +39,23 @@ public final class ActingPlayer {
 
     private static final ThreadLocal<Player> CURRENT = new ThreadLocal<>();
 
-    /** Capture the acting player for the duration of a click transaction. */
+    /**
+     * Makes {@code player} the acting player and returns whoever was acting before,
+     * for {@link #exit} to put back. Nesting-safe: a click or a move inside another
+     * restores the outer one's player when it ends, instead of clearing it.
+     */
+    public static @Nullable Player enter(@Nullable Player player) {
+        Player outer = CURRENT.get();
+        set(player);
+        return outer;
+    }
+
+    /** Restores what {@link #enter} returned. Always called in a {@code finally}. */
+    public static void exit(@Nullable Player outer) {
+        set(outer);
+    }
+
+    /** Capture the acting player for the duration of a click transaction. Prefer {@link #enter}, which nests. */
     public static void set(@Nullable Player player) {
         if (player != null) CURRENT.set(player);
         else CURRENT.remove();
