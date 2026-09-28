@@ -8,9 +8,11 @@ import org.jetbrains.annotations.ApiStatus;
 import java.util.Objects;
 
 /**
- * The single client-side "live slot → {@link Address}" mapping that every client
- * slot-observer shares — observed reactions ({@link ObservedReactions}) and slot
- * interaction signals ({@link WindowSignals}). MK-alone the default addresses
+ * The single "live slot → {@link Address}" mapping, on both sides: the client's
+ * slot observers (observed reactions, {@link ObservedReactions}; interaction
+ * signals, {@link WindowSignals}) and the operation seams and vetoes, which run on
+ * the server too ({@link SlotOperations}, {@link SlotRef}). The name predates that;
+ * 6.0.0's naming pass renames it. MK-alone the default addresses
  * vanilla slots only ({@link VanillaAddressing}); MKC installs the kind-aware
  * {@code SlotAddresses.of} so a created slot resolves to its created address. One
  * install point, one resolution rule, so two observers can never disagree on which
@@ -34,7 +36,7 @@ public final class ClientSlotAddressing {
 
     private static volatile SlotAddressFn fn = VanillaAddressing::addressOf;
 
-    /** MKC installs its kind-aware {@code SlotAddresses.of} here at client init. */
+    /** MKC installs its kind-aware {@code SlotAddresses.of} here from common init, on both sides. */
     public static void install(SlotAddressFn impl) {
         fn = Objects.requireNonNull(impl, "impl");
     }

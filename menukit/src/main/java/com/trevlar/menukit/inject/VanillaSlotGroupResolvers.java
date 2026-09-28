@@ -59,8 +59,12 @@ public final class VanillaSlotGroupResolvers {
     private VanillaSlotGroupResolvers() {}
 
     /**
-     * Called once from {@code MKClient.onInitializeClient}. Registers
-     * a resolver for each vanilla menu class listed in M8 §6.11.
+     * Called once from {@code MK.init}, on both sides. Registers a resolver for
+     * each vanilla menu class that exists on a server, so a vanilla slot has its
+     * category there too: the operations cascade, {@code AppliesTo} and
+     * {@code SlotGroups.of} resolve on the server that enforces them. (Until 6.0.0
+     * this ran from client init only, and a dedicated server saw no vanilla
+     * categories at all.)
      */
     public static void registerAll() {
         registerPlayerAndStorage();
@@ -69,6 +73,14 @@ public final class VanillaSlotGroupResolvers {
         registerUtilityBlocks();
         registerBrewingTradingBeacon();
         registerMounts();
+    }
+
+    /**
+     * Called once from {@code MKClient.onInitializeClient}: the one vanilla menu
+     * that only exists on the client, creative's item picker. Its class is a
+     * client class, so naming it on a server would crash.
+     */
+    public static void registerClient() {
         registerCreativeItemPicker();
     }
 

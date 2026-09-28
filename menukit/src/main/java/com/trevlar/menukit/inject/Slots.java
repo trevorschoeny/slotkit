@@ -47,6 +47,9 @@ public final class Slots {
 
     private Slots() {}
 
+    private static final boolean CLIENT =
+            net.fabricmc.loader.api.FabricLoader.getInstance().getEnvironmentType() == net.fabricmc.api.EnvType.CLIENT;
+
     /**
      * The real vanilla {@link Slot} {@code slot} is or wraps: the slot a creative
      * {@code SlotWrapper} delegates to, or {@code slot} itself when it is not a
@@ -58,7 +61,10 @@ public final class Slots {
      * coordinates.
      */
     public static Slot target(Slot slot) {
-        if (slot instanceof SlotWrapperAccessor wrapper) {
+        // SlotWrapperAccessor is a client mixin: on a dedicated server its config
+        // section is not applied and loading it throws, and there are no creative
+        // wrappers to see through anyway. The guard keeps the class unresolved there.
+        if (CLIENT && slot instanceof SlotWrapperAccessor wrapper) {
             Slot t = wrapper.mk$getTarget();
             if (t != null) return t;
         }
