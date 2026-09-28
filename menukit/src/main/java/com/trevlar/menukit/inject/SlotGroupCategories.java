@@ -118,9 +118,11 @@ public final class SlotGroupCategories {
         com.trevlar.menukit.window.Declarations.requireOpen("SlotGroupCategories.register(" + menuClass.getName() + ")");
         SlotGroupResolver existing = RESOLVERS.get(menuClass);
         if (existing != null) {
-            LOGGER.warn("[SlotGroupCategories] resolver for {} already registered — ignoring " +
-                    "second registration", menuClass.getName());
-            return;
+            // Which of two mods would win depends on load order, which Fabric does not
+            // define (§0063): the second registration is an error, not a silent no-op.
+            throw new IllegalStateException("SlotGroupCategories: a resolver for " + menuClass.getName()
+                    + " is already registered. One menu class has one primary resolver; a second mod "
+                    + "adds groups to it with extend(...).");
         }
         RESOLVERS.put(menuClass, resolver);
         LOGGER.info("[SlotGroupCategories] registered resolver for {}",
@@ -263,8 +265,29 @@ public final class SlotGroupCategories {
         if (primary != null) {
             addVanillaGroups(menu, primary.resolve(menu), out, claimed, false);
         }
-        for (SlotGroupResolver ext : extensions) {
-            addVanillaGroups(menu, ext.resolve(menu), out, claimed, true);
+        // Extensions carry no id to sort by, so a collision between them must not be
+        // settled by which registered first (load order, §0063): a category two
+        // extensions both claim is dropped from both. The primary still wins over any.
+        if (!extensions.isEmpty()) {
+            List<Map<SlotGroupCategory, int[]>> resolved = new ArrayList<>(extensions.size());
+            Map<SlotGroupCategory, Integer> claims = new java.util.HashMap<>();
+            for (SlotGroupResolver ext : extensions) {
+                Map<SlotGroupCategory, int[]> m = ext.resolve(menu);
+                resolved.add(m);
+                for (SlotGroupCategory c : m.keySet()) claims.merge(c, 1, Integer::sum);
+            }
+            for (Map<SlotGroupCategory, int[]> m : resolved) {
+                Map<SlotGroupCategory, int[]> kept = new java.util.LinkedHashMap<>();
+                for (Map.Entry<SlotGroupCategory, int[]> e : m.entrySet()) {
+                    if (claims.get(e.getKey()) > 1) {
+                        LOGGER.warn("[SlotGroupCategories] two extensions for {} claim category {}; dropped from both",
+                                menu.getClass().getName(), e.getKey());
+                    } else {
+                        kept.put(e.getKey(), e.getValue());
+                    }
+                }
+                addVanillaGroups(menu, kept, out, claimed, true);
+            }
         }
         for (CreatedGroupResolver universal : UNIVERSAL) {
             addCreatedGroups(menu, universal.resolve(menu), out);
@@ -313,7 +336,7 @@ public final class SlotGroupCategories {
             if (claimed.contains(category)) {
                 if (warnOnCollision) {
                     LOGGER.warn("[SlotGroupCategories] extension for {} tried to redefine " +
-                            "category {} — dropping (earlier entry wins)",
+                            "category {} the primary resolver claims; dropping it",
                             menu.getClass().getName(), category);
                 }
                 continue;

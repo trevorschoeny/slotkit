@@ -42,7 +42,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <h3>Sync safety</h3>
  *
  * Both real seams build through {@link MKCSlots} with the same recipe in the
- * same registry order, and the {@code storage} factory yields the same size per
+ * same order (sorted by slot panel id, the same on both sides whatever order mods
+ * initialised in), and the {@code storage} factory yields the same size per
  * player on both sides — so the appended slot blocks are byte-identical, the
  * invariant {@link MKCSlotProjection} spells out. {@link #applyTo} is called at
  * most once per menu instance: the inventory mixin fires once per construction;
@@ -67,8 +68,21 @@ public final class ParitySlotRegistry {
      * — {@link MKCContainerPanel} derives it from the container-panel id + group
      * so it's stable and collision-free.
      */
-    public static void register(String slotPanelId, SlotSpec spec) {
-        RECIPES.add(new Entry(slotPanelId, spec));
+    public static synchronized void register(String slotPanelId, SlotSpec spec) {
+        for (Entry e : RECIPES) {
+            if (e.slotPanelId().equals(slotPanelId)) {
+                throw new IllegalStateException("A parity slot group " + slotPanelId + " is already registered");
+            }
+        }
+        // Sorted by slot panel id, never registration order: the slots are appended
+        // to the menu in this order on both sides, and a client and a server with
+        // different mod sets can run their initializers in different orders, which
+        // would give the same slot two indexes (§0063).
+        List<Entry> sorted = new java.util.ArrayList<>(RECIPES);
+        sorted.add(new Entry(slotPanelId, spec));
+        sorted.sort(java.util.Comparator.comparing(Entry::slotPanelId));
+        RECIPES.clear();
+        RECIPES.addAll(sorted);
     }
 
     /** Whether any parity recipe is registered (lets the build seams short-circuit). */

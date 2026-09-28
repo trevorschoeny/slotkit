@@ -44,7 +44,9 @@ public final class SlotStateRegistry {
 
     public static void registerChannel(SlotStateChannel<?> channel) {
         com.trevlar.menukit.window.Declarations.requireOpen("a slot-state channel " + channel.id());
-        CHANNELS.put(channel.id(), channel);
+        if (CHANNELS.putIfAbsent(channel.id(), channel) != null) {
+            throw new IllegalStateException("A slot-state channel " + channel.id() + " is already registered");
+        }
     }
 
     public static Iterable<SlotStateChannel<?>> allChannels() {

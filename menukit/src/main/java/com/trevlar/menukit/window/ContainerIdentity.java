@@ -72,14 +72,18 @@ public final class ContainerIdentity {
     public static <T extends BlockEntity> void registerBlockEntityResolver(
             Class<T> type, Function<T, PersistentContainerKey> resolver) {
         com.trevlar.menukit.window.Declarations.requireOpen("a block-entity container resolver for " + type.getName());
-        BE_RESOLVERS.put(type, resolver);
+        if (BE_RESOLVERS.putIfAbsent(type, resolver) != null) {
+            throw new IllegalStateException("A block-entity container resolver for " + type.getName() + " is already registered");
+        }
     }
 
     /** A modded entity class resolves through {@code resolver} instead of its UUID. */
     public static <T extends Entity> void registerEntityResolver(
             Class<T> type, Function<T, PersistentContainerKey> resolver) {
         com.trevlar.menukit.window.Declarations.requireOpen("an entity container resolver for " + type.getName());
-        ENTITY_RESOLVERS.put(type, resolver);
+        if (ENTITY_RESOLVERS.putIfAbsent(type, resolver) != null) {
+            throw new IllegalStateException("An entity container resolver for " + type.getName() + " is already registered");
+        }
     }
 
     /** One slot of {@code container}: its owner and its index within that owner. */
@@ -139,13 +143,18 @@ public final class ContainerIdentity {
         return byClass(ENTITY_RESOLVERS, target);
     }
 
+    /**
+     * The resolver registered for {@code target}'s own class, else its nearest
+     * superclass with one: the most specific wins, the same answer whatever order
+     * the resolvers were registered in.
+     */
     @SuppressWarnings("unchecked")
     private static <B, T extends B> Optional<PersistentContainerKey> byClass(
             Map<Class<? extends B>, Function<? extends B, PersistentContainerKey>> resolvers, T target) {
-        for (Map.Entry<Class<? extends B>, Function<? extends B, PersistentContainerKey>> e : resolvers.entrySet()) {
-            if (e.getKey().isInstance(target)) {
-                return Optional.ofNullable(((Function<T, PersistentContainerKey>) e.getValue()).apply(target));
-            }
+        if (resolvers.isEmpty()) return Optional.empty();
+        for (Class<?> c = target.getClass(); c != null; c = c.getSuperclass()) {
+            Function<? extends B, PersistentContainerKey> fn = resolvers.get(c);
+            if (fn != null) return Optional.ofNullable(((Function<T, PersistentContainerKey>) fn).apply(target));
         }
         return Optional.empty();
     }

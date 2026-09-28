@@ -137,7 +137,11 @@ public final class SlotNames {
     /** Registers/replaces the naming rule for a (typically consumer-defined) category. */
     public static void register(SlotGroupCategory category, String label, String... singletons) {
         com.trevlar.menukit.window.Declarations.requireOpen("SlotNames.register(" + category + ")");
-        SPECS.put(category, singletons.length == 0 ? ordinal(label) : singletons(singletons));
+        Object was = SPECS.putIfAbsent(category, singletons.length == 0 ? ordinal(label) : singletons(singletons));
+        if (was != null) {
+            throw new IllegalStateException("SlotNames: " + category + " already has names; two mods naming one "
+                    + "category's slots would be settled by load order (§0063)");
+        }
     }
 
     // ── Lookup ───────────────────────────────────────────────────────────────

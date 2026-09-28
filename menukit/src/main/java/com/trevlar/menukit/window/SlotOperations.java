@@ -341,6 +341,10 @@ public final class SlotOperations {
         synchronized (DEFINED) {
             List<BehaviorKey<?>> out = new java.util.ArrayList<>(DEFINED.size());
             for (Definition d : DEFINED.values()) out.add(d.key());
+            // By namespace, never by which mod loaded first (§0063); within one
+            // namespace, the order its mod defined them in (a stable sort), since one
+            // mod's own order is deliberate: vanilla's eleven are ordered for a list.
+            out.sort(java.util.Comparator.comparing(k -> k.id().getNamespace()));
             return List.copyOf(out);
         }
     }

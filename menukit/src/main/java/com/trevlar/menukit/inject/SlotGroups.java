@@ -75,17 +75,15 @@ import java.util.concurrent.ConcurrentHashMap;
  * changes, whatever sets exist, so a saved choice survives a mod adding, renaming
  * or dropping a set.
  *
- * {@link Entry#key()} and {@link #entryKey(SlotGroupId)} are for the listing: they
- * match a live group to the row it is shown in. They are not for saving.
+ * {@link Entry#key()} is for the listing: it matches a row to what is shown. It is
+ * not for saving.
  *
  * <h2>Who may put a group in a set</h2>
  *
- * Only a declaration in the group's own namespace (a vanilla group's category
- * namespace; a created group's panel-id namespace), and only while nothing has read
- * the group's row: at the group's first declaration, or before the first
- * {@link #listing()} or {@link #entryKey}. Anything else is logged and ignored, so
- * no mod can move another mod's group between rows, and no row changes under a
- * screen that has already shown it.
+ * Only the group's own declaration, in the group's own namespace (a category
+ * group's category namespace; a created group's panel-id namespace), and only its
+ * first. Anything else is an error (§0063): no mod can move another mod's group
+ * between rows, and no row changes under a screen that has already shown it.
  *
  * <h2>Names</h2>
  *
@@ -157,7 +155,6 @@ public final class SlotGroups {
     // SlotOperations.groups(op)), so a declaration invalidates them all at once.
     private static volatile long generation = 0;
     /** Set by the first read of a row: from then on no group may join a set. */
-    private static volatile boolean rowsRead = false;
     private static volatile @Nullable List<Entry> listingCache;
     private static long listingGeneration = -1;
 
@@ -248,15 +245,15 @@ public final class SlotGroups {
     private static synchronized void record(SlotGroupId id, SlotGroupCategory category, @Nullable SlotGroupSet set) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(category, "category");
+        // Every conflict is an error at the second declaration (§0063): which of two
+        // mods would win otherwise depends on load order, which Fabric does not define.
         if (id instanceof SlotGroupId.Category v && !v.category().equals(category)) {
-            LOGGER.warn("[SlotGroups] vanilla group {} is named by its category and cannot be declared as {}; ignored",
-                    v.category(), category);
-            return;
+            throw new IllegalStateException("SlotGroups: " + id.asString() + " is named by its category "
+                    + v.category() + " and cannot be declared as " + category);
         }
         if (set != null && !set.namespace().equals(namespaceOf(id))) {
-            LOGGER.warn("[SlotGroups] group {} cannot join set {}: a group joins a set only from its own "
-                    + "namespace ({}); ignored", id.asString(), set.asString(), namespaceOf(id));
-            set = null;
+            throw new IllegalStateException("SlotGroups: " + id.asString() + " cannot join set " + set.asString()
+                    + ": a group joins a set only from its own namespace (" + namespaceOf(id) + ")");
         }
         Declared was = DECLARED.get(id);
         if (was == null) {
@@ -267,23 +264,15 @@ public final class SlotGroups {
             return;
         }
         if (!was.category().equals(category)) {
-            LOGGER.warn("[SlotGroups] group {} was declared as {} and again as {}; keeping {}",
-                    id.asString(), was.category(), category, was.category());
+            throw new IllegalStateException("SlotGroups: " + id.asString() + " was declared as " + was.category()
+                    + " and again as " + category);
         }
-        if (set == null || set.equals(was.set())) return;
-        if (was.set() != null) {
-            LOGGER.warn("[SlotGroups] group {} was put in set {} and again in {}; keeping {}",
-                    id.asString(), was.set(), set, was.set());
-            return;
+        if (set != null && !set.equals(was.set())) {
+            throw new IllegalStateException("SlotGroups: " + id.asString() + " joins set " + set.asString()
+                    + (was.set() != null ? " but is already in " + was.set().asString()
+                    : " after its first declaration; declare the set with the group"));
         }
-        if (rowsRead) {
-            LOGGER.warn("[SlotGroups] group {} cannot join set {} after the listing has been read: its row "
-                    + "would change under a screen that already showed it; declare the set with the group",
-                    id.asString(), set.asString());
-            return;
-        }
-        DECLARED.put(id, new Declared(was.category(), set));
-        generation++;
+        // The same declaration again (a menu rebuilt, the derived path): idempotent.
     }
 
     /** The namespace a group belongs to: its category's for a vanilla group, its panel id's for a created one. */
@@ -318,22 +307,11 @@ public final class SlotGroups {
         return d == null ? null : d.set();
     }
 
-    /**
-     * The key of the row {@code id} is listed in: its set's
-     * {@link SlotGroupSet#asString()} when it is in one, else its own
-     * {@link SlotGroupId#asString()}. For the listing, to match a live group to its
-     * row; not for saving (see "Saving a choice" in the class doc).
-     */
-    public static String entryKey(SlotGroupId id) {
-        rowsRead = true;
-        SlotGroupSet set = setOf(id);
-        return set != null ? set.asString() : id.asString();
-    }
 
     /**
      * One row of the player-facing list.
      *
-     * @param key        the row's key, which {@link #entryKey} answers for any member; for the listing, not for saving
+     * @param key        the row's key, which every member's row shares; for the listing, not for saving
      * @param name       what to show
      * @param set        the set, or {@code null} for a lone group
      * @param groups     the groups the row stands for; one for a lone group
@@ -356,7 +334,6 @@ public final class SlotGroups {
      * groups. Vanilla groups first in MenuKit's category order, then the rest by key.
      */
     public static synchronized List<Entry> listing() {
-        rowsRead = true;
         long gen = generation;
         List<Entry> cached = listingCache;
         if (cached != null && listingGeneration == gen) return cached;
