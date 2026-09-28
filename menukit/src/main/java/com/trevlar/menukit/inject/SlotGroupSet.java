@@ -1,5 +1,7 @@
 package com.trevlar.menukit.inject;
 
+import com.trevlar.menukit.window.KeyStrings;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 

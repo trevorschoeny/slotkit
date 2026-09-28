@@ -1,5 +1,7 @@
 package com.trevlar.menukit.containers.screen;
 
+import com.trevlar.menukit.inject.SlotGroupId;
+
 import com.trevlar.menukit.core.*;
 import com.trevlar.menukit.containers.core.*;
 import com.trevlar.menukit.window.Address;
@@ -439,28 +441,6 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
         return new Builder(menuType);
     }
 
-    /**
-     * THE canonical {@link Address} of one slot in a custom-menu group declared on this
-     * handler's builder — use it to name a custom-menu slot when arming behavior or
-     * reading per-slot state by address. The custom-menu twin of
-     * {@link MKCContainerPanel#address} (which is for container-parity {@code define()}
-     * slots): a custom-menu slot carries the <b>bare</b> declared panel id (no
-     * {@code ":groupId"} derivation), so this applies the right encoding for you. Prefer
-     * it over the now-{@code @Internal} {@code CreatedSlotAdapter.addressOf}, which mints
-     * a non-resolving address if handed the wrong path's id.
-     *
-     * <pre>{@code
-     * Window.slot(MKCScreenHandler.address("mymod:menu:side", "filtered", i))
-     *       .set(MKCBehaviorKeys.GATING, gate);
-     * }</pre>
-     *
-     * @param panelId    the panel id declared on the builder ({@code .panel(panelId, ...)})
-     * @param groupId    the slot group id within that panel
-     * @param localIndex the slot's index within its group
-     */
-    public static Address address(String panelId, String groupId, int localIndex) {
-        return CreatedSlotAdapter.addressOf(panelId, groupId, localIndex);
-    }
 
     public static class Builder {
         private final MenuType<?> menuType;

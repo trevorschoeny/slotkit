@@ -1,5 +1,7 @@
 package com.trevlar.menukit.containers.core;
 
+import com.trevlar.menukit.inject.SlotGroupId;
+
 import com.trevlar.menukit.window.Address;
 import com.trevlar.menukit.window.CreatedSlotResolver;
 import com.trevlar.menukit.window.KindTag;
@@ -54,9 +56,6 @@ public final class CreatedSlotAdapter implements CreatedSlotResolver {
 
     private CreatedSlotAdapter() {}
 
-    // groupId<SEP>localIndex: a NUL separator a normal id never contains, so the
-    // composite is injective over distinct (groupId, localIndex) pairs.
-    private static final String SEP = String.valueOf((char) 0);  // NUL — never appears in a normal id
 
     // menu instance -> (address -> matching slot's menu index). Reopen = new menu
     // = fresh cache; GC'd menu drops its entry. Holds only indices (§3.7).
@@ -105,7 +104,7 @@ public final class CreatedSlotAdapter implements CreatedSlotResolver {
      * The slot's {@code groupId + localIndex} is its durable declaration token.
      */
     public static Address addressOf(MKCSlot mk) {
-        return addressOf(mk.getPanelId(), mk.getGroupId(), mk.getLocalIndex());
+        return Address.createdSlot(SlotGroupId.created(mk.getPanelId(), mk.getGroupId()), mk.getLocalIndex());
     }
 
     /**
@@ -138,13 +137,6 @@ public final class CreatedSlotAdapter implements CreatedSlotResolver {
      * @param localIndex the slot's index within its group
      */
     @ApiStatus.Internal
-    public static Address addressOf(String panelId, String groupId, int localIndex) {
-        OwnerRef owner = OwnerRef.nested(
-                OwnerRef.root(PanelAddressing.PANEL_FAMILY, OwnerScope.primary()),
-                Token.reg(PanelAddressing.regKey(panelId)));
-        String declId = groupId + SEP + localIndex;
-        return new Address(owner, Token.decl(declId), KindTag.CREATED_SLOT);
-    }
 
     private static @Nullable MKCSlot mkcAt(AbstractContainerMenu menu, int index) {
         if (index < 0 || index >= menu.slots.size()) return null;

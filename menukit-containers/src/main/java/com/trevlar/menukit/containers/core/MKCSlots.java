@@ -1,5 +1,7 @@
 package com.trevlar.menukit.containers.core;
 
+import com.trevlar.menukit.window.Address;
+
 import com.trevlar.menukit.core.OutsideRegion;
 import com.trevlar.menukit.core.Panel;
 import com.trevlar.menukit.core.PanelElement;
@@ -155,7 +157,7 @@ public final class MKCSlots {
      * to. This path registers under the bare declared panel id, unlike the
      * container-parity path ({@code MKCContainerPanel.groupId}), which derives one.
      */
-    public static SlotGroupId groupId(String panelId, String groupId) {
+    public static SlotGroupId.Created groupId(String panelId, String groupId) {
         return SlotGroupId.created(panelId, groupId);
     }
 
@@ -390,7 +392,7 @@ public final class MKCSlots {
             // minter the window resolves these slots by, below.
             for (int local = 0; local < storage.size(); local++) {
                 CreatedSlotCategories.index(
-                        CreatedSlotAdapter.addressOf(panelId, groupId, local), category);
+                        Address.createdSlot(SlotGroupId.created(panelId, groupId), local), category);
             }
 
             // 2. Standalone Panel — no PanelOwner (this isn't a MKCScreenHandler).
@@ -447,7 +449,7 @@ public final class MKCSlots {
                 int size = storage.size();
                 for (int local = 0; local < size; local++) {
                     SlotNames.override(
-                            CreatedSlotAdapter.addressOf(panelId, groupId, local),
+                            Address.createdSlot(SlotGroupId.created(panelId, groupId), local),
                             size <= 1 ? label : label + " " + (local + 1));
                 }
             }

@@ -1,5 +1,7 @@
 package com.trevlar.menukit.containers.core;
 
+import com.trevlar.menukit.inject.SlotGroupId;
+
 import com.trevlar.menukit.core.PanelElement;
 import com.trevlar.menukit.core.RenderContext;
 import com.trevlar.menukit.core.SlotRendering;
@@ -117,7 +119,7 @@ public final class SlotElement implements PanelElement {
     public SlotElement(String panelId, String groupId, int localIndex,
                        int childX, int childY) {
         this.panelId = panelId;
-        this.address = CreatedSlotAdapter.addressOf(panelId, groupId, localIndex);
+        this.address = Address.createdSlot(SlotGroupId.created(panelId, groupId), localIndex);
         this.childX = childX;
         this.childY = childY;
     }

@@ -1,5 +1,7 @@
 package com.trevlar.menukit.inject;
 
+import com.trevlar.menukit.window.KeyStrings;
+
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.trevlar.menukit.core.SlotGroupCategory;
@@ -74,7 +76,7 @@ public sealed interface SlotGroupId {
         return new Vanilla(category);
     }
 
-    static SlotGroupId created(String panelId, String groupId) {
+    static Created created(String panelId, String groupId) {
         return new Created(panelId, groupId);
     }
 

@@ -364,7 +364,7 @@ public final class MKCContainerPanel {
         // behavior: that is what lets the category's inherent values reach the group.
         Set<Address> addresses = new java.util.HashSet<>(spec.count());
         for (int i = 0; i < spec.count(); i++) {
-            Address a = address(containerPanelId, spec.groupId(), i);
+            Address a = Address.createdSlot(groupId(containerPanelId, spec.groupId()), i);
             addresses.add(a);
             CreatedSlotCategories.index(a, spec.category());
         }
@@ -415,45 +415,6 @@ public final class MKCContainerPanel {
 
     // ── Created-slot address minter (THE public way to name a parity slot) ──
 
-    /**
-     * THE canonical {@link Address} of one slot created by a container-parity
-     * {@code define(...)} — use this to name a {@code define()}-created slot when
-     * arming behavior or reading state by address. Never reconstruct the address by
-     * hand.
-     *
-     * <p><b>Why a dedicated minter:</b> a parity slot does NOT carry the container
-     * panel id passed to {@link #define(String)} as its address panel id — it carries
-     * the library-derived id {@code containerPanelId + ":" + groupId} (so each group
-     * lives in its own collision-free address sub-space). That derivation is an
-     * internal rule; this method applies it for you. The raw
-     * {@code CreatedSlotAdapter.addressOf} encoding is {@code @Internal} precisely so a
-     * consumer can't hand it the bare {@code define()} id and silently mint a
-     * non-resolving address — each slot-creation path has its own public minter
-     * ({@code MKCContainerPanel.address} for parity slots; {@code MKCScreenHandler.address}
-     * for custom-menu slots). So:
-     *
-     * <pre>{@code
-     * // Container-parity slot — derived id applied internally:
-     * Window.slot(MKCContainerPanel.address("inventory-plus:pockets", "pockets", i))
-     *       .set(MKCBehaviorKeys.GATING, gate);
-     *
-     * // Custom-menu slot (different path) — bare declared id, its own minter:
-     * Window.slot(MKCScreenHandler.address("inventory-plus:menu:main", "main", i))
-     *       .set(MKCBehaviorKeys.GATING, gate);
-     * }</pre>
-     *
-     * <p>For most consumers the {@link SlotSpec} inline verbs ({@code .gate(...)},
-     * {@code .binding()}, {@code .mending()}, {@code .quickMove(...)}) arm behavior
-     * for you and you never call this directly; it remains the explicit seam for
-     * by-address arming and for reading per-slot state by address.
-     *
-     * @param containerPanelId the id passed to {@link #define(String)}
-     * @param groupId          the slot group id (the {@link SlotSpec#at} group id)
-     * @param localIndex       the slot's index within its group
-     */
-    public static Address address(String containerPanelId, String groupId, int localIndex) {
-        return CreatedSlotAdapter.addressOf(slotPanelId(containerPanelId, groupId), groupId, localIndex);
-    }
 
     /**
      * The {@link SlotGroupId} naming one of this panel's slot groups — what a
@@ -465,7 +426,7 @@ public final class MKCContainerPanel {
      * its own slot panel id ({@code containerPanelId:groupId}), so building the
      * identity from the raw ids would silently name a group that never resolves.
      */
-    public static SlotGroupId groupId(String containerPanelId, String groupId) {
+    public static SlotGroupId.Created groupId(String containerPanelId, String groupId) {
         return SlotGroupId.created(slotPanelId(containerPanelId, groupId), groupId);
     }
 
