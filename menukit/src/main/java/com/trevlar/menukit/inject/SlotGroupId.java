@@ -38,8 +38,10 @@ import java.util.Objects;
  *
  * <h2>Saving one</h2>
  *
- * {@link #asString()} is a stable text form for a config file and {@link #parse}
- * reads it back; {@link #CODEC} is the same form for codec-based config:
+ * {@link #asString()} is the key to save a choice about a group under: a stable
+ * text form for a config file, which {@link #parse} reads back; {@link #CODEC} is
+ * the same form for codec-based config. Save by group, never by the set a group is
+ * listed in ({@code SlotGroups}, "Saving a choice"):
  *
  * <pre>
  * vanilla|menukit|player_inventory

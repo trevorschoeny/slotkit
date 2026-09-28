@@ -293,7 +293,13 @@ public final class SlotGroupCategories {
     private static void addVanillaGroups(AbstractContainerMenu menu,
             Map<SlotGroupCategory, int[]> indices, List<ResolvedSlotGroup> out,
             Set<SlotGroupCategory> claimed, boolean warnOnCollision) {
-        for (Map.Entry<SlotGroupCategory, int[]> entry : indices.entrySet()) {
+        // In slot order, whatever map the resolver returned: a HashMap's or
+        // Map.copyOf's iteration order varies per JVM run, and the groups' order is
+        // what listings, stacking and "first group" readers see.
+        List<Map.Entry<SlotGroupCategory, int[]>> ordered = new ArrayList<>(indices.entrySet());
+        ordered.sort(java.util.Comparator.comparingInt(e -> e.getValue().length == 0 ? Integer.MAX_VALUE
+                : java.util.Arrays.stream(e.getValue()).min().getAsInt()));
+        for (Map.Entry<SlotGroupCategory, int[]> entry : ordered) {
             SlotGroupCategory category = entry.getKey();
             if (claimed.contains(category)) {
                 if (warnOnCollision) {

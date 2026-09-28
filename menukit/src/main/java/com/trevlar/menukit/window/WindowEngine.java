@@ -107,6 +107,11 @@ public final class WindowEngine {
         if (key.tier() == Tier.SERVER) {
             Decl<V> auth = ServerTier.declarations().resolve(address, key, alsoMemberOf);
             if (auth instanceof Decl.Set<V> s) return s.value();
+            // A server-tier key is never written to the client tier: set() and
+            // setGroup() route it to the server store (or buffer it until that store
+            // installs). So the client half below can never answer for one; skip it.
+            // It ran on every operation call, for every slot a click touches.
+            return key.libraryDefault();
         }
         // AXIS 2 — client tier specificity: per-address > per-owner-ancestor >
         // per-group > library default.

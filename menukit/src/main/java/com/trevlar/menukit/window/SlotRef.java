@@ -87,4 +87,18 @@ public record SlotRef(Container container, int containerSlot, @Nullable Slot slo
     private static @Nullable SlotGroupCategory categoryOf(AbstractContainerMenu menu, Slot slot) {
         return CATEGORIES.computeIfAbsent(menu, SlotGroupCategories::categoriesBySlot).get(slot);
     }
+
+    // The same for a slot's Address: minting one resolves the container's identity
+    // and builds its scope id, and every operation question asks for it, so it is
+    // minted once per (menu, slot). Same lifetime and ceiling as CATEGORIES.
+    private static final Map<AbstractContainerMenu, Map<Slot, Address>> ADDRESSES =
+            Collections.synchronizedMap(new WeakHashMap<>());
+
+    /** The {@link Address} of a slot on a menu, under the installed addressing rule, minted once per menu. */
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public static Address addressOf(AbstractContainerMenu menu, Slot slot) {
+        Map<Slot, Address> perMenu = ADDRESSES.computeIfAbsent(menu,
+                m -> Collections.synchronizedMap(new java.util.IdentityHashMap<>()));
+        return perMenu.computeIfAbsent(slot, s -> ClientSlotAddressing.addressOf(menu, s));
+    }
 }

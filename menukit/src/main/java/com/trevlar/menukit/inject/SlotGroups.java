@@ -54,11 +54,28 @@ import java.util.concurrent.ConcurrentHashMap;
  * <h2>For a settings screen</h2>
  *
  * {@link #listing()} is the player-facing list: each {@link Entry} is a lone group
- * or a set of groups, with a name, the categories in it (to filter by), and a
- * {@link Entry#key() key} to save a choice under. On a live menu,
- * {@link #entryKey(SlotGroupId)} turns any {@link ResolvedSlotGroup#id()} into the
- * key its choice was saved under, so a choice made against a set reaches every
- * group in it.
+ * or a set of groups, with a name and the categories in it (to filter by). It is
+ * cached, and rebuilt only after a declaration changes it.
+ *
+ * <h2>Saving a choice</h2>
+ *
+ * <b>Save by group: {@link SlotGroupId#asString()} is the persisted key.</b> A choice
+ * the player makes on a set's row is a choice for each group in
+ * {@link Entry#groups()}; store it under each of their ids. A group's id never
+ * changes, whatever sets exist, so a saved choice survives a mod adding, renaming
+ * or dropping a set.
+ *
+ * {@link Entry#key()} and {@link #entryKey(SlotGroupId)} are for the listing: they
+ * match a live group to the row it is shown in. They are not for saving.
+ *
+ * <h2>Who may put a group in a set</h2>
+ *
+ * Only a declaration in the group's own namespace (a vanilla group's category
+ * namespace; a created group's panel-id namespace), and only while nothing has read
+ * the group's row: at the group's first declaration, or before the first
+ * {@link #listing()} or {@link #entryKey}. Anything else is logged and ignored, so
+ * no mod can move another mod's group between rows, and no row changes under a
+ * screen that has already shown it.
  *
  * <h2>Names</h2>
  *
@@ -100,6 +117,20 @@ public final class SlotGroups {
     private record Declared(SlotGroupCategory category, @Nullable SlotGroupSet set) {}
 
     private static final Map<SlotGroupId, Declared> DECLARED = new ConcurrentHashMap<>();
+
+    // Bumped on every change to DECLARED. Readers cache against it (listing() here,
+    // SlotOperations.groups(op)), so a declaration invalidates them all at once.
+    private static volatile long generation = 0;
+    /** Set by the first read of a row: from then on no group may join a set. */
+    private static volatile boolean rowsRead = false;
+    private static volatile @Nullable List<Entry> listingCache;
+    private static long listingGeneration = -1;
+
+    /** How many times the declared groups have changed; a cache key for anything derived from them. */
+    @ApiStatus.Internal
+    public static long generation() {
+        return generation;
+    }
 
     // ── The group a slot is in ─────────────────────────────────────────────
 
@@ -172,9 +203,15 @@ public final class SlotGroups {
                     v.category(), category);
             return;
         }
+        if (set != null && !set.namespace().equals(namespaceOf(id))) {
+            LOGGER.warn("[SlotGroups] group {} cannot join set {}: a group joins a set only from its own "
+                    + "namespace ({}); ignored", id.asString(), set.asString(), namespaceOf(id));
+            set = null;
+        }
         Declared was = DECLARED.get(id);
         if (was == null) {
             DECLARED.put(id, new Declared(category, set));
+            generation++;
             SlotGroupCategories.declare(category);
             return;
         }
@@ -188,7 +225,25 @@ public final class SlotGroups {
                     id.asString(), was.set(), set, was.set());
             return;
         }
+        if (rowsRead) {
+            LOGGER.warn("[SlotGroups] group {} cannot join set {} after the listing has been read: its row "
+                    + "would change under a screen that already showed it; declare the set with the group",
+                    id.asString(), set.asString());
+            return;
+        }
         DECLARED.put(id, new Declared(was.category(), set));
+        generation++;
+    }
+
+    /** The namespace a group belongs to: its category's for a vanilla group, its panel id's for a created one. */
+    private static @Nullable String namespaceOf(SlotGroupId id) {
+        return switch (id) {
+            case SlotGroupId.Vanilla v -> v.category().namespace();
+            case SlotGroupId.Created c -> {
+                int colon = c.panelId().indexOf(':');
+                yield colon > 0 ? c.panelId().substring(0, colon) : null;
+            }
+        };
     }
 
     // ── Reading ────────────────────────────────────────────────────────────
@@ -213,11 +268,13 @@ public final class SlotGroups {
     }
 
     /**
-     * The key a choice about {@code id} is saved under: its set's
+     * The key of the row {@code id} is listed in: its set's
      * {@link SlotGroupSet#asString()} when it is in one, else its own
-     * {@link SlotGroupId#asString()}. The same key as its {@link Entry}.
+     * {@link SlotGroupId#asString()}. For the listing, to match a live group to its
+     * row; not for saving (see "Saving a choice" in the class doc).
      */
     public static String entryKey(SlotGroupId id) {
+        rowsRead = true;
         SlotGroupSet set = setOf(id);
         return set != null ? set.asString() : id.asString();
     }
@@ -225,7 +282,7 @@ public final class SlotGroups {
     /**
      * One row of the player-facing list.
      *
-     * @param key        what to save a choice under; {@link #entryKey} answers it for any member
+     * @param key        the row's key, which {@link #entryKey} answers for any member; for the listing, not for saving
      * @param name       what to show
      * @param set        the set, or {@code null} for a lone group
      * @param groups     the groups the row stands for; one for a lone group
@@ -247,7 +304,18 @@ public final class SlotGroups {
      * The player-facing list: every lone group, and every set once in place of its
      * groups. Vanilla groups first in MenuKit's category order, then the rest by key.
      */
-    public static List<Entry> listing() {
+    public static synchronized List<Entry> listing() {
+        rowsRead = true;
+        long gen = generation;
+        List<Entry> cached = listingCache;
+        if (cached != null && listingGeneration == gen) return cached;
+        List<Entry> built = buildListing();
+        listingCache = built;
+        listingGeneration = gen;
+        return built;
+    }
+
+    private static List<Entry> buildListing() {
         List<Entry> out = new ArrayList<>();
         Map<SlotGroupSet, List<SlotGroupId>> sets = new LinkedHashMap<>();
         for (SlotGroupId id : all()) {

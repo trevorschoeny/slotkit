@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -131,6 +132,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * </ol>
  *
  * {@link #allows} is the one question: the cascade says yes and no veto says no.
+ * A veto that decides by slot group registers as a {@link GroupVeto}: it is handed
+ * the slot's group, resolved once per question ({@link SlotGroups#of}), rather than
+ * working it out again on every slot of every click.
  *
  * <h2>Simulated clicks</h2>
  *
@@ -238,10 +242,21 @@ public final class SlotOperations {
             return new AppliesTo(vanilla, exceptGroups, out);
         }
 
-        /** Whether this applies to {@code group}. A set is read from what the group declared ({@link SlotGroups#setOf}). */
+        /**
+         * Whether this applies to {@code group}. A vanilla group answers by its
+         * category. A group a mod added that declared a vanilla category is judged
+         * by that category first (a pocket declared {@code PLAYER_INVENTORY} goes
+         * where the inventory goes, no further), then by the exceptions. A group in
+         * a category of its mod's own is judged by the exceptions alone. The set is
+         * read from what the group declared ({@link SlotGroups#setOf}).
+         */
         public boolean test(SlotGroupId group) {
             if (group instanceof SlotGroupId.Vanilla v && SlotGroupCategory.vanilla().contains(v.category())) {
                 return vanilla.contains(v.category());
+            }
+            SlotGroupCategory declared = SlotGroups.categoryOf(group);
+            if (declared != null && SlotGroupCategory.vanilla().contains(declared) && !vanilla.contains(declared)) {
+                return false;
             }
             if (exceptGroups.contains(group)) return false;
             SlotGroupSet set = SlotGroups.setOf(group);
@@ -255,8 +270,8 @@ public final class SlotOperations {
     private static final Map<Identifier, Definition> DEFINED =
             Collections.synchronizedMap(new LinkedHashMap<>());
 
-    /** One {@link GroupKey} per category, carrying that category's inherent operations. */
-    private static final Map<SlotGroupCategory, GroupKey> CATEGORY_GROUPS = new HashMap<>();
+    /** One {@link GroupKey} per category that has inherent operations; minted by {@link #inherent} only. */
+    private static final Map<SlotGroupCategory, GroupKey> CATEGORY_GROUPS = new ConcurrentHashMap<>();
 
     // ── The category port (§0042) ──────────────────────────────────────────
 
@@ -383,11 +398,22 @@ public final class SlotOperations {
      * {@link SlotGroups#listing()} instead, keep an entry when any of its groups applies.
      */
     public static List<SlotGroupId> groups(BehaviorKey<?> operation) {
+        // Cached per operation against the registry's generation, so a declaration
+        // (or a group joining a set) since the last read rebuilds it and nothing else does.
+        long gen = SlotGroups.generation();
+        CachedGroups c = GROUPS_CACHE.get(operation.id());
+        if (c != null && c.generation() == gen && c.key().equals(operation)) return c.groups();
         AppliesTo a = appliesTo(operation);
         List<SlotGroupId> out = new java.util.ArrayList<>();
         for (SlotGroupId id : SlotGroups.all()) if (a.test(id)) out.add(id);
-        return List.copyOf(out);
+        List<SlotGroupId> groups = List.copyOf(out);
+        GROUPS_CACHE.put(operation.id(), new CachedGroups(operation, gen, groups));
+        return groups;
     }
+
+    private record CachedGroups(BehaviorKey<?> key, long generation, List<SlotGroupId> groups) {}
+
+    private static final Map<Identifier, CachedGroups> GROUPS_CACHE = new ConcurrentHashMap<>();
 
     // ── Name and description ───────────────────────────────────────────────
 
@@ -422,16 +448,17 @@ public final class SlotOperations {
         Objects.requireNonNull(category, "category");
         Objects.requireNonNull(operation, "operation");
         Objects.requireNonNull(value, "value");
-        WindowEngine.setGroup(groupFor(category), operation, Decl.set(value));
+        WindowEngine.setGroup(mintGroupFor(category), operation, Decl.set(value));
     }
 
     /**
      * The {@link GroupKey} standing for "every slot whose group declared
-     * {@code category}". One per category, created on first use, id-unique so two
-     * categories can never share a binding. Its membership predicate answers for
-     * created slots; a vanilla slot is stated as a member by {@link #allows}.
+     * {@code category}". One per category, minted by the first {@link #inherent}
+     * for it, id-unique so two categories can never share a binding. Its membership
+     * predicate answers for created slots; a vanilla slot is stated as a member by
+     * {@link #allows}.
      */
-    private static synchronized GroupKey groupFor(SlotGroupCategory category) {
+    private static GroupKey mintGroupFor(SlotGroupCategory category) {
         return CATEGORY_GROUPS.computeIfAbsent(category, c -> new GroupKey(
                 GroupIds.of("category", c.namespace() + "/" + c.path()),
                 address -> c.equals(lookup.categoryOf(address)),
@@ -451,17 +478,53 @@ public final class SlotOperations {
         boolean denies(SlotRef slot, BehaviorKey<?> operation);
     }
 
-    private static final List<Veto> VETOES = new CopyOnWriteArrayList<>();
+    /**
+     * A {@link Veto} that is handed the slot's group: {@link SlotGroups#of} of the
+     * slot, resolved once per question and shared by every group veto, or
+     * {@code null} when the slot is in no known group. For a rule by group ("not in
+     * my pockets", "a lock group"), which would otherwise work the group out again
+     * on every slot of every click. A separate interface rather than a third
+     * parameter on {@code Veto}, so every veto written against 5.1.0 still compiles
+     * and still links.
+     */
+    @FunctionalInterface
+    public interface GroupVeto {
+        boolean denies(SlotRef slot, @Nullable SlotGroupId group, BehaviorKey<?> operation);
+    }
+
+    private static final List<GroupVeto> VETOES = new CopyOnWriteArrayList<>();
+    /** Whether any veto asked for the group, so a question with none never resolves it. */
+    private static volatile boolean anyGroupVeto = false;
 
     // A veto that throws is a consumer's bug, and a click must not crash on it: it
     // is logged once and skipped from then on, so the log says which one and the
     // game keeps working with that veto silent.
-    private static final Set<Veto> BROKEN = Collections.synchronizedSet(
+    private static final Set<GroupVeto> BROKEN = Collections.synchronizedSet(
             Collections.newSetFromMap(new IdentityHashMap<>()));
 
     /** Registers a veto. Typically once, at your mod's init. */
     public static void veto(Veto veto) {
+        Objects.requireNonNull(veto, "veto");
+        VETOES.add(new PlainVeto(veto));
+    }
+
+    /** Registers a veto that is handed the slot's group. Typically once, at your mod's init. */
+    public static void veto(GroupVeto veto) {
         VETOES.add(Objects.requireNonNull(veto, "veto"));
+        anyGroupVeto = true;
+    }
+
+    /** A {@link Veto} run as a group veto, ignoring the group; logged under the consumer's own class. */
+    private record PlainVeto(Veto veto) implements GroupVeto {
+        @Override
+        public boolean denies(SlotRef slot, @Nullable SlotGroupId group, BehaviorKey<?> operation) {
+            return veto.denies(slot, operation);
+        }
+
+        @Override
+        public String toString() {
+            return veto.toString();
+        }
     }
 
     // ── Simulated clicks ───────────────────────────────────────────────────
@@ -491,10 +554,11 @@ public final class SlotOperations {
         Objects.requireNonNull(ref, "ref");
         Objects.requireNonNull(operation, "operation");
         if (!cascade(ref, operation)) return false;
-        for (Veto veto : VETOES) {
+        SlotGroupId group = anyGroupVeto ? SlotGroups.of(ref) : null;   // once per question
+        for (GroupVeto veto : VETOES) {
             if (BROKEN.contains(veto)) continue;
             try {
-                if (veto.denies(ref, operation)) return false;
+                if (veto.denies(ref, group, operation)) return false;
             } catch (RuntimeException e) {
                 BROKEN.add(veto);
                 LOGGER.error("[MenuKit] a slot operation veto threw and is disabled from here on: {}", veto, e);
@@ -552,16 +616,17 @@ public final class SlotOperations {
     private static boolean cascade(SlotRef ref, BehaviorKey<TriBool> operation) {
         Address address;
         if (ref.menu() != null && ref.slot() != null) {
-            address = ClientSlotAddressing.addressOf(ref.menu(), ref.slot());
+            address = SlotRef.addressOf(ref.menu(), ref.slot());
         } else {
             Optional<Address> byIdentity = VanillaAddressing.addressOf(ref.container(), ref.containerSlot());
             if (byIdentity.isEmpty()) return operation.libraryDefault().asBoolean();
             address = byIdentity.get();
         }
-        Collection<GroupKey> alsoMemberOf =
-                ref.category() != null && address.kind() == KindTag.VANILLA_SLOT
-                        ? List.of(groupFor(ref.category()))
-                        : List.of();
+        // Read, never mint: a category nobody declared inherent operations for has no
+        // binding, so there is no membership to state.
+        GroupKey categoryGroup = ref.category() != null && address.kind() == KindTag.VANILLA_SLOT
+                ? CATEGORY_GROUPS.get(ref.category()) : null;
+        Collection<GroupKey> alsoMemberOf = categoryGroup != null ? List.of(categoryGroup) : List.of();
         return WindowEngine.resolve(address, operation, alsoMemberOf).asBoolean();
     }
 }
