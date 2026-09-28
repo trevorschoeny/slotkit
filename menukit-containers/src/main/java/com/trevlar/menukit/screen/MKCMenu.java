@@ -36,9 +36,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * public static final MKCMenu CUSTOM = MKCMenu
  *     .define(Identifier.fromNamespaceAndPath(MOD_ID, "custom_menu"), MyMenu::buildHandler)
  *     .title(Component.literal("My Custom Menu"))   // optional; default = "menu.<ns>.<path>"
- *     .screen(MyScreen::new)                         // optional; default MKCHandledScreen::new
  *     .arm(MyMenu::armBehaviors)                     // optional; arm slot behavior by Address, same chain
  *     .register();
+ *
+ * // Consumer CLIENT initializer, only if the menu has its own screen class
+ * // (default MKCHandledScreen::new). Never in common code: naming a screen class
+ * // there crashes a dedicated server.
+ * MyMod.CUSTOM.screen(MyScreen::new);
  *
  * // The handler factory receives the menu's own MenuType (no reach-back to the
  * // CUSTOM handle being assigned above — see HandlerFactory):
@@ -124,18 +128,19 @@ public final class MKCMenu {
     private final Identifier id;
     private final HandlerFactory handlerFactory;
     private final Component title;
-    private final MKCMenuScreenFactory screenFactory;
+    /** Set on the client by {@link #screen}; null means the default screen. */
+    private volatile @org.jspecify.annotations.Nullable MKCMenuScreenFactory screenFactory;
+    /** Set once {@link #registerScreens} has run; a later {@link #screen} would never take effect. */
+    private static volatile boolean screensRegistered = false;
     private final MenuType<MKCScreenHandler> type;
 
     private MKCMenu(Identifier id,
                     HandlerFactory handlerFactory,
                     Component title,
-                    MKCMenuScreenFactory screenFactory,
                     MenuType<MKCScreenHandler> type) {
         this.id = id;
         this.handlerFactory = handlerFactory;
         this.title = title;
-        this.screenFactory = screenFactory;
         this.type = type;
     }
 
@@ -162,7 +167,6 @@ public final class MKCMenu {
         private final Identifier id;
         private final HandlerFactory handlerFactory;
         private Component title;                                        // null => default translation key
-        private MKCMenuScreenFactory screenFactory = MKCHandledScreen::new;
         private @org.jspecify.annotations.Nullable Runnable arm = null; // behavior-arming; run by register()
 
         Builder(Identifier id, HandlerFactory handlerFactory) {
@@ -176,16 +180,6 @@ public final class MKCMenu {
             return this;
         }
 
-        /**
-         * The client screen factory. Optional — defaults to {@code MKCHandledScreen::new}.
-         * Pass a consumer subclass ({@code MyScreen::new}) to wire per-screen hooks
-         * (custom keys / listeners / drag modes) in its {@code init()}. Never invoked
-         * on a dedicated server (see {@link MKCMenuScreenFactory}).
-         */
-        public Builder screen(MKCMenuScreenFactory screenFactory) {
-            this.screenFactory = screenFactory;
-            return this;
-        }
 
         /**
          * A behavior-arming hook, invoked by {@code register()} <b>after</b> the
@@ -242,7 +236,7 @@ public final class MKCMenu {
                     ? title
                     : Component.translatable("menu." + id.getNamespace() + "." + id.getPath());
 
-            MKCMenu handle = new MKCMenu(id, handlerFactory, resolvedTitle, screenFactory, type);
+            MKCMenu handle = new MKCMenu(id, handlerFactory, resolvedTitle, type);
             DEFINITIONS.add(handle);
             BY_ID.put(id, handle);
 
@@ -256,6 +250,31 @@ public final class MKCMenu {
         }
     }
 
+    // ── Client: the screen ──────────────────────────────────────────────
+
+    /**
+     * This menu's screen, when it has its own class ({@code MyScreen::new}, a
+     * subclass of {@code MKCHandledScreen} wiring per-screen keys, listeners or drag
+     * modes in its {@code init()}). Without it the menu uses {@code MKCHandledScreen}.
+     *
+     * <p><b>Client only: call it from your client initializer.</b> Naming a screen
+     * class in common code links a client class, which crashes a dedicated server;
+     * that is why this is not on the builder. Screens are registered once every
+     * client initializer has run.
+     *
+     * @throws IllegalStateException if screens are already registered (called
+     *         after client start)
+     */
+    public MKCMenu screen(MKCMenuScreenFactory factory) {
+        java.util.Objects.requireNonNull(factory, "factory");
+        if (screensRegistered) {
+            throw new IllegalStateException("MKCMenu " + id + ": screen(...) after client start never takes "
+                    + "effect; call it from your client initializer");
+        }
+        this.screenFactory = factory;
+        return this;
+    }
+
     // ── Handle accessors ────────────────────────────────────────────────
 
     /** This menu's registered {@link MenuType}. */
@@ -265,7 +284,7 @@ public final class MKCMenu {
     public Identifier getId() { return id; }
 
     /** The screen factory (client-only; see {@link MKCMenuScreenFactory}). */
-    MKCMenuScreenFactory screenFactory() { return screenFactory; }
+    @org.jspecify.annotations.Nullable MKCMenuScreenFactory screenFactory() { return screenFactory; }
 
     // ── Open ────────────────────────────────────────────────────────────
 
@@ -308,16 +327,18 @@ public final class MKCMenu {
     // ── Client screen registration (called from MKCClient) ──────────────
 
     /**
-     * Registers every defined menu's screen with {@link MenuScreens}. Client-only —
-     * invoked once from {@code MKCClient.onInitializeClient}, after all consumer
-     * common-init {@code register()} calls have populated {@link #DEFINITIONS}
-     * (Fabric runs all main entrypoints before any client entrypoint). The screen
-     * factory is materialised into a vanilla {@code ScreenConstructor} only here.
+     * Registers every defined menu's screen with {@link MenuScreens}. Client-only,
+     * at client start ({@code MKCClient}), after every mod's client initializer has
+     * had its chance to call {@link #screen}: Fabric does not order client
+     * entrypoints between mods, so this cannot run from Containers' own.
      */
     @ApiStatus.Internal
     public static void registerScreens() {
+        screensRegistered = true;
         for (MKCMenu handle : DEFINITIONS) {
-            MenuScreens.register(handle.getType(), handle.screenFactory()::create);
+            MKCMenuScreenFactory factory = handle.screenFactory() != null
+                    ? handle.screenFactory() : MKCHandledScreen::new;
+            MenuScreens.register(handle.getType(), factory::create);
         }
     }
 }

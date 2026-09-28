@@ -10,7 +10,6 @@ import com.trevlar.menukit.state.SlotStateRegistry;
 import com.trevlar.menukit.state.SlotStateServer;
 
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.client.Minecraft;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
@@ -344,10 +343,22 @@ public final class MKSlotState {
     private static @Nullable Player tryClientPlayer() {
         if (!"Render thread".equals(Thread.currentThread().getName())) return null;
         try {
-            return Minecraft.getInstance().player;
+            return clientPlayer.get();
         } catch (Throwable t) {
             return null;
         }
+    }
+
+    // The client's player, installed by MKCClient. Not read here directly: a method
+    // returning Minecraft.getInstance().player makes the verifier load LocalPlayer
+    // with this class, and on a dedicated server that crashed every mod registering
+    // a slot-state channel (6.0.0 phase 1, found by the production join test).
+    private static volatile java.util.function.Supplier<@Nullable Player> clientPlayer = () -> null;
+
+    /** MKCClient installs the client player lookup at client init. */
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public static void installClientPlayer(java.util.function.Supplier<@Nullable Player> lookup) {
+        clientPlayer = java.util.Objects.requireNonNull(lookup, "lookup");
     }
 
     // ── Helpers used by packet receivers ────────────────────────────────
