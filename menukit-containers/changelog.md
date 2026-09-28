@@ -6,6 +6,8 @@ A created slot's address comes from `Address.createdSlot(MKCSlots.groupId(panelI
 
 `SlotGroups.of(slotRef)` names a created slot's own group, so a veto can tell a pocket from the main inventory. Adds API and breaks nothing.
 
+The gate, Curse of Binding and shift-click routing are MenuKit's. `SlotGate`, `GatingContext`, `GATING` and `BINDING` moved to MenuKit; every gate implementation's import changes and `MKCBehaviorKeys` keeps only `MENDING`, whose seam is Containers'. `QUICK_MOVE`, `SlotSpec.quickMove` and `QuickMoveParticipation` are gone, deprecated since 5.1.0: `SlotSpec.shiftClickOut(false)` and `shiftClickIn(false)` declare the two shift-click operations at the group rung. `MKCSlotQuickMove.route`, which nothing called, is deleted; a menu's own `quickMoveStack` still routes between its groups. Containers' four gating mixins are gone with the gate; a created slot no longer gates itself, and resolves through MenuKit's slot-level seam by its created address.
+
 5.1.0: Created slots follow MenuKit's slot operations. Requires MenuKit 5.1.0. This release adds API and breaks nothing.
 
 Shift-clicking into or out of a created slot now goes through the same shift-click in and shift-click out operations as a vanilla slot. A locking mod's veto covers pockets and other created slots without any extra work from you.
