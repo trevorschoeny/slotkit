@@ -1,10 +1,12 @@
 package com.trevlar.menukit.core;
 
+import com.trevlar.menukit.window.PersistentContainerKey;
+
 import com.mojang.serialization.Codec;
 import com.trevlar.menukit.mixin.CompoundContainerAccessor;
 import com.trevlar.menukit.window.Address;
 import com.trevlar.menukit.network.SlotStateSnapshotS2CPayload;
-import com.trevlar.menukit.state.ResolvedSlot;
+import com.trevlar.menukit.window.ResolvedSlot;
 import com.trevlar.menukit.state.SlotStateClientCache;
 import com.trevlar.menukit.state.SlotStateRegistry;
 import com.trevlar.menukit.state.SlotStateServer;

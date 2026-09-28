@@ -1,6 +1,9 @@
 package com.trevlar.menukit.state;
 
-import com.trevlar.menukit.core.PersistentContainerKey;
+import com.trevlar.menukit.window.ContainerIdentity;
+import com.trevlar.menukit.window.ResolvedSlot;
+
+import com.trevlar.menukit.window.PersistentContainerKey;
 import com.trevlar.menukit.core.SlotStateChannel;
 
 import net.minecraft.resources.Identifier;
@@ -49,71 +52,34 @@ public final class SlotStateRegistry {
 
     // ── Container resolvers ─────────────────────────────────────────────
     //
-    // Modded BE / Entity types register custom resolvers. v1 ships no
-    // auto-resolution for modded types — explicit opt-in only.
-
-    private static final Map<Class<? extends BlockEntity>,
-            Function<? extends BlockEntity, PersistentContainerKey>> BE_RESOLVERS = new LinkedHashMap<>();
-
-    private static final Map<Class<? extends Entity>,
-            Function<? extends Entity, PersistentContainerKey>> ENTITY_RESOLVERS = new LinkedHashMap<>();
+    // Container identity lives in MenuKit since 6.0.0 (§0062, ContainerIdentity);
+    // these delegate so slot state and addressing agree on every key.
 
     public static <T extends BlockEntity> void registerBlockEntityResolver(
             Class<T> clazz, Function<T, PersistentContainerKey> resolver) {
-        BE_RESOLVERS.put(clazz, resolver);
+        ContainerIdentity.registerBlockEntityResolver(clazz, resolver);
     }
 
     public static <T extends Entity> void registerEntityResolver(
             Class<T> clazz, Function<T, PersistentContainerKey> resolver) {
-        ENTITY_RESOLVERS.put(clazz, resolver);
+        ContainerIdentity.registerEntityResolver(clazz, resolver);
     }
 
-    @SuppressWarnings("unchecked")
     public static <T extends BlockEntity> Optional<PersistentContainerKey> resolveBlockEntity(T be) {
-        for (Map.Entry<Class<? extends BlockEntity>,
-                Function<? extends BlockEntity, PersistentContainerKey>> entry : BE_RESOLVERS.entrySet()) {
-            if (entry.getKey().isInstance(be)) {
-                Function<T, PersistentContainerKey> fn =
-                        (Function<T, PersistentContainerKey>) entry.getValue();
-                return Optional.ofNullable(fn.apply(be));
-            }
-        }
-        return Optional.empty();
+        return ContainerIdentity.resolveBlockEntity(be);
     }
 
-    @SuppressWarnings("unchecked")
     public static <T extends Entity> Optional<PersistentContainerKey> resolveEntity(T entity) {
-        for (Map.Entry<Class<? extends Entity>,
-                Function<? extends Entity, PersistentContainerKey>> entry : ENTITY_RESOLVERS.entrySet()) {
-            if (entry.getKey().isInstance(entity)) {
-                Function<T, PersistentContainerKey> fn =
-                        (Function<T, PersistentContainerKey>) entry.getValue();
-                return Optional.ofNullable(fn.apply(entity));
-            }
-        }
-        return Optional.empty();
+        return ContainerIdentity.resolveEntity(entity);
     }
 
-    /**
-     * Attempts to resolve a persistent key from a {@link Container}. Returns
-     * {@link Optional#empty} for unsupported types (e.g., ephemeral crafting
-     * containers, modded types without registered resolvers).
-     *
-     * <p>Resolution order: player inventory → ender chest → block entity →
-     * entity → modded resolvers. First match wins.
-     */
+    /** The persistent key of {@code container}, when it has one. */
     public static Optional<PersistentContainerKey> resolve(Container container) {
-        return ContainerKeyResolver.resolve(container);
+        return ContainerIdentity.resolve(container);
     }
 
-    /**
-     * Slot-aware resolution (§0050): resolves a single slot to its persistent
-     * owner plus the index local to that owner. Single-owner containers are the
-     * identity case; a composite container (vanilla double chest) splits per
-     * slot to the owning block-entity half. Storage and the menu-free read key
-     * off the returned local index.
-     */
+    /** One slot of {@code container}: its owner and its index within that owner. */
     public static Optional<ResolvedSlot> resolve(Container container, int containerSlotIndex) {
-        return ContainerKeyResolver.resolve(container, containerSlotIndex);
+        return ContainerIdentity.resolve(container, containerSlotIndex);
     }
 }

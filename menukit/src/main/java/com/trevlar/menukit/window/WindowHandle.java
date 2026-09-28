@@ -23,8 +23,7 @@ import java.util.Objects;
  *
  * <p>The handle never returns the raw backing (no {@code getSlot()}), per the Law
  * of Demeter — reads go through {@link #behavior}, which resolves the engine
- * cascade and is always non-null. Writes route to {@link WindowEngine#set} (a
- * SERVER-tier key with MKC absent is a safe no-op via the NoServerTier port).
+ * cascade and is always non-null. Writes route to {@link WindowEngine#set}.
  *
  * <p>Sealed to the three kinds that exist; new kinds extend the family additively
  * (KindTag is FROZEN-OPEN). A handle is a value — held by the consumer, resolved

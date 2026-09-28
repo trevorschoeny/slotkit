@@ -15,15 +15,13 @@ import org.jetbrains.annotations.ApiStatus;
  *
  * <h2>Container-based when possible, menu-based as a fallback</h2>
  *
- * When the {@link VanillaSlotIdentity} port resolves the slot's container (MKC
- * present, a §0050-identifiable container), the address is MENU-INDEPENDENT:
- * {@link #CONTAINER_FAMILY} + {@code sub(scopeId)} + the container-relative index.
- * The same physical slot then has one address whether reached via its menu, a
- * hopper, or after a reopen. When the port returns empty (MK alone, or an
- * unidentifiable container), it falls back to a menu-based address (the menu's
- * family + the flat menu index) — fine, because vanilla-slot gating only exists
- * when MKC is present, so a menu-based decoration address has nothing to be
- * inconsistent with.
+ * When {@link ContainerIdentity} resolves the slot's container, the address is
+ * menu-independent: {@link #CONTAINER_FAMILY} + {@code sub(scopeId)} + the
+ * container-relative index. The same physical slot then has one address whether
+ * reached through its menu, by a hopper, or after a reopen, with or without
+ * Containers loaded (§0062). An unidentifiable container (crafting grid, horse
+ * storage) falls back to a menu-based address: the menu's family and the flat menu
+ * index.
  */
 public final class VanillaAddressing {
 
@@ -43,7 +41,7 @@ public final class VanillaAddressing {
     @ApiStatus.Internal
     public static Address addressOf(AbstractContainerMenu menu, Slot inMenuSlot) {
         Slot target = Slots.target(inMenuSlot); // identity off the unwrapped (creative) target
-        var id = ServerTier.identity().identify(target.container, target.getContainerSlot());
+        var id = ContainerIdentity.scope(target.container, target.getContainerSlot());
         if (id.isPresent()) {
             return Address.vanillaSlot(CONTAINER_FAMILY, OwnerScope.sub(id.get().scopeId()), id.get().localIndex());
         }
@@ -63,7 +61,7 @@ public final class VanillaAddressing {
      */
     @ApiStatus.Internal
     public static java.util.Optional<Address> addressOf(net.minecraft.world.Container container, int containerSlotIndex) {
-        return ServerTier.identity().identify(container, containerSlotIndex)
+        return ContainerIdentity.scope(container, containerSlotIndex)
                 .map(r -> Address.vanillaSlot(CONTAINER_FAMILY, OwnerScope.sub(r.scopeId()), r.localIndex()));
     }
 

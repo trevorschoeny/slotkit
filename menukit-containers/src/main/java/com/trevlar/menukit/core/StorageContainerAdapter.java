@@ -25,7 +25,7 @@ public class StorageContainerAdapter implements Container {
 
     /**
      * Returns the backing {@link Storage}. Exposed so internal MKC paths
-     * (notably the M1 {@code ContainerKeyResolver}) can introspect the
+     * (notably the {@code ContainerIdentity}) can introspect the
      * storage's nature — e.g., check whether it's a {@link KeyedStorage}
      * — without going through the vanilla {@link Container} interface.
      * Consumer code should generally NOT reach for this; the vanilla

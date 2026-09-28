@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  * <p><b>§0019 / §0050 note.</b> This is a pure access shim: it reads two
  * existing vanilla fields, injects no behavior, registers no hook, and owns no
  * code path. The composite-resolution <em>policy</em> (which half owns which
- * slot, where the value is stored) lives in {@code ContainerKeyResolver}; this
+ * slot, where the value is stored) lives in {@code ContainerIdentity}; this
  * accessor only lets the resolver reach fields vanilla keeps private. It mirrors
  * {@link AbstractContainerMenuInvoker} (the established access-shim pattern
  * §0019 permits) and MK's {@code SlotPositionAccessor}.

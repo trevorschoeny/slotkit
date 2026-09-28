@@ -1,5 +1,7 @@
 package com.trevlar.menukit.core;
 
+import com.trevlar.menukit.window.PersistentContainerKey;
+
 /**
  * A {@link Storage} that knows its own persistent identity. Implementing
  * {@code KeyedStorage} is the opt-in path for making a custom-panel slot
@@ -21,7 +23,7 @@ package com.trevlar.menukit.core;
  * {@link Storage}) instead of {@link Storage} directly.
  *
  * <p><b>Resolution path:</b> the
- * {@link com.trevlar.menukit.state.ContainerKeyResolver} sees that
+ * {@link com.trevlar.menukit.window.ContainerIdentity} sees that
  * the slot's container is a {@link StorageContainerAdapter}, inspects the
  * adapter's backing {@link Storage}, and — if it's a {@code KeyedStorage}
  * — uses {@link #storageKey()} as the persistent identity. Non-keyed

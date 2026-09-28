@@ -1,4 +1,4 @@
-package com.trevlar.menukit.core;
+package com.trevlar.menukit.window;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;

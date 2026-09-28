@@ -1,6 +1,6 @@
 package com.trevlar.menukit.mixin;
 
-import com.trevlar.menukit.core.BehaviorBindingTable;
+import com.trevlar.menukit.window.BehaviorBindingTable;
 import com.trevlar.menukit.core.MendingCandidates;
 import com.trevlar.menukit.core.MKCBehaviorKeys;
 import com.trevlar.menukit.core.MKCSlot;

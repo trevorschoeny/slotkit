@@ -1,6 +1,5 @@
-package com.trevlar.menukit.state;
+package com.trevlar.menukit.window;
 
-import com.trevlar.menukit.core.PersistentContainerKey;
 
 import org.jetbrains.annotations.ApiStatus;
 

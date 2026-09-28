@@ -2,7 +2,7 @@ package com.trevlar.menukit.state;
 
 import com.mojang.serialization.Codec;
 import com.trevlar.menukit.core.KeyedStorages;
-import com.trevlar.menukit.core.PersistentContainerKey;
+import com.trevlar.menukit.window.PersistentContainerKey;
 import com.trevlar.menukit.core.SlotStateChannel;
 
 import net.minecraft.nbt.CompoundTag;

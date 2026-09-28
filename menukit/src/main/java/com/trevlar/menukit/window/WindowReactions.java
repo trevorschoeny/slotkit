@@ -21,8 +21,8 @@ import net.minecraft.world.item.ItemStack;
  * <ul>
  *   <li><b>Server-authoritative</b> ({@link #fireInsert}/{@link #fireTake},
  *       {@code server=true}) — resolves {@code ON_INSERT}/{@code ON_TAKE} (SERVER
- *       tier) and routes invocation through the {@link ReactiveDispatch} port, so
- *       MK-alone no-ops and MKC owns server-thread/transaction semantics.</li>
+ *       tier) and invokes it with its failure isolated, since it runs inside a
+ *       menu transaction.</li>
  *   <li><b>Client-observed</b> ({@code server=false}) — resolves the observed
  *       variants (CLIENT tier) and invokes directly; MK-alone capable, pure UI
  *       feedback, no authority, fires for created slots too.</li>
@@ -74,10 +74,22 @@ public final class WindowReactions {
         ReactEvent event = ReactEvent.snapshot(address, before, after, cause);
         ReactionGuard.run(address, key, () -> {
             if (server) {
-                ServerTier.dispatch().fire(hook, event); // server-tier: route through MKC
+                fireIsolated(hook, event);               // server-tier: a throw never breaks the transaction
             } else {
                 hook.react(event);                       // client-tier: fire directly
             }
         });
+    }
+
+    private static final org.slf4j.Logger LOGGER = org.slf4j.LoggerFactory.getLogger("menukit");
+
+    /** A server-authoritative hook runs inside a menu transaction: its failure is logged and isolated. */
+    private static void fireIsolated(ReactiveHook hook, ReactEvent event) {
+        try {
+            hook.react(event);
+        } catch (RuntimeException e) {
+            LOGGER.error("[Reactions] hook threw for {} (cause {}); isolated, transaction continues",
+                    event.address(), event.cause(), e);
+        }
     }
 }

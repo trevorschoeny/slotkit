@@ -64,10 +64,8 @@ public final class WindowEngine {
     public static <V> void set(Address address, BehaviorKey<V> key, Decl<V> decl) {
         requireApplies(key, address.kind());
         if (key.tier() == Tier.SERVER) {
-            // Authoritative — routes to MKC's server store, BUFFERED until MKC's
-            // tier installs if it hasn't yet (so an init-time declaration lands
-            // regardless of mod load order); no-op when MK-alone.
-            ServerTier.declareWhenReady(() -> ServerTier.bridge().declare(address, key, decl));
+            // Authoritative: the server tier's store, always present (§0062).
+            BehaviorBindingTable.INSTANCE.declare(address, key, decl);
             return;
         }
         PER_ADDRESS.computeIfAbsent(address, a -> new ConcurrentHashMap<>()).put(key, decl);
@@ -78,7 +76,7 @@ public final class WindowEngine {
         // A group's members vary, so its kind can't be pre-checked here;
         // applicability is enforced at the typed handle boundary (Phase 6).
         if (key.tier() == Tier.SERVER) {
-            ServerTier.declareWhenReady(() -> ServerTier.bridge().declareGroup(group, key, decl));
+            BehaviorBindingTable.INSTANCE.declareGroup(group, key, decl);
             return;
         }
         bindingFor(group).put(key, decl);
@@ -102,10 +100,10 @@ public final class WindowEngine {
      */
     public static <V> V resolve(Address address, BehaviorKey<V> key, java.util.Collection<GroupKey> alsoMemberOf) {
         // AXIS 1 — server authority (above the client tier), for SERVER-tier keys.
-        // MKC absent => NoServerTier returns Inherit, so the key falls through to
-        // the client tier and finally the library default (the safe no-op).
+        // No server declaration => Inherit, so the key falls through to the
+        // client tier and finally the library default.
         if (key.tier() == Tier.SERVER) {
-            Decl<V> auth = ServerTier.declarations().resolve(address, key, alsoMemberOf);
+            Decl<V> auth = BehaviorBindingTable.INSTANCE.resolve(address, key, alsoMemberOf);
             if (auth instanceof Decl.Set<V> s) return s.value();
             // A server-tier key is never written to the client tier: set() and
             // setGroup() route it to the server store (or buffer it until that store
@@ -147,10 +145,6 @@ public final class WindowEngine {
         return null;
     }
 
-    /** Whether the server tier (MKC) is present. */
-    public static boolean serverTierPresent() {
-        return ServerTier.present();
-    }
 
     // ── internals ──────────────────────────────────────────────────────
 

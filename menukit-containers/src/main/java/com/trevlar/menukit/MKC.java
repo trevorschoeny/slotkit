@@ -84,22 +84,12 @@ public class MKC implements ModInitializer {
             return mk == null ? null
                     : com.trevlar.menukit.inject.SlotGroupId.created(mk.getPanelId(), mk.getGroupId());
         });
-        // THE ONE WINDOW — install the server tier into MK's engine (DIP: MK owns
-        // the ports, MKC conforms). Runs on both sides (universal init): server
-        // holds authoritative bindings; client mirrors for prediction.
-        com.trevlar.menukit.window.ServerTier.install(
-                com.trevlar.menukit.core.BehaviorBindingTable.INSTANCE,
-                com.trevlar.menukit.core.BehaviorBindingTable.INSTANCE);
-        // §0050-backed menu-independent vanilla-slot identity (so a chest slot
-        // gates the same via menu or hopper, both sides).
-        com.trevlar.menukit.window.ServerTier.installIdentity(
-                com.trevlar.menukit.core.MKCVanillaSlotIdentity.INSTANCE);
-        // Server-authoritative reactive firing (ON_INSERT/ON_TAKE). The firing
-        // seams that call WindowReactions.fireInsert/fireTake (server tier) are
-        // the named owed gap; this makes the dispatch real so wiring a seam later
-        // is a single call.
-        com.trevlar.menukit.window.ServerTier.installDispatch(
-                com.trevlar.menukit.core.ReactiveDispatchImpl.INSTANCE);
+        // Container identity is MenuKit's (§0062); a Containers storage that carries
+        // its own key is recognised first, so a slot backed by it is addressed by it.
+        com.trevlar.menukit.window.ContainerIdentity.extend(container ->
+                container instanceof com.trevlar.menukit.core.StorageContainerAdapter adapter
+                        && adapter.getStorage() instanceof com.trevlar.menukit.core.KeyedStorage keyed
+                        ? java.util.Optional.of(keyed.storageKey()) : java.util.Optional.empty());
         // M1 per-slot state — attachments + shared networking types register
         // here (attachment registration must run on both sides; networking
         // payload-type registration is also symmetric).

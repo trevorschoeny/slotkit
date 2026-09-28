@@ -1,7 +1,9 @@
 package com.trevlar.menukit.state;
 
+import com.trevlar.menukit.window.ResolvedSlot;
+
 import com.trevlar.menukit.core.MKSlotState;
-import com.trevlar.menukit.core.PersistentContainerKey;
+import com.trevlar.menukit.window.PersistentContainerKey;
 import com.trevlar.menukit.core.SlotStateChannel;
 import com.trevlar.menukit.network.SlotStateSnapshotS2CPayload;
 import com.trevlar.menukit.network.SlotStateUpdateC2SPayload;

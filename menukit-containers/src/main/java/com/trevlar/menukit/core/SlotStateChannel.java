@@ -1,5 +1,7 @@
 package com.trevlar.menukit.core;
 
+import com.trevlar.menukit.window.PersistentContainerKey;
+
 import com.mojang.serialization.Codec;
 import com.trevlar.menukit.window.Address;
 import net.minecraft.network.RegistryFriendlyByteBuf;

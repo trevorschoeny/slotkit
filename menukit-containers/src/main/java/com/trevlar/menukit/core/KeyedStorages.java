@@ -1,5 +1,7 @@
 package com.trevlar.menukit.core;
 
+import com.trevlar.menukit.window.PersistentContainerKey;
+
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
@@ -16,7 +18,7 @@ import java.util.UUID;
  * metadata. It wraps a content {@link Storage} (typically bound from a
  * {@link StorageAttachment}) and tags it with a
  * {@link PersistentContainerKey.Modded} key whose payload encodes the owning
- * player. M1's {@code ContainerKeyResolver} routes the registered slot to this
+ * player. MenuKit's {@code ContainerIdentity} routes the registered slot to this
  * key; the server resolves it to a resolver-id-namespaced bag on the player
  * (so distinct slots, and distinct mods, never collide).
  *

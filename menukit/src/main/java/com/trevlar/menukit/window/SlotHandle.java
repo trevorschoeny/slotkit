@@ -9,8 +9,7 @@ package com.trevlar.menukit.window;
  * (§0042), so it offers no typed sugar for them — the substrate is the truth.
  *
  * <p>Reactive verbs ({@link ReactiveHook}) and visibility ({@link TriBool}) are
- * MK types, so their sugar lives here. A SERVER reaction with MKC absent is a safe
- * no-op (the dispatch port is the null-object); an observed reaction is MK-alone.
+ * MK types, so their sugar lives here.
  */
 public final class SlotHandle extends WindowHandle {
 

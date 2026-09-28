@@ -1,5 +1,7 @@
 package com.trevlar.menukit.core;
 
+import com.trevlar.menukit.window.PersistentContainerKey;
+
 import com.trevlar.menukit.inject.ScreenMatcher;
 import com.trevlar.menukit.inject.SlotGroupId;
 import com.trevlar.menukit.inject.ScreenPanelAdapter;

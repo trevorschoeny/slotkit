@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <h2>Why this is purely additive</h2>
  * It reads {@link SlotGroupCategories} (already client-side, already per-screen) and
  * the override map; it never touches {@code Address}, the window engine, the
- * addressing, or the {@code VanillaSlotIdentity} port. Coarse categories stay coarse
+ * addressing, or the container identity ({@code ContainerIdentity}). Coarse categories stay coarse
  * — armor is still ONE {@code PLAYER_ARMOR} group for targeting; the four distinct
  * names come from the naming {@link Spec}, NOT from splitting the category (which
  * would change resolved-category behavior every panel-targeting consumer relies on).
