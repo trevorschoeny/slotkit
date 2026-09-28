@@ -27,7 +27,7 @@ import java.util.Objects;
  * No new names are minted for this:
  *
  * <ul>
- *   <li>{@link Vanilla} — a vanilla resolver emits exactly one contiguous run per
+ *   <li>{@link Category} — a vanilla resolver emits exactly one contiguous run per
  *       category per menu, so for vanilla the category already <em>is</em> the
  *       group's name. Derived, never hand-authored, so
  *       {@code PLAYER_INVENTORY} keeps being named once and every container type
@@ -46,7 +46,7 @@ import java.util.Objects;
  * listed in ({@code SlotGroups}, "Saving a choice"):
  *
  * <pre>
- * vanilla|menukit|player_inventory
+ * category|menukit|player_inventory
  * created|inventorymax:pocket_0_0|pocket_0_0
  * </pre>
  *
@@ -57,9 +57,12 @@ import java.util.Objects;
  */
 public sealed interface SlotGroupId {
 
-    /** The one group a vanilla resolver contributes for {@code category} on a menu. */
-    record Vanilla(SlotGroupCategory category) implements SlotGroupId {
-        public Vanilla {
+    /**
+     * The one group a resolver contributes for {@code category} on a menu: vanilla's
+     * resolvers, and a mod's own resolver for its own menu, name a group this way.
+     */
+    record Category(SlotGroupCategory category) implements SlotGroupId {
+        public Category {
             Objects.requireNonNull(category, "category");
         }
     }
@@ -72,18 +75,23 @@ public sealed interface SlotGroupId {
         }
     }
 
-    static SlotGroupId vanilla(SlotGroupCategory category) {
-        return new Vanilla(category);
+    static Category category(SlotGroupCategory category) {
+        return new Category(category);
     }
 
     static Created created(String panelId, String groupId) {
         return new Created(panelId, groupId);
     }
 
+    /** Whether this is one of vanilla's own groups (a {@link Category} group of a vanilla category). */
+    default boolean isVanilla() {
+        return this instanceof Category c && SlotGroupCategory.vanilla().contains(c.category());
+    }
+
     /** The stable text form, for saving a choice made against this group. */
     default String asString() {
         return switch (this) {
-            case Vanilla v -> KeyStrings.join("vanilla", v.category().namespace(), v.category().path());
+            case Category v -> KeyStrings.join("category", v.category().namespace(), v.category().path());
             case Created c -> KeyStrings.join("created", c.panelId(), c.groupId());
         };
     }
@@ -95,8 +103,9 @@ public sealed interface SlotGroupId {
      */
     static SlotGroupId parse(String text) {
         List<String> parts = KeyStrings.split(text);
-        if (parts.size() == 3 && parts.get(0).equals("vanilla")) {
-            return vanilla(new SlotGroupCategory(parts.get(1), parts.get(2)));
+        // "vanilla" is the 5.x spelling of the same form, still read so a saved choice survives.
+        if (parts.size() == 3 && (parts.get(0).equals("category") || parts.get(0).equals("vanilla"))) {
+            return category(new SlotGroupCategory(parts.get(1), parts.get(2)));
         }
         if (parts.size() == 3 && parts.get(0).equals("created")) {
             return created(parts.get(1), parts.get(2));

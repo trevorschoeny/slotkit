@@ -67,7 +67,6 @@ public class MKC implements ModInitializer {
         // category's inherent operations reach them. Both sides: the operation
         // seams run on the server. (QUICK_MOVE is no longer published to the
         // vocabulary: MenuKit's SHIFT_CLICK_OUT / SHIFT_CLICK_IN are the entries.)
-        com.trevlar.menukit.containers.core.CreatedSlotCategories.installLookup();
         // The kind-aware slot address rule, so a created slot resolves to its
         // CREATED address, and created slot groups published into MenuKit's
         // slot-group registry. Both sides: the operation seams, vetoes and

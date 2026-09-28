@@ -28,7 +28,7 @@ import java.util.function.Predicate;
  * Several groups can match one address, and they are not equally specific: a slot
  * group's own declaration should outrank the inherent declarations of the category
  * that group belongs to. {@link #precedence()} orders them, <b>higher wins</b>, with
- * the last-declared tie-break applying only within one precedence. The library uses
+ * a tie at one precedence going to the id that sorts last (never load order). The library uses
  * {@link #PRECEDENCE_CATEGORY} and {@link #PRECEDENCE_GROUP}; a consumer bulk-group
  * defaults to {@link #PRECEDENCE_DEFAULT}, below both, because a hand-declared group
  * is the broadest thing in the picture unless it says otherwise.
@@ -51,6 +51,28 @@ public final class GroupKey {
     private final net.minecraft.resources.Identifier id;
     private final Predicate<Address> membership;
     private final int precedence;
+
+    private static final java.util.Map<com.trevlar.menukit.inject.SlotGroupId, GroupKey> OF =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * The cascade group of a slot group: one identity for the registry's group and
+     * the engine's (§0063), at {@link #PRECEDENCE_GROUP}. A created group's
+     * membership follows from a slot's address, so it holds wherever the slot is
+     * resolved, hoppers and pickup included. A category group's membership depends
+     * on the menu, so the seam that has the menu states it
+     * ({@code SlotOperations.allows} does); without a menu it has no members.
+     */
+    public static GroupKey of(com.trevlar.menukit.inject.SlotGroupId group) {
+        return OF.computeIfAbsent(group, g -> new GroupKey(
+                GroupIds.of("group", g.asString()),
+                switch (g) {
+                    case com.trevlar.menukit.inject.SlotGroupId.Created c ->
+                            address -> c.equals(com.trevlar.menukit.inject.SlotGroups.groupOf(address));
+                    case com.trevlar.menukit.inject.SlotGroupId.Category k -> address -> false;
+                },
+                PRECEDENCE_GROUP));
+    }
 
     /** A group at {@link #PRECEDENCE_DEFAULT}. */
     public GroupKey(net.minecraft.resources.Identifier id, Predicate<Address> membership) {

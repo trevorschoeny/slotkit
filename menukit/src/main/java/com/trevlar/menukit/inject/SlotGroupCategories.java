@@ -312,7 +312,7 @@ public final class SlotGroupCategories {
             List<Slot> slots = deref(menu, entry.getValue());
             if (slots.isEmpty()) continue;      // absent, per the resolver contract
             claimed.add(category);
-            out.add(new ResolvedSlotGroup(SlotGroupId.vanilla(category), category, slots));
+            out.add(new ResolvedSlotGroup(SlotGroupId.category(category), category, slots));
         }
     }
 

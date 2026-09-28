@@ -360,16 +360,10 @@ public final class MKCContainerPanel {
         QuickMoveParticipation quickMove = spec.quickMoveValue();
         TriBool collect = spec.collectValue();
         TriBool dragFill = spec.dragFillValue();
-        // Every slot's category is published whether or not the spec declares
-        // behavior: that is what lets the category's inherent values reach the group.
-        Set<Address> addresses = new java.util.HashSet<>(spec.count());
-        for (int i = 0; i < spec.count(); i++) {
-            Address a = Address.createdSlot(groupId(containerPanelId, spec.groupId()), i);
-            addresses.add(a);
-            CreatedSlotCategories.index(a, spec.category());
-        }
-        // Listed with no menu open (SlotGroups): this path registers at init, so the
-        // group shows from the title screen.
+        // Declared whether or not the spec declares behavior: the group's category,
+        // recorded once on the group, is what lets the category's inherent values
+        // reach its slots. This path registers at init, so the group is listed from
+        // the title screen.
         com.trevlar.menukit.inject.SlotGroups.declare(groupId(containerPanelId, spec.groupId()), spec.category());
         if (gate == null && binding == null && mending == null && quickMove == null
                 && collect == null && dragFill == null) return;
@@ -379,10 +373,7 @@ public final class MKCContainerPanel {
         // one slot with Window.slot(addr).set(...) then wins outright, instead of the
         // two colliding on the per-address level and being settled by whichever mod's
         // init ran last. Above the group sits the category (PRECEDENCE_CATEGORY).
-        GroupKey group = new GroupKey(
-                GroupIds.of("group", containerPanelId + "/" + spec.groupId()),
-                addresses::contains,
-                GroupKey.PRECEDENCE_GROUP);
+        GroupKey group = GroupKey.of(groupId(containerPanelId, spec.groupId()));   // the group's own identity
         if (gate != null)      WindowEngine.setGroup(group, MKCBehaviorKeys.GATING, Decl.set(gate));
         if (binding != null)   WindowEngine.setGroup(group, MKCBehaviorKeys.BINDING, Decl.set(binding));
         if (mending != null)   WindowEngine.setGroup(group, MKCBehaviorKeys.MENDING, Decl.set(mending));

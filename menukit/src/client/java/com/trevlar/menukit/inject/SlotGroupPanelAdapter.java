@@ -147,7 +147,7 @@ public final class SlotGroupPanelAdapter {
                     "has no .onAny() — 'any slot group' isn't a meaningful target.");
         }
         SlotGroupId[] ids = new SlotGroupId[categories.length];
-        for (int i = 0; i < categories.length; i++) ids[i] = SlotGroupId.vanilla(categories[i]);
+        for (int i = 0; i < categories.length; i++) ids[i] = SlotGroupId.category(categories[i]);
         return onGroup(ids);
     }
 

@@ -387,14 +387,6 @@ public final class MKCSlots {
                     groupId, category, storage,
                     /*shiftClickPriority*/ 100, columns, /*rowGapAfter*/ -1, /*rowGapSize*/ 0);
 
-            // Publish the group to the category registry and let the category's
-            // inherent operations reach its slots (see SlotOperations). Same address
-            // minter the window resolves these slots by, below.
-            for (int local = 0; local < storage.size(); local++) {
-                CreatedSlotCategories.index(
-                        Address.createdSlot(SlotGroupId.created(panelId, groupId), local), category);
-            }
-
             // 2. Standalone Panel — no PanelOwner (this isn't a MKCScreenHandler).
             //    Style NONE: the consumer's render adapter draws the frame; the
             //    Panel itself carries no elements, only the visibility flag the

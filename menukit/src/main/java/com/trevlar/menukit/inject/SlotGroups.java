@@ -1,5 +1,15 @@
 package com.trevlar.menukit.inject;
 
+import com.trevlar.menukit.window.Token;
+
+import com.trevlar.menukit.window.PanelAddressing;
+
+import com.trevlar.menukit.window.OwnerRef;
+
+import com.trevlar.menukit.window.KindTag;
+
+import com.trevlar.menukit.window.Address;
+
 import com.trevlar.menukit.core.SlotGroupCategory;
 
 import net.fabricmc.loader.api.FabricLoader;
@@ -35,7 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <ul>
  *   <li><b>Vanilla</b>: MenuKit declares one group per vanilla category at init
- *       ({@code SlotGroupId.vanilla(category)}), the groups its resolvers produce. A
+ *       ({@code SlotGroupId.category(category)}), the groups its resolvers produce. A
  *       mod that registers a resolver for its own menu declares its categories'
  *       groups the same way, with {@link #declare}.</li>
  *   <li><b>Created</b>: MenuKit-Containers declares each group as it registers. A
@@ -118,6 +128,31 @@ public final class SlotGroups {
 
     private static final Map<SlotGroupId, Declared> DECLARED = new ConcurrentHashMap<>();
 
+    // A created slot's group, from its address: the address carries its panel's
+    // registration key and the group id before its index, so this index (filled as
+    // groups are declared) names the group without a menu. The group's category is
+    // then the one recorded on the group (§0063).
+    private static final Map<String, SlotGroupId.Created> CREATED_BY_ADDRESS = new ConcurrentHashMap<>();
+
+    private static String createdKey(net.minecraft.resources.Identifier regKey, String groupId) {
+        return regKey + "\0" + groupId;
+    }
+
+    /**
+     * The created group a created slot's address belongs to, or {@code null} for
+     * anything else (a vanilla slot's group depends on its menu; see
+     * {@link #of(com.trevlar.menukit.window.SlotRef)}).
+     */
+    public static SlotGroupId.@Nullable Created groupOf(Address address) {
+        if (address.kind() != KindTag.CREATED_SLOT) return null;
+        if (!(address.owner() instanceof OwnerRef.NestedOwner owner)) return null;
+        if (!(owner.parentToken() instanceof Token.RegToken reg)) return null;
+        if (!(address.token() instanceof Token.DeclToken decl)) return null;
+        int sep = decl.declId().lastIndexOf('\0');
+        if (sep < 0) return null;
+        return CREATED_BY_ADDRESS.get(createdKey(reg.regKey(), decl.declId().substring(0, sep)));
+    }
+
     // Bumped on every change to DECLARED. Readers cache against it (listing() here,
     // SlotOperations.groups(op)), so a declaration invalidates them all at once.
     private static volatile long generation = 0;
@@ -165,7 +200,7 @@ public final class SlotGroups {
         if (ref.slot() != null) {
             SlotGroupId created = createdLookup.groupOf(ref.slot());
             if (created != null) return created;
-            if (ref.category() != null) return SlotGroupId.vanilla(ref.category());
+            if (ref.category() != null) return SlotGroupId.category(ref.category());
         }
         if (ref.container() instanceof Inventory) return playerInventoryGroup(ref.containerSlot());
         return null;
@@ -180,7 +215,7 @@ public final class SlotGroups {
         else if (index < Inventory.SLOT_OFFHAND) category = SlotGroupCategory.PLAYER_ARMOR;
         else if (index == Inventory.SLOT_OFFHAND) category = SlotGroupCategory.PLAYER_OFFHAND;
         else return null;
-        return SlotGroupId.vanilla(category);
+        return SlotGroupId.category(category);
     }
 
     // ── Declaring ──────────────────────────────────────────────────────────
@@ -198,7 +233,7 @@ public final class SlotGroups {
     public static synchronized void declare(SlotGroupId id, SlotGroupCategory category, @Nullable SlotGroupSet set) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(category, "category");
-        if (id instanceof SlotGroupId.Vanilla v && !v.category().equals(category)) {
+        if (id instanceof SlotGroupId.Category v && !v.category().equals(category)) {
             LOGGER.warn("[SlotGroups] vanilla group {} is named by its category and cannot be declared as {}; ignored",
                     v.category(), category);
             return;
@@ -211,6 +246,7 @@ public final class SlotGroups {
         Declared was = DECLARED.get(id);
         if (was == null) {
             DECLARED.put(id, new Declared(category, set));
+            if (id instanceof SlotGroupId.Created c) CREATED_BY_ADDRESS.put(createdKey(PanelAddressing.regKey(c.panelId()), c.groupId()), c);
             generation++;
             SlotGroupCategories.declare(category);
             return;
@@ -238,7 +274,7 @@ public final class SlotGroups {
     /** The namespace a group belongs to: its category's for a vanilla group, its panel id's for a created one. */
     private static @Nullable String namespaceOf(SlotGroupId id) {
         return switch (id) {
-            case SlotGroupId.Vanilla v -> v.category().namespace();
+            case SlotGroupId.Category v -> v.category().namespace();
             case SlotGroupId.Created c -> {
                 int colon = c.panelId().indexOf(':');
                 yield colon > 0 ? c.panelId().substring(0, colon) : null;
@@ -342,7 +378,7 @@ public final class SlotGroups {
     /** The translation key a group's name lives under; see the class doc. */
     public static String langKey(SlotGroupId id) {
         return switch (id) {
-            case SlotGroupId.Vanilla v -> "slot_group." + v.category().namespace() + "." + v.category().path();
+            case SlotGroupId.Category v -> "slot_group." + v.category().namespace() + "." + v.category().path();
             case SlotGroupId.Created c -> "slot_group." + keyPart(c.panelId()) + "." + keyPart(c.groupId());
         };
     }
@@ -367,7 +403,7 @@ public final class SlotGroups {
     /** The mod a group comes from, or {@code null} for vanilla's; see the class doc. */
     public static @Nullable Component source(SlotGroupId id) {
         return switch (id) {
-            case SlotGroupId.Vanilla v -> SlotGroupCategory.vanilla().contains(v.category())
+            case SlotGroupId.Category v -> SlotGroupCategory.vanilla().contains(v.category())
                     ? null : modName(v.category().namespace());
             case SlotGroupId.Created c -> {
                 int colon = c.panelId().indexOf(':');
@@ -401,7 +437,7 @@ public final class SlotGroups {
 
     /** Vanilla groups by MenuKit's category order (player slots first); everything else after. */
     private static int rank(SlotGroupId id) {
-        if (id instanceof SlotGroupId.Vanilla v) {
+        if (id instanceof SlotGroupId.Category v) {
             int i = VANILLA_ORDER.indexOf(v.category());
             if (i >= 0) return i;
         }

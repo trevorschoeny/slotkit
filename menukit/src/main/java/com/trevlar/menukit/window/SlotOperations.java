@@ -251,7 +251,7 @@ public final class SlotOperations {
          * read from what the group declared ({@link SlotGroups#setOf}).
          */
         public boolean test(SlotGroupId group) {
-            if (group instanceof SlotGroupId.Vanilla v && SlotGroupCategory.vanilla().contains(v.category())) {
+            if (group instanceof SlotGroupId.Category v && SlotGroupCategory.vanilla().contains(v.category())) {
                 return vanilla.contains(v.category());
             }
             SlotGroupCategory declared = SlotGroups.categoryOf(group);
@@ -272,28 +272,6 @@ public final class SlotOperations {
 
     /** One {@link GroupKey} per category that has inherent operations; minted by {@link #inherent} only. */
     private static final Map<SlotGroupCategory, GroupKey> CATEGORY_GROUPS = new ConcurrentHashMap<>();
-
-    // ── The category port (§0042) ──────────────────────────────────────────
-
-    /**
-     * Resolves a created slot's {@link Address} to the category its group declared.
-     * MenuKit-Containers installs the implementation; MenuKit alone there are no
-     * created slots, so the default answers {@code null} and no category group ever
-     * matches a created address. (Vanilla slots reach their category through
-     * {@link #allows}, which has the menu in hand.)
-     */
-    @FunctionalInterface
-    public interface CategoryLookup {
-        @Nullable SlotGroupCategory categoryOf(Address address);
-    }
-
-    private static volatile CategoryLookup lookup = address -> null;
-
-    /** MenuKit-Containers installs its created-slot category lookup here at init. */
-    @ApiStatus.Internal
-    public static void installCategoryLookup(CategoryLookup impl) {
-        lookup = Objects.requireNonNull(impl, "impl");
-    }
 
     // ── The vocabulary ─────────────────────────────────────────────────────
 
@@ -461,7 +439,12 @@ public final class SlotOperations {
     private static GroupKey mintGroupFor(SlotGroupCategory category) {
         return CATEGORY_GROUPS.computeIfAbsent(category, c -> new GroupKey(
                 GroupIds.of("category", c.namespace() + "/" + c.path()),
-                address -> c.equals(lookup.categoryOf(address)),
+                address -> {
+                    // The category recorded once, on the group (§0063).
+                    com.trevlar.menukit.inject.SlotGroupId.Created g =
+                            com.trevlar.menukit.inject.SlotGroups.groupOf(address);
+                    return g != null && c.equals(com.trevlar.menukit.inject.SlotGroups.categoryOf(g));
+                },
                 GroupKey.PRECEDENCE_CATEGORY));
     }
 
@@ -622,11 +605,16 @@ public final class SlotOperations {
             if (byIdentity.isEmpty()) return operation.libraryDefault().asBoolean();
             address = byIdentity.get();
         }
-        // Read, never mint: a category nobody declared inherent operations for has no
-        // binding, so there is no membership to state.
-        GroupKey categoryGroup = ref.category() != null && address.kind() == KindTag.VANILLA_SLOT
-                ? CATEGORY_GROUPS.get(ref.category()) : null;
-        Collection<GroupKey> alsoMemberOf = categoryGroup != null ? List.of(categoryGroup) : List.of();
+        // A vanilla slot's group and category come from its menu, so they are
+        // stated here: its group rung (the one group per category on the menu) and,
+        // when anyone declared inherent operations for it, its category rung. Read,
+        // never mint, for the category: no binding means no membership to state.
+        Collection<GroupKey> alsoMemberOf = List.of();
+        if (ref.category() != null && address.kind() == KindTag.VANILLA_SLOT) {
+            GroupKey group = GroupKey.of(com.trevlar.menukit.inject.SlotGroupId.category(ref.category()));
+            GroupKey categoryGroup = CATEGORY_GROUPS.get(ref.category());
+            alsoMemberOf = categoryGroup != null ? List.of(group, categoryGroup) : List.of(group);
+        }
         return WindowEngine.resolve(address, operation, alsoMemberOf).asBoolean();
     }
 }

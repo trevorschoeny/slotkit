@@ -4,9 +4,6 @@ import net.minecraft.resources.Identifier;
 
 import org.jetbrains.annotations.ApiStatus;
 
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
 
 /**
  * Allocates the {@link Identifier} a library-built {@link GroupKey} is identified
@@ -28,30 +25,20 @@ public final class GroupIds {
 
     private GroupIds() {}
 
-    /** Allocated path → the exact key it was allocated for. */
-    private static final Map<String, String> CLAIMED = new HashMap<>();
-
     /**
      * A stable, unique {@code menukit:<prefix>/<key>} identifier for {@code key}.
-     * Calling twice with the same {@code prefix} and {@code key} returns the same
-     * identifier; two different keys never collide, even if they sanitize alike.
+     * The key is encoded injectively (every character outside {@code [a-z0-9.-]},
+     * {@code _} included, becomes {@code _} and its code in hex, then {@code _}),
+     * so two different keys never collide and the id depends on nothing but the
+     * key: no allocation order, so no mod load order (§0063).
      */
-    public static synchronized Identifier of(String prefix, String key) {
-        String base = prefix + "/" + sanitize(key);
-        String path = base;
-        for (int n = 2; ; n++) {
-            String claimedBy = CLAIMED.get(path);
-            if (claimedBy == null) {
-                CLAIMED.put(path, key);
-                break;
-            }
-            if (claimedBy.equals(key)) break;   // same caller, same id
-            path = base + "_" + n;              // sanitizing collapsed two distinct keys
+    public static Identifier of(String prefix, String key) {
+        StringBuilder out = new StringBuilder(prefix).append('/');
+        for (int i = 0; i < key.length(); i++) {
+            char ch = key.charAt(i);
+            if ((ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch == '.' || ch == '-') out.append(ch);
+            else out.append('_').append(Integer.toHexString(ch)).append('_');
         }
-        return Identifier.fromNamespaceAndPath("menukit", path);
-    }
-
-    private static String sanitize(String s) {
-        return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_.-]", "_");
+        return Identifier.fromNamespaceAndPath("menukit", out.toString());
     }
 }

@@ -47,42 +47,6 @@ public final class CreatedSlotCategories {
         SlotGroupCategories.extendEvery(CreatedSlotCategories::resolve);
     }
 
-    // ── Address → category, for the operations cascade (both sides) ─────────
-    //
-    // A category's INHERENT operations (SlotOperations.inherent) resolve through a
-    // GroupKey whose membership asks "is this address in that category?". The window
-    // engine is menu-free, so it cannot look a slot up on a menu; this index answers
-    // from the declaration instead. Filled when a group registers, on whichever side
-    // registered it, and read on the server where the operation seams run.
-
-    private static final Map<Address, SlotGroupCategory> BY_ADDRESS = new ConcurrentHashMap<>();
-
-    /** Installs the lookup MenuKit's operation cascade resolves categories through. */
-    public static void installLookup() {
-        SlotOperations.installCategoryLookup(BY_ADDRESS::get);
-    }
-
-    /**
-     * Records the category of one created slot, so its group's category can supply
-     * operation defaults, and publishes the category to the registry. Idempotent: a
-     * group re-registers on every menu construction and writes the same values.
-     *
-     * <p>Takes the {@link Address} rather than the identity triple on purpose. Each
-     * creation path mints addresses its own way ({@code MKCContainerPanel} nests the
-     * group id into the panel id; {@code MKCSlots} does not), so the caller passes
-     * the address <em>it</em> minted and the index cannot drift from the address the
-     * window resolves.
-     */
-    public static void index(Address address, SlotGroupCategory category) {
-        BY_ADDRESS.put(address, category);
-        SlotGroupCategories.declare(category);
-    }
-
-    /** The declared category of a created slot address, or {@code null}. */
-    public static @Nullable SlotGroupCategory of(Address address) {
-        return BY_ADDRESS.get(address);
-    }
-
     /**
      * Every created group with a live slot on {@code menu}, each reported as its
      * own contribution. Bucketed by {@code (panelId, groupId)}, NOT by category:
