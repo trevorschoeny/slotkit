@@ -26,6 +26,6 @@ public enum KindTag {
     CREATED_SLOT,
     /** A non-slot panel element (button, label, decoration). */
     PANEL_ELEMENT,
-    /** A panel itself, for its own properties (parity, opacity, inertness). */
+    /** A panel itself, for its own properties (visibility, opacity). */
     PANEL
 }

@@ -8,20 +8,17 @@ import com.trevlar.menukit.api.window.PersistentContainerKey;
 import com.mojang.serialization.Codec;
 import com.trevlar.menukit.mixin.CompoundContainerAccessor;
 import com.trevlar.menukit.api.window.Address;
-import com.trevlar.menukit.containers.network.SlotStateSnapshotS2CPayload;
 import com.trevlar.menukit.window.ResolvedSlot;
 import com.trevlar.menukit.containers.state.SlotStateClientCache;
 import com.trevlar.menukit.containers.state.SlotStateRegistry;
 import com.trevlar.menukit.containers.state.SlotStateServer;
 
-import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
-import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.CompoundContainer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.Entity;
@@ -144,26 +141,6 @@ public final class SlotState {
             if (PORTABLE.contains(c)) return true;
         }
         return false;
-    }
-
-    // ── Client capability (§0055) ───────────────────────────────────────
-
-    /**
-     * Reports whether {@code player}'s client can receive slot-state sync, i.e.
-     * has MenuKit-Containers' slot-state S2C channel registered (a vanilla or
-     * otherwise non-MenuKit client returns {@code false}). Backed by Fabric's
-     * channel handshake ({@code ServerPlayNetworking.canSend}) for the slot-state
-     * snapshot channel.
-     *
-     * <p><b>Reports only, never acts.</b> Whether a non-capable client is bound
-     * by, or bypasses, a consumer's per-slot feature (e.g. Inventory Plus's
-     * Container Locks letting non-modded players bypass a lock they cannot see.
-     * Trev's product call) is the <em>consumer's</em> enforcement policy. The
-     * library exposes the capability; it does not skip or bind players itself
-     * (§0019 / §0055, the library off enforcement behavior).
-     */
-    public static boolean isSlotStateCapable(ServerPlayer player) {
-        return ServerPlayNetworking.canSend(player, SlotStateSnapshotS2CPayload.TYPE);
     }
 
     // ── Internal read/write (called from SlotStateChannel) ──────────────

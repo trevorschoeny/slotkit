@@ -23,7 +23,7 @@ public final class Window {
 
     private Window() {}
 
-    /** A handle on the panel with id {@code panelId} (its own visibility/opacity/inertness). */
+    /** A handle on the panel with id {@code panelId} (its own visibility and opacity). */
     public static PanelHandle panel(String panelId) {
         return new PanelHandle(PanelAddressing.ofPanel(panelId));
     }

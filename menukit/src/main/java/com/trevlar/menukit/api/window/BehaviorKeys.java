@@ -7,12 +7,11 @@ import net.minecraft.resources.Identifier;
  * engine is generic, so a mod adds a behaviour by declaring a key of its own.
  *
  * <ul>
- *   <li>Client tier: {@link #VISIBILITY}, {@link #OPACITY}, {@link #INERTNESS}, and
- *       the observed reactions.</li>
+ *   <li>Client tier: {@link #VISIBILITY}, {@link #OPACITY}, and the observed
+ *       reactions.</li>
  *   <li>Server tier, the slot author's rules: {@link #GATING} (what a slot accepts
  *       and releases, and how many), {@link #BINDING} (Curse of Binding on any
- *       slot), the server reactions, and the eleven {@linkplain SlotOperations
- *       operations}. Containers keeps {@code ContainerKeys.MENDING}, whose seam
+ *       slot), and the eleven {@linkplain SlotOperations operations}. Containers keeps {@code ContainerKeys.MENDING}, whose seam
  *       (the XP orb) is its own.</li>
  * </ul>
  */
@@ -41,13 +40,6 @@ public final class BehaviorKeys {
     public static final BehaviorKey<TriBool> OPACITY = BehaviorKey.of(
             id("opacity"), TriBool.class, TriBool.TRUE, Tier.CLIENT, KindTag.PANEL);
 
-    /**
-     * Whether a panel makes what it covers inert. Client-tier, panels only.
-     * Default {@link TriBool#FALSE} (a panel is not inert-making unless declared).
-     */
-    public static final BehaviorKey<TriBool> INERTNESS = BehaviorKey.of(
-            id("inertness"), TriBool.class, TriBool.FALSE, Tier.CLIENT, KindTag.PANEL);
-
     // ── The slot author's rules (server tier, every slot kind) ─────────────────
 
     /**
@@ -68,25 +60,11 @@ public final class BehaviorKeys {
             id("binding"), TriBool.class, TriBool.FALSE, Tier.SERVER,
             KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
 
-    // ── Reactive verbs, slot kinds only; default = no-op hook ────────────────
-
-    /**
-     * Fires when a slot gains content, on the server inside the menu transaction
-     * (authoritative; may have game-state effects). SERVER tier → fires only with
-     * MKC present (the firing seams are the architecture's named owed gap). Default
-     * {@link ReactiveHook#NONE}.
-     */
-    public static final BehaviorKey<ReactiveHook> ON_INSERT = BehaviorKey.of(
-            id("on_insert"), ReactiveHook.class, ReactiveHook.NONE, Tier.SERVER,
-            KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
-
-    /**
-     * Fires when a slot loses content, on the server inside the menu transaction.
-     * SERVER tier; default {@link ReactiveHook#NONE}.
-     */
-    public static final BehaviorKey<ReactiveHook> ON_TAKE = BehaviorKey.of(
-            id("on_take"), ReactiveHook.class, ReactiveHook.NONE, Tier.SERVER,
-            KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
+    // ── Reactions, slot kinds only; default = no-op hook ─────────────────────
+    //
+    // Client-observed only: the client diffs a slot's synced contents each tick.
+    // There is no server-side pair: 6.0.0 removed the declared one, which
+    // nothing fired.
 
     /**
      * Fires on the client when synced slot contents grow, pure UI feedback (flash,

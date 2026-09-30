@@ -4,8 +4,8 @@ package com.trevlar.menukit.api.window;
  * A typed handle on a slot, vanilla or created: the slot verbs, plus the generic
  * {@link WindowHandle#set} substrate. The slot author's server rules are
  * {@link #gate} and {@link #binding}; the operations are set by key
- * ({@code set(BehaviorKeys.SHIFT_CLICK_IN, TriBool.FALSE)}). Reactive verbs
- * ({@link ReactiveHook}) and visibility ({@link TriBool}) have sugar here too.
+ * ({@code set(BehaviorKeys.SHIFT_CLICK_IN, TriBool.FALSE)}). The client-observed
+ * reactions ({@link ReactiveHook}) and visibility have sugar here too.
  */
 public final class SlotHandle extends WindowHandle {
 
@@ -34,18 +34,6 @@ public final class SlotHandle extends WindowHandle {
     /** Show/hide this slot on the client (constant rule). */
     public SlotHandle visibility(boolean visible) {
         return visibility(VisibilityRule.of(visible));
-    }
-
-    /** Server-authoritative reaction when this slot gains content (MKC-only firing; the seam is owed). */
-    public SlotHandle onInsert(ReactiveHook hook) {
-        set(BehaviorKeys.ON_INSERT, hook);
-        return this;
-    }
-
-    /** Server-authoritative reaction when this slot loses content. */
-    public SlotHandle onTake(ReactiveHook hook) {
-        set(BehaviorKeys.ON_TAKE, hook);
-        return this;
     }
 
     /** Client-observed reaction when synced contents grow, pure UI feedback, MK-alone. */

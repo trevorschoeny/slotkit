@@ -76,7 +76,7 @@ public final class WindowView {
     // ── Identity minters (menu-independent: the panel subtree roots at a constant
     //    family, so these need no live screen, one address everywhere) ──────────
 
-    /** A handle on the panel with id {@code panelId} (its own visibility/opacity/inertness). */
+    /** A handle on the panel with id {@code panelId} (its own visibility and opacity). */
     public PanelHandle panel(String panelId) {
         return new PanelHandle(PanelAddressing.ofPanel(panelId));
     }

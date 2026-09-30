@@ -21,6 +21,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import org.slf4j.Logger;
@@ -32,7 +33,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -665,15 +665,14 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
             }
         }
 
-        // Right-click handler dispatch (group-level capability)
-        if (event.button() == 1 && this.hoveredSlot instanceof CreatedSlot mkSlot) {
-            BiConsumer<net.minecraft.world.entity.player.Player, CreatedSlot> handler =
-                    mkSlot.getGroup().getRightClickHandler();
-            if (handler != null && this.minecraft != null && this.minecraft.player != null) {
-                handler.accept(this.minecraft.player, mkSlot);
-                fireSlotClick(mkSlot, event.button());
-                return true; // consumed, don't let vanilla place an item
-            }
+        // A right click on a slot with a handler is sent as a plain right click, whatever
+        // the cursor holds (vanilla would start a drag): the menu runs the handler on
+        // both sides (CustomContainerMenu.clicked), so the server's run is the one that counts.
+        if (event.button() == 1 && this.hoveredSlot instanceof CreatedSlot mkSlot
+                && menu.rightClickHandler(mkSlot.index, 1, ContainerInput.PICKUP) != null) {
+            slotClicked(mkSlot, mkSlot.index, 1, ContainerInput.PICKUP);
+            fireSlotClick(mkSlot, event.button());
+            return true;
         }
 
         // Fire slot click event (doesn't consume, vanilla still processes)

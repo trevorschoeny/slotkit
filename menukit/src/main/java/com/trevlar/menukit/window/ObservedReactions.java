@@ -16,8 +16,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 /**
- * The client-observed half of the reactive verbs (the part the architecture says
- * "ships working now") — a client-side detector that fires {@code ON_INSERT_OBSERVED}
+ * The reactive verbs: a client-side detector that fires {@code ON_INSERT_OBSERVED}
  * / {@code ON_TAKE_OBSERVED} when a slot's synced contents change. Pure UI feedback
  * (flash/sound/badge), no authority, MK-alone capable.
  *
@@ -25,7 +24,7 @@ import java.util.WeakHashMap;
  *
  * Each client tick, for the open container menu, it diffs every slot against a
  * per-menu snapshot and fires the observed reaction for any change (via
- * {@link WindowReactions#fireInsert}/{@code fireTake} with {@code server=false}).
+ * {@link WindowReactions#fireInsert}/{@code fireTake}).
  * First sight of a menu only snapshots (no fire on open). A reopen is a new menu
  * instance, so its snapshot starts fresh ({@link WeakHashMap}, GC-friendly).
  *
@@ -76,8 +75,8 @@ public final class ObservedReactions {
             boolean gotNew = !after.isEmpty()
                     && (before.isEmpty() || !ItemStack.isSameItemSameComponents(before, after)
                         || after.getCount() > before.getCount());
-            if (tookOld) WindowReactions.fireTake(address, before, after, ReactCause.SYNC, /*server=*/false);
-            if (gotNew) WindowReactions.fireInsert(address, before, after, ReactCause.SYNC, /*server=*/false);
+            if (tookOld) WindowReactions.fireTake(address, before, after, ReactCause.SYNC);
+            if (gotNew) WindowReactions.fireInsert(address, before, after, ReactCause.SYNC);
         }
         SNAPSHOTS.put(menu, snapshot(slots));
     }

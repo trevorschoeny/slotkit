@@ -7,6 +7,7 @@ import com.trevlar.menukit.containers.api.storage.StorageContainerAdapter;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.DataSlot;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 
 /**
@@ -47,6 +49,12 @@ import java.util.function.Predicate;
  * {@link SlotLayout.PanelBuilder#toggleable()} (vanilla's {@code clickMenuButton});
  * any other request is refused. A hidden panel's slots are inert: they read empty and
  * refuse placement and pickup, on both sides.
+ *
+ * <h3>Right clicks</h3>
+ * A right click on a shown slot whose group has a {@link SlotLayout.PanelBuilder#rightClick}
+ * handler runs the handler instead of vanilla's click. It is a click like any other: the
+ * client runs it as its prediction and sends it, and the server runs it too, which is the
+ * run that counts (§0067). Vanilla's take and put operations do not apply to it.
  *
  * <h3>Validity</h3>
  * {@link #stillValid} is real: the menu stays open while its validity holds, checked
@@ -208,7 +216,29 @@ public class CustomContainerMenu extends AbstractContainerMenu {
         return slots.get(flatIndex) instanceof CreatedSlot mk ? mk.getGroup() : null;
     }
 
-    // ── Shift-click and validity ────────────────────────────────────────
+    // ── Clicks, shift-click and validity ────────────────────────────────
+
+    /** A right click on a slot with a handler runs the handler, on each side; any other click is vanilla's. */
+    @Override
+    public void clicked(int slotId, int button, ContainerInput input, Player player) {
+        BiConsumer<Player, CreatedSlot> handler = rightClickHandler(slotId, button, input);
+        if (handler != null) {
+            handler.accept(player, (CreatedSlot) slots.get(slotId));
+            return;
+        }
+        super.clicked(slotId, button, input, player);
+    }
+
+    /**
+     * The handler this click runs instead of vanilla's, or {@code null}: a plain right
+     * click on a shown created slot whose group declared one.
+     */
+    @ApiStatus.Internal
+    public @Nullable BiConsumer<Player, CreatedSlot> rightClickHandler(int slotId, int button, ContainerInput input) {
+        if (input != ContainerInput.PICKUP || button != 1 || slotId < 0 || slotId >= slots.size()) return null;
+        return slots.get(slotId) instanceof CreatedSlot slot && slot.isActive()
+                ? slot.getGroup().getRightClickHandler() : null;
+    }
 
     @Override
     public ItemStack quickMoveStack(Player player, int index) {

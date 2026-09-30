@@ -141,7 +141,12 @@ public final class SlotLayout {
             return this;
         }
 
-        /** A right-click handler for the last-added group; it runs instead of vanilla's placement. */
+        /**
+         * A right-click handler for the last-added group; a right click on one of its
+         * slots runs it instead of vanilla's click. It runs on both sides, like any click:
+         * the client's run is its prediction and the server's is the one that counts. Put
+         * an effect that belongs to one side behind {@code player.level().isClientSide()}.
+         */
         public PanelBuilder rightClick(BiConsumer<Player, CreatedSlot> handler) {
             last().rightClick = Objects.requireNonNull(handler, "handler");
             return this;

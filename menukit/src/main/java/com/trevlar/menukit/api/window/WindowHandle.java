@@ -15,7 +15,7 @@ import java.util.Objects;
  *   <li><b>Generic substrate</b> (here, every kind): {@link #set}/{@link #behavior}
  * the engine is the truth. Any behavior, including ones added later, with
  *       zero new handle code.</li>
- *   <li><b>Named sugar</b> (the typed subclasses): {@code SlotHandle.onInsert(...)},
+ *   <li><b>Named sugar</b> (the typed subclasses): {@code SlotHandle.gate(...)},
  *       {@code PanelHandle.opacity(...)}, thin, discoverable wrappers over the
  *       substrate, restricted per kind so a slot verb is unreachable on a panel
  *       handle (compile-checked).</li>

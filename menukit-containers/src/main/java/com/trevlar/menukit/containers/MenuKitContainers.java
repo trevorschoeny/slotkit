@@ -38,10 +38,11 @@ public class MenuKitContainers implements ModInitializer {
         // vanilla one and saw no created groups.)
         com.trevlar.menukit.window.ClientSlotAddressing.install(
                 com.trevlar.menukit.containers.core.SlotAddresses.RULE);
-        // The one fact a gate reads that only Containers knows: whether a server
-        // player's client can receive slot state (§0064's capability port).
-        com.trevlar.menukit.api.window.GatingContext.installCapability(
-                com.trevlar.menukit.containers.api.state.SlotState::isSlotStateCapable);
+        // A custom menu runs a right click on a slot with a handler itself, so the
+        // click names no take or put operation: not at the client's send, not on the server.
+        com.trevlar.menukit.window.ClickOperations.installOwnClick((menu, slotId, button, input) ->
+                menu instanceof com.trevlar.menukit.containers.api.menu.CustomContainerMenu custom
+                        && custom.rightClickHandler(slotId, button, input) != null);
         com.trevlar.menukit.containers.core.CreatedSlotCategories.install();
         // SlotGroups.of(SlotRef) answers a created slot's own group. Both sides: a
         // veto that reads it runs wherever the operation does.

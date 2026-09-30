@@ -22,8 +22,8 @@ import net.minecraft.world.item.ItemStack;
  *
  * <h2>The {@link GatingContext}</h2>
  *
- * Each decision receives who is acting, so a gate can choose its own policy for a
- * player whose client cannot see slot state ({@link GatingContext#actingPlayerCapable}).
+ * Each decision receives who is acting ({@link GatingContext#actingPlayer}), or
+ * {@code null} for automation, so a gate can answer per player.
  */
 public interface SlotGate {
 

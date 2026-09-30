@@ -14,7 +14,7 @@ import java.util.Set;
  *
  * <ol>
  *   <li><b>Visited set keyed by {@code (Address, BehaviorKey)}</b> — not by slot
- *       alone, so a cross-kind chain (a slot's onTake → an element's observed
+ *       alone, so a cross-kind chain (a slot's observed take → an element's observed
  *       reaction → a panel's visibility → re-touching the slot) terminates the
  *       same way an all-slot chain does: the first time an {@code (Address, key)}
  *       pair repeats on the current propagation <em>stack</em>, that branch ends.
@@ -24,8 +24,7 @@ import java.util.Set;
  *       all-distinct-pairs chain can't run away.</li>
  * </ol>
  *
- * <p>The state is a {@link ThreadLocal} (server reactions fire on the server
- * thread inside the menu transaction; observed reactions on the client thread).
+ * <p>The state is a {@link ThreadLocal} (observed reactions fire on the client thread).
  * It is naturally empty again once the outermost {@link #run} returns — that is
  * the "reset when the transaction/sync sweep completes" the architecture names —
  * and the ThreadLocal is removed at depth zero so nothing leaks across sweeps.

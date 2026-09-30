@@ -34,17 +34,34 @@ import org.jetbrains.annotations.ApiStatus;
  *   <li>{@code QUICK_CRAFT} adding a slot to a drag: drag-fill on that slot.</li>
  * </ul>
  * Double-click collect is judged per swept slot at {@code canTakeItemForPickAll},
- * and creative clone touches nothing.
+ * and creative clone touches nothing. A click the menu runs itself instead of
+ * vanilla's ({@link OwnClick}: a Containers right-click handler) moves nothing, so
+ * it names no operation.
  */
 @ApiStatus.Internal
 public final class ClickOperations {
 
     private ClickOperations() {}
 
+    /** Whether a menu runs this click itself instead of vanilla's. Containers installs it. */
+    @FunctionalInterface
+    public interface OwnClick {
+        boolean runsItself(AbstractContainerMenu menu, int slotId, int button, ContainerInput input);
+    }
+
+    private static volatile OwnClick ownClick = (menu, slotId, button, input) -> false;
+
+    /** Containers installs which clicks its menus run themselves, from common init. */
+    public static void installOwnClick(OwnClick impl) {
+        com.trevlar.menukit.api.window.Declarations.requireOpen("ClickOperations.installOwnClick");
+        ownClick = java.util.Objects.requireNonNull(impl, "impl");
+    }
+
     /** Whether the click MenuKit is about to run or send is refused on the slot(s) it names. */
     public static boolean refuses(AbstractContainerMenu menu, int slotId, int button, ContainerInput input,
                                   Player player) {
         if (slotId < 0 || slotId >= menu.slots.size()) return false; // outside the menu: no slot to judge
+        if (ownClick.runsItself(menu, slotId, button, input)) return false; // moves nothing vanilla would
         Slot slot = menu.slots.get(slotId);
         return switch (input) {
             case PICKUP -> {
