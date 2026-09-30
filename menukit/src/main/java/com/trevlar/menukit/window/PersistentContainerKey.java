@@ -38,9 +38,23 @@ public sealed interface PersistentContainerKey {
 
     /**
      * Modded container type. The {@code payload} CompoundTag is opaque to the
-     * library — the mod defines its shape. {@code resolverId} identifies the
-     * mod's registered resolver + attachment binding.
+     * library; the mod defines its shape. {@code resolverId} identifies the
+     * mod's registered resolver and attachment binding.
+     *
+     * <p>An immutable value (§0067): the payload is copied in and copied out, so a
+     * key used as a map key never changes under the map.
      */
     record Modded(Identifier resolverId, CompoundTag payload)
-            implements PersistentContainerKey {}
+            implements PersistentContainerKey {
+        public Modded {
+            java.util.Objects.requireNonNull(resolverId, "resolverId");
+            payload = payload.copy();
+        }
+
+        /** A copy of the payload; changing it does not change the key. */
+        @Override
+        public CompoundTag payload() {
+            return payload.copy();
+        }
+    }
 }

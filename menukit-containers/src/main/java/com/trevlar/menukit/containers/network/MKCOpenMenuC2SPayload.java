@@ -16,13 +16,15 @@ import org.jetbrains.annotations.ApiStatus;
  * <p>This replaces the per-consumer hand-rolled open payload that every custom
  * menu used to ship: one generic payload + one generic receiver serves <em>every</em>
  * {@code MKCMenu} a consumer defines, keyed by the menu's registered id. An unknown
- * id is a fail-loud log on the receiver side, never an NPE.
+ * id is a fail-loud log on the receiver side, never an NPE. The server opens the menu
+ * only when its definition declares {@code validWhen} and it holds for the player
+ * ({@code MKCMenu.handleOpenRequest}, §0067).
  */
 @ApiStatus.Internal
 public record MKCOpenMenuC2SPayload(Identifier menuId) implements CustomPacketPayload {
 
     public static final Type<MKCOpenMenuC2SPayload> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath("menukit", "open_menu_c2s"));
+            new Type<>(Presence.id("open_menu"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, MKCOpenMenuC2SPayload> STREAM_CODEC =
             StreamCodec.composite(

@@ -11,10 +11,10 @@ import net.minecraft.world.entity.player.Inventory;
  * for custom keys/listeners/drag) drops in as {@code MySubclass::new}.
  *
  * <p><b>Client-only.</b> This factory constructs a GUI object; it is invoked
- * exclusively from {@code MKCMenu.registerScreens()} on the client (drained from
+ * exclusively from {@code ClientMenu.registerScreens()} on the client (drained from
  * {@code MKCClient.onInitializeClient}) and is <em>never</em> invoked on a
- * dedicated server — the same never-server-invoked discipline as
- * {@code MKCContainerPanel.chrome}.
+ * dedicated server. It lives in Containers' client source set, so common code
+ * cannot name it (§0067).
  */
 @FunctionalInterface
 public interface MKCMenuScreenFactory {

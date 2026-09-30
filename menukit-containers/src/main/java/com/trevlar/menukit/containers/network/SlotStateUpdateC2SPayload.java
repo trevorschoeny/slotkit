@@ -1,9 +1,5 @@
 package com.trevlar.menukit.containers.network;
 
-import com.trevlar.menukit.containers.core.SlotStateChannel;
-
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-import net.minecraft.nbt.Tag;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
@@ -12,33 +8,28 @@ import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Client → Server write request. Carries the channel id, the menu-relative
- * slot index (client addresses by menu position), and the encoded value as
- * a {@link Tag}. Server resolves via
- * {@code player.containerMenu.slots.get(menuSlotIndex)} and extracts the
- * container-relative index for storage.
+ * Client to server: a slot-state write the server judges (§0067). Names the menu the
+ * client wrote in ({@code containerId}, so a write that races a menu switch is refused),
+ * the slot by its index in that menu, the channel, and the value as the channel's own
+ * {@code StreamCodec} bytes. The server decodes those bytes with that codec, and stores
+ * the value's canonical re-encoding, never the client's bytes.
  */
 @ApiStatus.Internal
-public record SlotStateUpdateC2SPayload(Identifier channelId, int menuSlotIndex, Tag encodedValue)
+public record SlotStateUpdateC2SPayload(int containerId, int menuSlotIndex, Identifier channelId, byte[] value)
         implements CustomPacketPayload {
 
-    public static final Type<SlotStateUpdateC2SPayload> TYPE =
-            new Type<>(Identifier.fromNamespaceAndPath("menukit", "slot_state_update_c2s"));
+    public static final Type<SlotStateUpdateC2SPayload> TYPE = new Type<>(Presence.id("slot_state_write"));
 
     public static final StreamCodec<RegistryFriendlyByteBuf, SlotStateUpdateC2SPayload> STREAM_CODEC =
             StreamCodec.composite(
-                    Identifier.STREAM_CODEC, SlotStateUpdateC2SPayload::channelId,
+                    ByteBufCodecs.VAR_INT, SlotStateUpdateC2SPayload::containerId,
                     ByteBufCodecs.VAR_INT, SlotStateUpdateC2SPayload::menuSlotIndex,
-                    ByteBufCodecs.TAG, SlotStateUpdateC2SPayload::encodedValue,
+                    Identifier.STREAM_CODEC, SlotStateUpdateC2SPayload::channelId,
+                    ByteBufCodecs.byteArray(SlotStateWire.MAX_VALUE_BYTES), SlotStateUpdateC2SPayload::value,
                     SlotStateUpdateC2SPayload::new);
 
     @Override
     public Type<? extends CustomPacketPayload> type() {
         return TYPE;
-    }
-
-    /** Convenience for the client-side write path — fires the C2S packet. */
-    public static <T> void sendFromClient(SlotStateChannel<T> channel, int menuSlotIndex, Tag encoded) {
-        ClientPlayNetworking.send(new SlotStateUpdateC2SPayload(channel.id(), menuSlotIndex, encoded));
     }
 }

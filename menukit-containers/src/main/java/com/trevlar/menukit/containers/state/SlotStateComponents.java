@@ -3,6 +3,7 @@ package com.trevlar.menukit.containers.state;
 import net.minecraft.core.Registry;
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
 
 import org.jetbrains.annotations.ApiStatus;
@@ -50,6 +51,10 @@ public final class SlotStateComponents {
                     Identifier.fromNamespaceAndPath("menukit", "portable_slot_state"),
                     DataComponentType.<PerPlayerSlotStateBag>builder()
                             .persistent(PerPlayerSlotStateBag.CODEC)
+                            // Not synchronised (§0067): the bag holds every player's
+                            // private marks, and no client reads it (slot state reaches a
+                            // client through its snapshots). On the wire it is an empty bag.
+                            .networkSynchronized(StreamCodec.of((buf, bag) -> {}, buf -> new PerPlayerSlotStateBag()))
                             .build());
 
     /**

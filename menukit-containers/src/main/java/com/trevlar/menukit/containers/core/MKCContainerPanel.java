@@ -1,15 +1,10 @@
 package com.trevlar.menukit.containers.core;
 
-import com.trevlar.menukit.core.Button;
 import com.trevlar.menukit.core.OutsideRegion;
-import com.trevlar.menukit.core.Panel;
-import com.trevlar.menukit.core.PanelElement;
 import com.trevlar.menukit.core.PanelPosition;
 import com.trevlar.menukit.core.PanelStyle;
 
-import com.trevlar.menukit.inject.ScreenMatcher;
 import com.trevlar.menukit.inject.ScreenOrigin;
-import com.trevlar.menukit.inject.ScreenPanelAdapter;
 import com.trevlar.menukit.inject.SlotGroupId;
 import com.trevlar.menukit.window.Address;
 import com.trevlar.menukit.window.WindowEngine;
@@ -23,7 +18,6 @@ import com.trevlar.menukit.window.Window;
 
 import net.minecraft.world.inventory.InventoryMenu;
 
-import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -42,55 +36,50 @@ import java.util.function.Supplier;
  * <h3>What one registration drives</h3>
  *
  * <pre>{@code
- * // Consumer COMMON initializer (runs both sides):
+ * // Consumer COMMON initializer (runs both sides): the slots, and where the panel sits.
  * MKCContainerPanel.define("inventory-plus:pockets")
  *     .at(PanelPosition.region(OutsideRegion.LEFT_ALIGN_TOP).priority(20), 7)
  *     .style(PanelStyle.RAISED)
- *     .parity(ScreenMatcher.all())                       // default; opt out per screen
- *     .chrome(() -> List.of(new Button(...)))             // client-only, built lazily
- *     .addSlot(SlotSpec.at("pockets").count(9)             // slots flow + wrap to width
+ *     .addSlot(SlotSpec.at("pockets", MY_CATEGORY).count(9)   // slots flow and wrap to width
  *             .storage(player -> POCKETS.bind(player)))
  *     .register();
+ *
+ * // Consumer CLIENT initializer, only for chrome or a narrower screen scope:
+ * ClientContainerPanel.of("inventory-plus:pockets")
+ *     .chrome(() -> List.of(Button.builder()...build()))
+ *     .parity(ScreenMatcher.allExcept(...));
  * }</pre>
  *
- * From that single declaration the library:
+ * From that declaration the library:
  * <ol>
  *   <li>builds the real, synced {@link MKCSlot}s on the player's own
  *       {@code InventoryMenu} (the library-owned {@code MKCInventoryMenuMixin},
- *       both sides) — <b>no consumer mixin</b>;</li>
+ *       both sides), with no consumer mixin;</li>
  *   <li>projects the same slots onto every foreign container menu
  *       ({@link MKCSlotProjection}, both sides);</li>
- *   <li>gets the creative item-picker for free (the existing creative wrapper
- *       wraps whatever {@link MKCSlot}s sit on {@code player.inventoryMenu});</li>
- *   <li>on the client, renders the panel's chrome + slot presentation on every
- *       screen the {@link ScreenMatcher} accepts (a {@link ScreenPanelAdapter}
- *       wired via {@code onMatching}).</li>
+ *   <li>gets the creative item picker for free (the creative wrapper wraps whatever
+ *       {@link MKCSlot}s sit on {@code player.inventoryMenu});</li>
+ *   <li>on the client, renders the panel's chrome and slot presentation on every
+ *       container screen its parity scope accepts (default: all).</li>
  * </ol>
  *
- * <h3>The client/server split this honestly reflects</h3>
+ * <h3>The client/server split</h3>
  *
- * The server must build a menu's slots <em>at construction time, before any
- * client exists</em>, so the slot <b>data</b> is declared side-neutrally (the
- * {@link SlotSpec} recipes) and travels onto every container menu
- * unconditionally — that is the only sync-correct default. The per-screen
- * {@link Builder#parity} scope therefore gates the client <b>presentation</b> (whether
- * the panel + its slots are drawn and interactive on a given screen), not
- * whether the slot data exists. A slot you opt a screen out of is still present
- * on that menu; it simply isn't shown there. The chrome ({@link Builder#chrome}) is a
- * client-only {@link Supplier} so no GUI objects are constructed on a dedicated
- * server.
- *
- * <p>{@link Builder#register} is safe to call from the consumer's common initializer:
- * it touches only side-neutral data (recipes, the projection source, the stored
- * definition). The client chrome is materialised later, on the client only, from
- * {@link #wireRegisteredChrome} (invoked by {@code MKCClient}).
+ * The server builds a menu's slots at construction, before any client exists, so the
+ * slot data is declared here, in common code, and travels onto every container menu
+ * unconditionally: the only sync-correct default. What only the client has (the chrome
+ * elements and the screen scope, which name client types) is declared with
+ * {@code ClientContainerPanel} from the client initializer (§0067; the compiler refuses
+ * it here). The scope gates presentation, not whether the slot data exists: a slot a
+ * screen opts out of is still on that menu, just not shown there. The client wires every
+ * registered panel at client start, after every client initializer has run.
  */
 public final class MKCContainerPanel {
 
     private MKCContainerPanel() {}
 
     // ── Registered definitions (read on the client to wire chrome) ──────
-    private static final List<Definition> DEFINITIONS = new CopyOnWriteArrayList<>();
+    static final List<Definition> DEFINITIONS = new CopyOnWriteArrayList<>();
 
     // The single foreign-menu projection source is registered lazily on the
     // first define().register() — one source covers every parity panel because
@@ -100,13 +89,11 @@ public final class MKCContainerPanel {
     /** Immutable snapshot of one registered container panel. {@code position} is
      *  the panel's one placement (§0065): a region around the menu frame, a screen
      *  spot, an overlay, or a per-frame pixel supplier (§0057 Revision). */
-    private record Definition(String panelId,
+    record Definition(String panelId,
                               PanelPosition position,
                               int padding,
                               PanelStyle style,
                               boolean opaque,
-                              ScreenMatcher parityScope,
-                              Supplier<List<PanelElement>> chrome,
                               @Nullable BooleanSupplier visibleWhen,
                               int pinnedHeight,
                               int pinnedWidth,
@@ -121,11 +108,9 @@ public final class MKCContainerPanel {
     public static final class Builder {
         private final String panelId;
         private PanelPosition position = PanelPosition.UNPLACED;      // required: one .at(...)
-        private int padding = ScreenPanelAdapter.DEFAULT_PADDING;
+        private int padding = 7;                                       // ScreenPanelAdapter.DEFAULT_PADDING
         private PanelStyle style = PanelStyle.NONE;
         private boolean opaque = true;
-        private ScreenMatcher parityScope = ScreenMatcher.all();       // default-on everywhere
-        private Supplier<List<PanelElement>> chrome = List::of;        // no chrome by default
         private @Nullable BooleanSupplier visibleWhen = null;          // null = always visible
         private int pinnedHeight = -1;                                 // -1 = auto-size to visible content
         private int pinnedWidth = -1;                                  // -1 = auto-size to visible content
@@ -166,9 +151,9 @@ public final class MKCContainerPanel {
          * natural "this screen doesn't surface my anchor" escape.
          *
          * <p>Everything else about the parity panel is unchanged: the slots are
-         * real synced {@link MKCSlot}s on every container menu, the chrome +
-         * {@link SlotElement}s ride the panel (their intra-panel offsets are fixed;
-         * only the panel origin moves), and {@link Builder#parity}/{@link #showWhen}
+         * real synced {@link MKCSlot}s on every container menu, the chrome and
+         * {@code SlotElement}s ride the panel (their intra-panel offsets are fixed;
+         * only the panel origin moves), and the client's parity scope and {@link #showWhen}
          * compose as usual. No reactive wrap/scroll budgets are fed — pixel
          * placement means the consumer owns the exact geometry, on-screen included.
          *
@@ -197,36 +182,13 @@ public final class MKCContainerPanel {
         }
 
         /**
-         * Screen scope for the panel's <em>presentation</em>. Default
-         * {@link ScreenMatcher#all()} — shown on every container screen. Opt a
-         * screen out with {@link ScreenMatcher#allExcept}. Does NOT affect where
-         * the slot data lives (that's every container menu); see the class doc.
-         */
-        public Builder parity(ScreenMatcher scope) {
-            this.parityScope = scope;
-            return this;
-        }
-
-        /**
-         * The panel's display elements (buttons, labels, decorations), built
-         * lazily on the client only. The slots are added automatically as
-         * {@link SlotElement}s from {@link #addSlot}; this supplies the rest of
-         * the panel's chrome. MUST NOT be invoked on a dedicated server — it
-         * isn't (the library calls it client-side from {@code MKCClient}).
-         */
-        public Builder chrome(Supplier<List<PanelElement>> chrome) {
-            this.chrome = chrome;
-            return this;
-        }
-
-        /**
          * Gates the WHOLE panel's visibility (chrome + slot presentation) on a
          * client-side predicate — the entire parity panel appears/disappears as
          * one. Default (unset): always visible. When the supplier returns false,
          * the chrome, background, and slot elements all stop rendering together;
          * per-group {@code revealWhen} still applies on top when the panel is
-         * shown. Client-side presentation gate (the underlying
-         * {@link Panel#showWhen}); does not by itself drive server slot-sync, so
+         * shown. Client-side presentation gate (the panel's {@code showWhen}); does not
+         * by itself drive server slot-sync, so
          * pair it with per-group {@code revealWhen} when the slots are
          * sync-critical (as the validator pool does).
          */
@@ -250,7 +212,7 @@ public final class MKCContainerPanel {
          * already-visible slots; if a reveal predicate reads cursor-over-slot
          * state, that motion can un-trigger the reveal and oscillate (a flash).
          * Pinning the height reserves the panel's full extent so reveals never
-         * shift existing slots. Mirrors {@link Panel#pinnedHeight(int)}; width
+         * shift existing slots. Mirrors {@code Panel.pinnedHeight(int)}; width
          * stays adaptive.
          *
          * @param h pinned content height in pixels
@@ -270,7 +232,7 @@ public final class MKCContainerPanel {
          * cursor-over-slot state, that shift slides the hover target out from
          * under the cursor and oscillates (the flash). Pinning the width
          * reserves the panel's full horizontal extent so reveals never shift
-         * existing slots sideways. Mirrors {@link Panel#pinnedWidth(int)}.
+         * existing slots sideways. Mirrors {@code Panel.pinnedWidth(int)}.
          *
          * @param w pinned content width in pixels
          */
@@ -331,9 +293,9 @@ public final class MKCContainerPanel {
             //    the library inventory mixin, so it must not be double-appended).
             ensureProjectionSource();
 
-            // 3. Stash for client chrome wiring (read in MKCClient).
+            // 3. Stash for the client's wiring (ClientContainerPanel, at client start).
             DEFINITIONS.add(new Definition(panelId, position, padding,
-                    style, opaque, parityScope, chrome, visibleWhen, pinnedHeight,
+                    style, opaque, visibleWhen, pinnedHeight,
                     pinnedWidth, List.copyOf(slots)));
         }
     }
@@ -391,89 +353,24 @@ public final class MKCContainerPanel {
                 ParitySlotRegistry::applyTo);
     }
 
-    /** The id the built {@link MKCSlot}s carry and the {@link SlotElement}s resolve against. */
-    private static String slotPanelId(String containerPanelId, String groupId) {
+    /** The id the built {@link MKCSlot}s carry and the {@code SlotElement}s resolve against. */
+    static String slotPanelId(String containerPanelId, String groupId) {
         return containerPanelId + ":" + groupId;
     }
 
-    // ── Created-slot address minter (THE public way to name a parity slot) ──
-
+    // ── The public way to name a parity group ──
 
     /**
      * The {@link SlotGroupId} naming one of this panel's slot groups — what a
      * {@code SlotGroupPanelAdapter.onGroup(...)} anchors to, so another mod can
      * place a panel against these slots.
      *
-     * <p>Minted here rather than by hand for the same reason
-     * {@link #address(String, String, int)} is: the container-parity path derives
-     * its own slot panel id ({@code containerPanelId:groupId}), so building the
-     * identity from the raw ids would silently name a group that never resolves.
+     * <p>Minted here rather than by hand: the container-parity path derives its own
+     * slot panel id ({@code containerPanelId:groupId}), so building the identity from
+     * the raw ids would silently name a group that never resolves. A slot's address is
+     * {@code Address.createdSlot(groupId(panel, group), index)}.
      */
     public static SlotGroupId.Created groupId(String containerPanelId, String groupId) {
         return SlotGroupId.created(slotPanelId(containerPanelId, groupId), groupId);
-    }
-
-    // ── Client chrome wiring ────────────────────────────────────────────
-
-    /**
-     * Builds each registered panel's chrome {@link Panel} (chrome elements +
-     * auto-generated {@link SlotElement}s) and wires a {@link ScreenPanelAdapter}
-     * scoped by the panel's parity matcher. Client-only — invoked once from
-     * {@code MKCClient.onInitializeClient}, after all consumer common-init
-     * {@code register()} calls have populated {@link #DEFINITIONS} (Fabric runs
-     * all main entrypoints before any client entrypoint).
-     */
-    @ApiStatus.Internal
-    public static void wireRegisteredChrome() {
-        for (Definition def : DEFINITIONS) {
-            List<PanelElement> elements = new ArrayList<>(def.chrome().get());
-
-            // Movement ④ — slots flow + wrap reactively, not a fixed grid. One
-            // SlotElement per logical slot, built at the flow's origin (0,0); the
-            // SlotFlowElement owns their per-frame positions, flowing only the
-            // currently-visible ones into the panel's width and hugging the result
-            // (no fixed columns, no reserved empty space). Declared order across
-            // groups is the flow order — a group's slots are a contiguous run, so
-            // revealing a group simply joins its slots to the stream.
-            List<SlotElement> slotElements = new ArrayList<>();
-            for (SlotSpec spec : def.slots()) {
-                String sid = slotPanelId(def.panelId(), spec.groupId());
-                for (int i = 0; i < spec.count(); i++) {
-                    SlotElement el = new SlotElement(sid, spec.groupId(), i, 0, 0);
-                    // Group-level hover tooltip flows from the spec onto each built
-                    // SlotElement (the consumer can't reach these library-built instances).
-                    if (spec.tooltip() != null) {
-                        el.tooltip(spec.tooltip());
-                    }
-                    slotElements.add(el);
-                }
-            }
-            if (!slotElements.isEmpty()) {
-                elements.add(new SlotFlowElement(slotElements, 0, 0));
-            }
-
-            Panel panel = Panel.builder(def.panelId())
-                    .elements(elements)
-                    .visible(true)
-                    .style(def.style())
-                    .position(def.position())
-                    .build()
-                    .opaque(def.opaque());
-            // Whole-panel visibility gate (chrome + slots toggle as one).
-            if (def.visibleWhen() != null) {
-                panel.showWhen(def.visibleWhen());
-            }
-            // Pinned height (anchored-panel reveal stability) when declared.
-            if (def.pinnedHeight() >= 0) {
-                panel.pinnedHeight(def.pinnedHeight());
-            }
-            if (def.pinnedWidth() >= 0) {
-                panel.pinnedWidth(def.pinnedWidth());
-            }
-
-            // The panel carries its placement; the adapter scopes it to the parity screens.
-            ScreenPanelAdapter adapter = new ScreenPanelAdapter(panel, def.padding());
-            adapter.onMatching(def.parityScope());
-        }
     }
 }

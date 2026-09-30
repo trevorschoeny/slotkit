@@ -14,6 +14,7 @@ import net.minecraft.client.input.KeyEvent;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,17 +26,25 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * Client-side partner to {@link MKCScreenHandler}: a standalone screen whose panels
  * hold slot groups. Owns slot positioning, hover events, key actions and drag modes;
  * placement, render and element input belong to its {@link PanelHost} (§0065).
  *
+ * <h3>Its panels</h3>
+ * The handler knows each panel's id, slot groups and whether the server shows it; how
+ * a panel looks is declared on the client with {@link ClientMenu#panel} on MenuKit's
+ * {@code Panel.Builder} (§0067). This screen builds one {@link Panel} per handler panel
+ * (a raised panel of its slots when nothing is declared) and shows it while the server
+ * says so.
+ *
  * <h3>Its host</h3>
- * The handler's panels go into a standalone host with the title band inside the
- * frame. The host places them by their {@link PanelPosition} (the handler's
- * builder has already given unplaced ones the standalone default: the first is the
- * {@code main()} frame, later ones stack below it). This screen tells the host what
+ * The panels go into a standalone host with the title band inside the frame. The host
+ * places them by their {@link PanelPosition}; an unplaced one takes the standalone
+ * default (the first is the {@code main()} frame, later ones stack below it). This
+ * screen tells the host what
  * the host cannot know on its own: a panel's content size includes its slot grid,
  * its slot frames draw between its background and its elements, the main panel
  * auto-fits its height only when it holds no slots, and a panel's own slots stay
@@ -63,6 +72,12 @@ public class MKCHandledScreen extends AbstractContainerScreen<MKCScreenHandler> 
 
     /** This screen's panels, placed, rendered and routed (§0065). */
     private final PanelHost host;
+
+    /** One client panel per handler panel, in the handler's order. */
+    private final List<Panel> panels;
+
+    /** Each panel's shown state as last seen, to tell listeners when the server changes it. */
+    private final Map<String, Boolean> lastShown = new LinkedHashMap<>();
 
     /** Panel id -> this frame's placement (absolute screen coordinates). Rebuilt each frame. */
     private Map<String, PanelHost.Placed> placements = new LinkedHashMap<>();
@@ -102,7 +117,7 @@ public class MKCHandledScreen extends AbstractContainerScreen<MKCScreenHandler> 
      * {@code setScreen} away from a container — so coming back means re-issuing
      * the open request, which is exactly what the returned {@link Runnable}
      * does (it resolves this menu's {@link MKCMenu} handle and calls
-     * {@link MKCMenu#requestOpen()}).
+     * {@link ClientMenu#requestOpen()}).
      *
      * <p>Returns {@code null} when there is nothing to return to (not in an MKC
      * container, or the menu's type doesn't resolve to a registered handle), so
@@ -125,7 +140,7 @@ public class MKCHandledScreen extends AbstractContainerScreen<MKCScreenHandler> 
         if (id == null) return null;
         MKCMenu handle = MKCMenu.byId(id);
         if (handle == null) return null;
-        return handle::requestOpen;
+        return () -> ClientMenu.of(handle).requestOpen();
     }
 
     // ── Construction ───────────────────────────────────────────────────
@@ -153,17 +168,40 @@ public class MKCHandledScreen extends AbstractContainerScreen<MKCScreenHandler> 
                 .autoFitMain(p -> menu.getGroupsFor(p.getId()).isEmpty())
                 .slotOwnership(this::ownsSlotAt)
                 .decoration(this::drawSlotFrames);
-        // The builder already applied the standalone default; applying it again is
-        // a no-op for placed panels and covers a handler built another way.
-        List<Panel> panels = menu.getPanels();
+        this.panels = buildPanels(handler);
         List<PanelPosition> positions = PanelPosition.standaloneDefaults(
                 panels.stream().map(Panel::getPosition).toList());
         for (int i = 0; i < panels.size(); i++) {
             Panel panel = panels.get(i);
             host.add(panel, positions.get(i), panel.interiorPadding(), "", i);
+            lastShown.put(panel.getId(), panel.isVisible());
         }
         // Initial layout sets the image size before init() runs.
         computeLayout();
+    }
+
+    /**
+     * One {@link Panel} per handler panel: raised by default, then the look declared with
+     * {@link ClientMenu#panel}, shown while the server shows the panel (§0067).
+     */
+    private static List<Panel> buildPanels(MKCScreenHandler handler) {
+        MenuType<?> type;
+        try {
+            type = handler.getType();
+        } catch (UnsupportedOperationException e) {
+            type = null; // a handler built without a menu type
+        }
+        List<Panel> built = new ArrayList<>();
+        for (MenuPanel server : handler.getPanels()) {
+            String id = server.id();
+            Panel.Builder b = Panel.builder(id).style(PanelStyle.RAISED);
+            Consumer<Panel.Builder> look = ClientMenu.lookFor(type, id);
+            if (look != null) look.accept(b);
+            Panel panel = b.visible(true).build();
+            panel.showWhen(() -> handler.isPanelVisible(id));
+            built.add(panel);
+        }
+        return List.copyOf(built);
     }
 
     @Override
@@ -276,7 +314,7 @@ public class MKCHandledScreen extends AbstractContainerScreen<MKCScreenHandler> 
      * visibility, not the client window).
      */
     private void positionSlots() {
-        for (Panel panel : menu.getPanels()) {
+        for (Panel panel : panels) {
             PanelHost.Placed placed = placements.get(panel.getId());
             int groupOffsetY = 0;
             for (SlotGroup group : menu.getGroupsFor(panel.getId())) {
@@ -364,6 +402,7 @@ public class MKCHandledScreen extends AbstractContainerScreen<MKCScreenHandler> 
     @Override
     public void extractRenderState(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         super.extractRenderState(graphics, mouseX, mouseY, delta);
+        fireServerToggles();
 
         // ── Hover tracking (fire enter/exit events) ────────────────────
         // After the super pass, hoveredSlot is set by vanilla's pipeline.
@@ -398,25 +437,25 @@ public class MKCHandledScreen extends AbstractContainerScreen<MKCScreenHandler> 
     // same C2S sync mechanism as the keybind path.
 
     /**
-     * Toggles a panel's visibility with full client+server sync.
-     *
-     * <p>Consumers can call this from any context (HUD button click,
-     * chat command, game event) — not just from keybinds. Routes through
-     * the same {@code clickMenuButton} C2S mechanism.
+     * Asks the server to show or hide a panel (vanilla's container button packet). The
+     * server honours it only for a panel declared {@code toggleable()} and the change
+     * arrives with the next sync (§0067); the client never changes it on its own.
+     * Listeners hear {@code onPanelToggle} when the server's answer arrives.
      */
     public void togglePanel(String panelId) {
         int buttonId = this.menu.getPanelButtonId(panelId);
         if (buttonId != MKCScreenHandler.PANEL_NOT_FOUND && this.minecraft != null
-                && this.minecraft.gameMode != null
-                && this.minecraft.player != null) {
-            this.menu.clickMenuButton(this.minecraft.player, buttonId);
-            this.minecraft.gameMode.handleInventoryButtonClick(
-                    this.menu.containerId, buttonId);
-            // Fire event
-            Panel panel = this.menu.getPanel(panelId);
-            if (panel != null) {
-                firePanelToggle(panel, panel.isVisible());
-            }
+                && this.minecraft.gameMode != null) {
+            this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, buttonId);
+        }
+    }
+
+    /** Tells listeners about each panel the server showed or hid since the last frame. */
+    private void fireServerToggles() {
+        for (Panel panel : panels) {
+            boolean now = panel.isVisible();
+            Boolean before = lastShown.put(panel.getId(), now);
+            if (before != null && before != now) firePanelToggle(panel, now);
         }
     }
 
@@ -439,12 +478,11 @@ public class MKCHandledScreen extends AbstractContainerScreen<MKCScreenHandler> 
     }
 
     /**
-     * Auto-registers panel toggle keys from the panel tree.
-     * Called during init(). Each panel with a toggleKey gets a
-     * registry entry that syncs visibility via the C2S mechanism.
+     * Registers each panel's toggle key (declared on its look). The key asks the server,
+     * which honours it only for a {@code toggleable()} panel.
      */
     private void registerPanelToggleKeys() {
-        for (Panel panel : menu.getPanels()) {
+        for (Panel panel : panels) {
             if (panel.getToggleKey() < 0) continue;
             String panelId = panel.getId();
             registerKey(panel.getToggleKey(), (event, screen) -> {

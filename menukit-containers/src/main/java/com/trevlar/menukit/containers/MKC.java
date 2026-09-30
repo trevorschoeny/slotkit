@@ -30,7 +30,8 @@ import org.jetbrains.annotations.ApiStatus;
  *
  * <p>This class owns common-side init for slot-state machinery — M1
  * attachment registration and networking-payload registration. The
- * companion {@link MKCClient} owns the client-side counterpart.
+ * companion {@code MKCClient}, in Containers' client source set, owns the client-side
+ * counterpart.
  *
  * <p>The MenuKit: Containers canonical surface for consumers:
  * <ul>
@@ -99,30 +100,19 @@ public class MKC implements ModInitializer {
         com.trevlar.menukit.containers.state.SlotStateHooks.registerCommon();
         com.trevlar.menukit.containers.state.SlotStateHooks.registerServer();
 
-        // MKCMenu turnkey open primitive — the ONE generic open payload + its
-        // server receiver, registered once here. The receiver resolves the menu
-        // by the id the client sent, hops to the main thread, and opens it. An
-        // unknown id is a fail-loud log, never an NPE. This serves every MKCMenu
-        // a consumer defines, keyed by the menu's registered id.
+        // The one generic open request every MKCMenu shares. The server judges it
+        // (§0067): the menu must declare validWhen and it must hold for the player.
         net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.serverboundPlay().register(
                 com.trevlar.menukit.containers.network.MKCOpenMenuC2SPayload.TYPE,
                 com.trevlar.menukit.containers.network.MKCOpenMenuC2SPayload.STREAM_CODEC);
         net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(
                 com.trevlar.menukit.containers.network.MKCOpenMenuC2SPayload.TYPE,
-                (payload, context) -> {
-                    net.minecraft.server.level.ServerPlayer player = context.player();
-                    com.trevlar.menukit.containers.screen.MKCMenu handle =
-                            com.trevlar.menukit.containers.screen.MKCMenu.byId(payload.menuId());
-                    if (handle == null) {
-                        LOGGER.warn("[MenuKit-Containers] MKCOpenMenu: no MKCMenu registered "
-                                + "under id '{}' — ignoring open request from {}",
-                                payload.menuId(), player.getName().getString());
-                        return;
-                    }
-                    // Central main-thread hop — menu open must run on the server thread.
-                    net.minecraft.server.MinecraftServer srv = player.level().getServer();
-                    if (srv != null) srv.execute(() -> handle.open(player));
-                });
+                (payload, context) -> context.server().execute(() ->
+                        com.trevlar.menukit.containers.screen.MKCMenu.handleOpenRequest(
+                                context.player(), payload.menuId())));
+
+        // §0069: a joining client must have Containers; checked in the configuration phase.
+        com.trevlar.menukit.containers.network.Presence.register();
 
         // §0052 Phase 2 — grave-mod compat. OPTIONAL: register a capture adapter
         // only when the grave mod is present; MKC hard-depends on none. The
@@ -138,11 +128,4 @@ public class MKC implements ModInitializer {
         }
     }
 
-    /** Client-side initialization. Invoked from
-     *  {@link MKCClient#onInitializeClient()}. Registers M1's
-     *  client-side networking handlers. */
-    public static void initClient() {
-        LOGGER.info("[MenuKit-Containers] Client initialized");
-        com.trevlar.menukit.containers.state.SlotStateHooks.registerClient();
-    }
 }

@@ -1,10 +1,5 @@
 package com.trevlar.menukit.containers.screen;
 
-import com.trevlar.menukit.containers.network.MKCOpenMenuC2SPayload;
-
-import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
-
-import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
@@ -12,15 +7,20 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.flag.FeatureFlagSet;
 import net.minecraft.world.inventory.MenuType;
 
 import org.jetbrains.annotations.ApiStatus;
+import org.jspecify.annotations.Nullable;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.function.Predicate;
 
 /**
  * The turnkey custom-menu primitive — one {@code define(...).register()} chain
@@ -36,13 +36,16 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * public static final MKCMenu CUSTOM = MKCMenu
  *     .define(Identifier.fromNamespaceAndPath(MOD_ID, "custom_menu"), MyMenu::buildHandler)
  *     .title(Component.literal("My Custom Menu"))   // optional; default = "menu.<ns>.<path>"
+ *     .validWhen(player -> player.isAlive())        // needed for a client to ask to open it
  *     .arm(MyMenu::armBehaviors)                     // optional; arm slot behavior by Address, same chain
  *     .register();
  *
- * // Consumer CLIENT initializer, only if the menu has its own screen class
- * // (default MKCHandledScreen::new). Never in common code: naming a screen class
- * // there crashes a dedicated server.
- * MyMod.CUSTOM.screen(MyScreen::new);
+ * // Consumer CLIENT initializer: how each panel looks, and the screen class if the
+ * // menu has its own (default MKCHandledScreen::new). Never in common code: naming a
+ * // client class there crashes a dedicated server.
+ * ClientMenu.of(MyMod.CUSTOM)
+ *     .screen(MyScreen::new)
+ *     .panel("mymod:menu:main", p -> p.position(PanelPosition.main()).add(label));
  *
  * // The handler factory receives the menu's own MenuType (no reach-back to the
  * // CUSTOM handle being assigned above — see HandlerFactory):
@@ -54,8 +57,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * }
  *
  * // Open it:
- * CUSTOM.requestOpen();        // client → sends the one generic open payload
- * CUSTOM.open(serverPlayer);   // server-side direct (no networking)
+ * ClientMenu.of(CUSTOM).requestOpen();   // client: asks the server, which checks validWhen
+ * CUSTOM.open(serverPlayer);             // server-side direct (no networking)
  * }</pre>
  *
  * <h3>Why the factory takes the MenuType</h3>
@@ -73,13 +76,19 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * <h3>The client/server split</h3>
  *
- * {@code register()} is side-neutral (common init): it builds + registers the
- * {@link MenuType}, stores the title + screen factory + id on the returned handle,
- * and adds the handle to {@link #DEFINITIONS} (so the client can drain it) + the
- * id-keyed {@link #BY_ID} map (so the generic server receiver can resolve it). The
- * screen factory is a {@link MKCMenuScreenFactory} — a never-server-invoked
- * functional interface, materialised into a vanilla screen only on the client from
- * {@link #registerScreens()} (same discipline as {@code MKCContainerPanel.chrome}).
+ * {@code register()} is side-neutral (common init): it builds and registers the
+ * {@link MenuType}, and records the handle by id so the server can resolve an open
+ * request. Everything the client adds (the screen class, how each panel looks, the
+ * open request) is {@code ClientMenu}'s, in Containers' client source set, so this
+ * class names no client type (§0067).
+ *
+ * <h3>Who may open it, and for how long</h3>
+ *
+ * {@link Builder#validWhen} is the menu's context predicate. A client's request to
+ * open the menu is honoured only when the menu declares one and it holds for that
+ * player; the open menu closes when it stops holding (vanilla's {@code stillValid},
+ * checked on the server every tick). Without one, the menu opens only from the
+ * server ({@link #open}) and stays open while the player is alive.
  *
  * <h3>Namespace your panel ids</h3>
  *
@@ -117,10 +126,11 @@ public final class MKCMenu {
         MKCScreenHandler build(MenuType<MKCScreenHandler> type, int syncId, Inventory inv);
     }
 
+    private static final Logger LOGGER = LoggerFactory.getLogger("MenuKit");
+
     // ── Registered definitions ──────────────────────────────────────────
-    // DEFINITIONS: drained client-side to register screens (mirror
-    // MKCContainerPanel.DEFINITIONS). BY_ID: resolved server-side by the
-    // generic open receiver. Both populated by register(), side-neutral.
+    // DEFINITIONS: every menu, in registration order (the client registers their
+    // screens). BY_ID: resolved server-side by the generic open receiver.
     private static final List<MKCMenu> DEFINITIONS = new CopyOnWriteArrayList<>();
     private static final Map<Identifier, MKCMenu> BY_ID = new ConcurrentHashMap<>();
 
@@ -128,20 +138,19 @@ public final class MKCMenu {
     private final Identifier id;
     private final HandlerFactory handlerFactory;
     private final Component title;
-    /** Set on the client by {@link #screen}; null means the default screen. */
-    private volatile @org.jspecify.annotations.Nullable MKCMenuScreenFactory screenFactory;
-    /** Set once {@link #registerScreens} has run; a later {@link #screen} would never take effect. */
-    private static volatile boolean screensRegistered = false;
     private final MenuType<MKCScreenHandler> type;
+    private final @Nullable Predicate<Player> validWhen;
 
     private MKCMenu(Identifier id,
                     HandlerFactory handlerFactory,
                     Component title,
-                    MenuType<MKCScreenHandler> type) {
+                    MenuType<MKCScreenHandler> type,
+                    @Nullable Predicate<Player> validWhen) {
         this.id = id;
         this.handlerFactory = handlerFactory;
         this.title = title;
         this.type = type;
+        this.validWhen = validWhen;
     }
 
     // ── Definition entry point ──────────────────────────────────────────
@@ -167,7 +176,8 @@ public final class MKCMenu {
         private final Identifier id;
         private final HandlerFactory handlerFactory;
         private Component title;                                        // null => default translation key
-        private @org.jspecify.annotations.Nullable Runnable arm = null; // behavior-arming; run by register()
+        private @Nullable Runnable arm = null;                          // behavior-arming; run by register()
+        private @Nullable Predicate<Player> validWhen = null;           // null => server opens only
 
         Builder(Identifier id, HandlerFactory handlerFactory) {
             this.id = id;
@@ -182,6 +192,20 @@ public final class MKCMenu {
 
 
         /**
+         * Who may open this menu, and for how long (§0067). A client's open request
+         * ({@code ClientMenu.of(menu).requestOpen()}) is honoured only when this is
+         * declared and holds for the requesting player, checked on the server; the
+         * open menu closes when it stops holding (vanilla's {@code stillValid}, every
+         * tick). A menu tied to a block checks the player's distance to it here.
+         * Without it the menu opens only from the server ({@link MKCMenu#open}) and
+         * stays open while the player is alive.
+         */
+        public Builder validWhen(Predicate<Player> context) {
+            this.validWhen = java.util.Objects.requireNonNull(context, "context");
+            return this;
+        }
+
+        /**
          * A behavior-arming hook, invoked by {@code register()} <b>after</b> the
          * {@link MenuType} + id are live, so a custom menu's slot behavior is armed in
          * the same define chain as the menu it belongs to and cannot be forgotten in a
@@ -189,18 +213,17 @@ public final class MKCMenu {
          *
          * <p>Arm slot behavior by {@link com.trevlar.menukit.window.Address} here
          * — the menu's created slots are addressable as soon as it is registered
-         * ({@code Window.slot(MKCScreenHandler.address(panelId, groupId, i)).set(...)}).
+         * ({@code Window.slot(Address.createdSlot(SlotGroupId.created(panelId, groupId), i)).set(...)}).
          * Side-neutral: it runs at register() time on whichever side called it (the
          * engine declarations are pure data), exactly like arming behavior by hand in
          * common init.
          *
          * <pre>{@code
          * MKCMenu.define(id, MyMenu::buildHandler)
-         *     .screen(MyScreen::new)
          *     .arm(() -> {
          *         for (int i = 0; i < 2; i++) {
-         *             Window.slot(MKCScreenHandler.address("side", "filtered", i))
-         *                   .set(BehaviorKeys.GATING, diamondsOnly);
+         *             Window.slot(Address.createdSlot(SlotGroupId.created("side", "filtered"), i))
+         *                   .gate(diamondsOnly);
          *         }
          *     })
          *     .register();
@@ -227,8 +250,9 @@ public final class MKCMenu {
             // final) holder and reads holder[0] at invocation time, after assignment.
             @SuppressWarnings("unchecked")
             final MenuType<MKCScreenHandler>[] holder = new MenuType[1];
+            final Predicate<Player> validity = validWhen;
             MenuType<MKCScreenHandler> type = new MenuType<>(
-                    (syncId, inv) -> handlerFactory.build(holder[0], syncId, inv),
+                    (syncId, inv) -> withValidity(handlerFactory.build(holder[0], syncId, inv), validity),
                     FeatureFlagSet.of());
             holder[0] = type;
             Registry.register(BuiltInRegistries.MENU, id, type);
@@ -237,7 +261,7 @@ public final class MKCMenu {
                     ? title
                     : Component.translatable("menu." + id.getNamespace() + "." + id.getPath());
 
-            MKCMenu handle = new MKCMenu(id, handlerFactory, resolvedTitle, type);
+            MKCMenu handle = new MKCMenu(id, handlerFactory, resolvedTitle, type, validWhen);
             DEFINITIONS.add(handle);
             BY_ID.put(id, handle);
 
@@ -251,31 +275,6 @@ public final class MKCMenu {
         }
     }
 
-    // ── Client: the screen ──────────────────────────────────────────────
-
-    /**
-     * This menu's screen, when it has its own class ({@code MyScreen::new}, a
-     * subclass of {@code MKCHandledScreen} wiring per-screen keys, listeners or drag
-     * modes in its {@code init()}). Without it the menu uses {@code MKCHandledScreen}.
-     *
-     * <p><b>Client only: call it from your client initializer.</b> Naming a screen
-     * class in common code links a client class, which crashes a dedicated server;
-     * that is why this is not on the builder. Screens are registered once every
-     * client initializer has run.
-     *
-     * @throws IllegalStateException if screens are already registered (called
-     *         after client start)
-     */
-    public MKCMenu screen(MKCMenuScreenFactory factory) {
-        java.util.Objects.requireNonNull(factory, "factory");
-        if (screensRegistered) {
-            throw new IllegalStateException("MKCMenu " + id + ": screen(...) after client start never takes "
-                    + "effect; call it from your client initializer");
-        }
-        this.screenFactory = factory;
-        return this;
-    }
-
     // ── Handle accessors ────────────────────────────────────────────────
 
     /** This menu's registered {@link MenuType}. */
@@ -284,8 +283,15 @@ public final class MKCMenu {
     /** This menu's registry id (also the open-payload key). */
     public Identifier getId() { return id; }
 
-    /** The screen factory (client-only; see {@link MKCMenuScreenFactory}). */
-    @org.jspecify.annotations.Nullable MKCMenuScreenFactory screenFactory() { return screenFactory; }
+    /** Every registered menu, in registration order. The client registers their screens. */
+    @ApiStatus.Internal
+    public static List<MKCMenu> all() { return List.copyOf(DEFINITIONS); }
+
+    /** A handler built by this menu's factory carries the menu's validity. */
+    private static MKCScreenHandler withValidity(MKCScreenHandler handler, @Nullable Predicate<Player> validity) {
+        if (validity != null) handler.validWhen(validity);
+        return handler;
+    }
 
     // ── Open ────────────────────────────────────────────────────────────
 
@@ -299,47 +305,46 @@ public final class MKCMenu {
         // so the server-side provider hands the consumer's factory the same MenuType
         // the client-side factory gets — no reach-back to the static handle.
         player.openMenu(new SimpleMenuProvider(
-                (syncId, inv, p) -> handlerFactory.build(type, syncId, inv),
+                (syncId, inv, p) -> withValidity(handlerFactory.build(type, syncId, inv), validWhen),
                 title));
-    }
-
-    /**
-     * Requests the server open this menu for the local player — client-side.
-     * Sends the one library-owned generic open payload carrying this menu's id;
-     * the server receiver (registered in {@code MKC.init()}) resolves the handle
-     * and calls {@link #open(ServerPlayer)} on the main thread.
-     */
-    public void requestOpen() {
-        ClientPlayNetworking.send(new MKCOpenMenuC2SPayload(id));
     }
 
     // ── Generic server receiver (called from MKC.init()) ────────────────
 
     /**
      * Resolves a menu by the id carried in an open payload, or {@code null} if no
-     * menu was registered under that id. The generic server receiver in
-     * {@code MKC.init()} uses this — an unknown id is a fail-loud log, never an NPE.
+     * menu was registered under that id.
      */
     @ApiStatus.Internal
-    public static MKCMenu byId(Identifier id) {
+    public static @Nullable MKCMenu byId(Identifier id) {
         return BY_ID.get(id);
     }
 
-    // ── Client screen registration (called from MKCClient) ──────────────
-
     /**
-     * Registers every defined menu's screen with {@link MenuScreens}. Client-only,
-     * at client start ({@code MKCClient}), after every mod's client initializer has
-     * had its chance to call {@link #screen}: Fabric does not order client
-     * entrypoints between mods, so this cannot run from Containers' own.
+     * A client's request to open menu {@code id} (the generic open payload), judged on
+     * the server (§0067): an unknown menu, a menu without {@link Builder#validWhen}, or
+     * one whose predicate does not hold for {@code player} is refused and logged.
+     * Returns whether it opened. Main thread.
      */
     @ApiStatus.Internal
-    public static void registerScreens() {
-        screensRegistered = true;
-        for (MKCMenu handle : DEFINITIONS) {
-            MKCMenuScreenFactory factory = handle.screenFactory() != null
-                    ? handle.screenFactory() : MKCHandledScreen::new;
-            MenuScreens.register(handle.getType(), factory::create);
+    public static boolean handleOpenRequest(ServerPlayer player, Identifier id) {
+        MKCMenu handle = BY_ID.get(id);
+        if (handle == null) {
+            LOGGER.warn("[MenuKit-Containers] refused an open request from {}: no menu '{}'",
+                    player.getName().getString(), id);
+            return false;
         }
+        if (handle.validWhen == null) {
+            LOGGER.warn("[MenuKit-Containers] refused an open request from {}: menu '{}' declares no "
+                    + "validWhen, so it opens only from the server", player.getName().getString(), id);
+            return false;
+        }
+        if (!handle.validWhen.test(player)) {
+            LOGGER.debug("[MenuKit-Containers] refused an open request from {}: menu '{}' is not valid for them",
+                    player.getName().getString(), id);
+            return false;
+        }
+        handle.open(player);
+        return true;
     }
 }

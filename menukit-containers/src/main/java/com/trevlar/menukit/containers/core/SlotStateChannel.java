@@ -1,12 +1,14 @@
 package com.trevlar.menukit.containers.core;
 
 import com.trevlar.menukit.window.PersistentContainerKey;
+import com.trevlar.menukit.window.SlotRef;
 
 import com.mojang.serialization.Codec;
 import com.trevlar.menukit.window.Address;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.resources.Identifier;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
@@ -63,7 +65,46 @@ public record SlotStateChannel<T>(
         Codec<T> codec,
         StreamCodec<RegistryFriendlyByteBuf, T> streamCodec,
         T defaultValue,
-        Visibility visibility) {
+        Visibility visibility,
+        CanWrite canWrite) {
+
+    /**
+     * Who may write this channel from a client (§0067). The server asks it for every
+     * write a client sends, after checking that the write names the player's open menu
+     * and a live slot on it, and refuses the write when it answers {@code false}. Writes
+     * made by server code are not asked: the server is trusted.
+     *
+     * <p>Defaults: a {@link Visibility#SHARED SHARED} channel denies every client write
+     * ({@link #DENY}), since one player's write is another player's state; a
+     * {@link Visibility#PRIVATE PRIVATE} channel lets a player write their own value on
+     * any live slot of their open menu ({@link #ANY}).
+     */
+    @FunctionalInterface
+    public interface CanWrite {
+        /** Refuses every client write. The SHARED default. */
+        CanWrite DENY = (player, slot) -> false;
+        /** Allows a write on any live slot of the writer's open menu. The PRIVATE default. */
+        CanWrite ANY = (player, slot) -> true;
+
+        /** Whether {@code player} may write this channel at {@code slot} (a live slot of their open menu). */
+        boolean allows(ServerPlayer player, SlotRef slot);
+    }
+
+    public SlotStateChannel {
+        java.util.Objects.requireNonNull(id, "id");
+        java.util.Objects.requireNonNull(codec, "codec");
+        java.util.Objects.requireNonNull(streamCodec, "streamCodec");
+        java.util.Objects.requireNonNull(defaultValue, "defaultValue");
+        java.util.Objects.requireNonNull(visibility, "visibility");
+        java.util.Objects.requireNonNull(canWrite, "canWrite");
+    }
+
+    /** A channel with its visibility's default writer rule ({@link CanWrite}). */
+    public SlotStateChannel(Identifier id, Codec<T> codec,
+            StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue, Visibility visibility) {
+        this(id, codec, streamCodec, defaultValue, visibility,
+                visibility == Visibility.SHARED ? CanWrite.DENY : CanWrite.ANY);
+    }
 
     /**
      * Channel visibility (§0049).
@@ -71,10 +112,11 @@ public record SlotStateChannel<T>(
      * <ul>
      *   <li><b>PRIVATE</b> (default) — each viewer has their own value, keyed by
      *       UUID. The shipped per-player model (§0034).</li>
-     *   <li><b>SHARED</b> — one player-agnostic value per slot, synced to and
-     *       writable by every viewer. For cross-player features like Inventory
-     *       Plus's Container Locks (one player locks slot 5 → every player sees
-     *       it locked).</li>
+     *   <li><b>SHARED</b>: one player-agnostic value per slot, synced to every
+     *       viewer, and written from a client only by whom its {@link CanWrite}
+     *       allows (§0067; nobody unless declared). For cross-player features like
+     *       Inventory Max's Container Locks (one player locks slot 5, every player
+     *       sees it locked).</li>
      * </ul>
      *
      * <p>SHARED is only meaningful on containers that are both multi-player and

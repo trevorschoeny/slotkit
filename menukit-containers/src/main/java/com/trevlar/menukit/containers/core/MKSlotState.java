@@ -1,6 +1,5 @@
 package com.trevlar.menukit.containers.core;
 
-import com.trevlar.menukit.core.Panel;
 
 import com.trevlar.menukit.window.PersistentContainerKey;
 
@@ -51,11 +50,7 @@ public final class MKSlotState {
 
     // ── Channel registration ────────────────────────────────────────────
 
-    /**
-     * Registers a channel. First registration of an identifier wins;
-     * subsequent calls with the same id return the already-registered channel
-     * and log a warning. See M1 §4.6 for rationale.
-     */
+    /** Registers a PRIVATE channel. A second channel with the same id throws. */
     public static <T> SlotStateChannel<T> register(
             Identifier id, Codec<T> codec,
             StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue) {
@@ -70,19 +65,35 @@ public final class MKSlotState {
      * fixed-slot containers (placed shulker/chest/barrel); see
      * {@link SlotStateChannel.Visibility}.
      */
-    @SuppressWarnings("unchecked")
     public static <T> SlotStateChannel<T> register(
             Identifier id, Codec<T> codec,
             StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue,
             SlotStateChannel.Visibility visibility) {
-        SlotStateChannel<T> existing = SlotStateRegistry.getChannelTyped(id);
-        if (existing != null) {
-            LOGGER.warn("[SlotState] channel {} already registered — returning existing instance", id);
-            return existing;
-        }
-        SlotStateChannel<T> channel = new SlotStateChannel<>(id, codec, streamCodec, defaultValue, visibility);
-        SlotStateRegistry.registerChannel(channel);
-        LOGGER.info("[SlotState] registered channel {} ({})", id, visibility);
+        return register(new SlotStateChannel<>(id, codec, streamCodec, defaultValue, visibility));
+    }
+
+    /**
+     * Registers a channel with its writer rule (§0067): who may write it from a client.
+     * A SHARED channel needs one for any client to write it; without one it keeps the
+     * default, which refuses every client write. A PRIVATE channel defaults to letting a
+     * player write their own value.
+     *
+     * <pre>{@code
+     * LOCKS = MKSlotState.register(id, Codec.BOOL, ByteBufCodecs.BOOL.cast(), false,
+     *         SlotStateChannel.Visibility.SHARED,
+     *         (player, slot) -> MyLocks.handles(slot.container()));
+     * }</pre>
+     */
+    public static <T> SlotStateChannel<T> register(
+            Identifier id, Codec<T> codec,
+            StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue,
+            SlotStateChannel.Visibility visibility, SlotStateChannel.CanWrite canWrite) {
+        return register(new SlotStateChannel<>(id, codec, streamCodec, defaultValue, visibility, canWrite));
+    }
+
+    private static <T> SlotStateChannel<T> register(SlotStateChannel<T> channel) {
+        SlotStateRegistry.registerChannel(channel);   // a second channel with one id throws
+        LOGGER.info("[SlotState] registered channel {} ({})", channel.id(), channel.visibility());
         return channel;
     }
 
@@ -103,6 +114,34 @@ public final class MKSlotState {
     public static <T extends Entity> void registerEntityResolver(
             Class<T> clazz, Function<T, PersistentContainerKey> resolver) {
         SlotStateRegistry.registerEntityResolver(clazz, resolver);
+    }
+
+    // ── Block-portable state (§0048) ────────────────────────────────────
+
+    private static final java.util.Set<Class<? extends net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity>>
+            PORTABLE = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    static {
+        PORTABLE.add(net.minecraft.world.level.block.entity.ShulkerBoxBlockEntity.class);
+    }
+
+    /**
+     * Makes a container block entity's slot state travel with its item, the way a
+     * shulker box's does (§0048): broken, the state rides the item; placed, it returns.
+     * Shulker boxes are registered by default. Declare at init.
+     */
+    public static void registerPortable(
+            Class<? extends net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity> type) {
+        com.trevlar.menukit.window.Declarations.requireOpen("MKSlotState.registerPortable " + type.getName());
+        PORTABLE.add(java.util.Objects.requireNonNull(type, "type"));
+    }
+
+    /** Whether a block entity's slot state travels with its item. */
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public static boolean isPortable(BlockEntity be) {
+        for (Class<?> c = be.getClass(); c != null; c = c.getSuperclass()) {
+            if (PORTABLE.contains(c)) return true;
+        }
+        return false;
     }
 
     // ── Client capability (§0050) ───────────────────────────────────────
@@ -147,38 +186,63 @@ public final class MKSlotState {
                            @Nullable Player player, T value) {
         Player viewer = resolvePlayer(slot, player);
         if (isClientSide(viewer)) {
-            // Optimistic local update; fire C2S packet for server to persist + broadcast.
-            SlotStateClientCache.write(channel, slot.container, slot.getContainerSlot(), value);
-            com.trevlar.menukit.containers.network.SlotStateUpdateC2SPayload.sendFromClient(
-                    channel, slot.index, SlotStateServer.encode(channel, value));
+            writeFromClient(channel, slot, viewer, value);
             return;
         }
-        // §0050: store under the owning (half-)key at the owner-local index. The
-        // GLOBAL index still drives sync — the client backs the menu with a flat
-        // container and indexes it globally; the half-split is server-only.
-        int globalIndex = slot.getContainerSlot();
-        Optional<ResolvedSlot> resolved = SlotStateRegistry.resolve(slot.container, globalIndex);
+        // §0050: store under the owning (half-)key at the owner-local index.
+        Optional<ResolvedSlot> resolved = SlotStateRegistry.resolve(slot.container, slot.getContainerSlot());
         if (resolved.isEmpty()) return;
-        Tag encoded = SlotStateServer.encode(channel, value);
-        boolean ok = SlotStateServer.writeTag(
-                resolved.get().key(), viewer, channel.id(), resolved.get().localSlotIndex(), encoded);
-        if (!ok) return;
+        writeResolved(channel, resolved.get(), viewer, value);
         if (viewer instanceof net.minecraft.server.level.ServerPlayer sp) {
+            // Server code wrote it, so no client has it yet. A SHARED value reaches every
+            // viewer of the slot, the writer included; a PRIVATE one only its own viewer.
             if (channel.visibility() == SlotStateChannel.Visibility.SHARED) {
-                // §0049/§0050: a shared write reaches every current viewer of this
-                // slot — matched by persistent owner key + local index, which spans
-                // co-viewers of a double chest (each holds a distinct
-                // CompoundContainer wrapper over the same two halves).
                 com.trevlar.menukit.containers.state.SlotStateHooks.broadcastToViewers(
-                        sp, resolved.get().key(), resolved.get().localSlotIndex(),
-                        channel.id(), encoded, true);
+                        sp, resolved.get().key(), resolved.get().localSlotIndex(), channel, value, true);
             } else {
-                // Private write: echo back to the writing player so their cache stays in sync.
-                // Global index — the writer's client indexes its flat container globally.
-                com.trevlar.menukit.containers.network.SlotStateUpdateS2CPayload.sendTo(
-                        sp, channel.id(), globalIndex, encoded);
+                com.trevlar.menukit.containers.state.SlotStateHooks.sendIfViewing(
+                        sp, resolved.get().key(), resolved.get().localSlotIndex(), channel, value);
             }
         }
+    }
+
+    /** Stores a value, or removes the entry when it is the channel's default (§0067). Server side. */
+    private static <T> void writeResolved(SlotStateChannel<T> channel, ResolvedSlot slot,
+                                          @Nullable Player viewer, T value) {
+        if (java.util.Objects.equals(value, channel.defaultValue())) {
+            SlotStateServer.clearTag(slot.key(), viewer, channel.id(), slot.localSlotIndex());
+        } else {
+            SlotStateServer.writeTag(slot.key(), viewer, channel.id(), slot.localSlotIndex(),
+                    SlotStateServer.encode(channel, value));
+        }
+    }
+
+    /**
+     * A client's write: shown at once from the local cache, and sent to the server,
+     * which judges it (§0067) and sends back its own value if it refuses. Sent only when
+     * the server runs Containers (§0069), and only for a slot of the menu the player has
+     * open, which the write names.
+     */
+    private static <T> void writeFromClient(SlotStateChannel<T> channel, Slot slot, @Nullable Player viewer, T value) {
+        SlotStateClientCache.write(channel, slot.container, slot.getContainerSlot(), value);
+        if (viewer == null || !com.trevlar.menukit.containers.network.Presence.serverHasContainers()) return;
+        // The menu the server has open. The creative picker is client-only and has the
+        // inventory menu's id; the server sees the inventory menu there.
+        net.minecraft.world.inventory.AbstractContainerMenu open = viewer.containerMenu;
+        net.minecraft.world.inventory.AbstractContainerMenu menu =
+                open == null || (open != viewer.inventoryMenu && open.containerId == viewer.inventoryMenu.containerId)
+                        ? viewer.inventoryMenu : open;
+        int index = indexOn(menu, slot);
+        if (index < 0) return; // not a slot of the open menu: nothing the server could judge
+        byte[] bytes;
+        try {
+            bytes = com.trevlar.menukit.containers.network.SlotStateWire.encode(channel, value, viewer.registryAccess());
+        } catch (RuntimeException e) {
+            LOGGER.warn("[SlotState] channel {} could not encode a value for the wire: {}", channel.id(), e.toString());
+            return;
+        }
+        clientSender.accept(new com.trevlar.menukit.containers.network.SlotStateUpdateC2SPayload(
+                menu.containerId, index, channel.id(), bytes));
     }
 
     static <T> T readPersistent(SlotStateChannel<T> channel, @Nullable Player player,
@@ -190,8 +254,7 @@ public final class MKSlotState {
 
     static <T> void writePersistent(SlotStateChannel<T> channel, @Nullable Player player,
                                      PersistentContainerKey key, int containerSlotIndex, T value) {
-        Tag encoded = SlotStateServer.encode(channel, value);
-        SlotStateServer.writeTag(key, player, channel.id(), containerSlotIndex, encoded);
+        writeResolved(channel, new ResolvedSlot(key, containerSlotIndex), player, value);
     }
 
     // ── Address-keyed read/write (THE ONE WINDOW twin) ──────────────────
@@ -267,6 +330,21 @@ public final class MKSlotState {
                 return null;
             }
         }
+    }
+
+    /**
+     * The index on {@code menu} of the slot that stores what {@code slot} stores (same
+     * container, same index; a creative wrapper is looked through), or -1.
+     */
+    private static int indexOn(net.minecraft.world.inventory.AbstractContainerMenu menu, Slot slot) {
+        Slot target = com.trevlar.menukit.inject.Slots.target(slot);
+        for (int i = 0; i < menu.slots.size(); i++) {
+            Slot s = com.trevlar.menukit.inject.Slots.target(menu.slots.get(i));
+            if (s == target || (s.container == target.container && s.getContainerSlot() == target.getContainerSlot())) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     // ── Menu-free shared read (§0050) ───────────────────────────────────
@@ -364,6 +442,19 @@ public final class MKSlotState {
     public static void installClientPlayer(java.util.function.Supplier<@Nullable Player> lookup) {
         com.trevlar.menukit.window.Declarations.requireOpen("MKSlotState.installClientPlayer");
         clientPlayer = java.util.Objects.requireNonNull(lookup, "lookup");
+    }
+
+    // The client's play-packet sender, installed by MKCClient for the same reason: the
+    // client networking class must not be named in common code.
+    private static volatile java.util.function.Consumer<net.minecraft.network.protocol.common.custom.CustomPacketPayload>
+            clientSender = payload -> {};
+
+    /** MKCClient installs the client's packet sender at client init. */
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public static void installClientSender(
+            java.util.function.Consumer<net.minecraft.network.protocol.common.custom.CustomPacketPayload> sender) {
+        com.trevlar.menukit.window.Declarations.requireOpen("MKSlotState.installClientSender");
+        clientSender = java.util.Objects.requireNonNull(sender, "sender");
     }
 
     // ── Helpers used by packet receivers ────────────────────────────────

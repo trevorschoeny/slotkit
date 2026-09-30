@@ -5,12 +5,12 @@ MenuKit: Containers is the slot extension for MenuKit. It adds slots that persis
 What it does:
 - Creates slots as UI components: a pocket, an extra equipment slot, a satchel, each a real `Slot` synced by vanilla's protocol.
 - Adds custom container menus that use MenuKit panels.
-- Attaches per-slot state to any slot, private per player, or shared across viewers.
+- Attaches per-slot state to any slot, private per player, or shared across viewers. The server judges every write a client sends.
 - Makes created slots behave like vanilla ones in creative and survival, on death, and with Curse of Binding and Mending.
 - Shows a registered slot on every container screen without per-screen setup.
 - Stores each slot's state on its owner (player, block, entity, or item), readable with `/data get`.
 
-Runs on client and server. Depends on MenuKit, which it pulls in automatically. Requires Fabric.
+Runs on client and server, and a server with it requires it on every player's game: a player without it is told, before the world loads, to install MenuKit and MenuKit: Containers. Depends on MenuKit, which it pulls in automatically. Requires Fabric.
 
 ## Install
 

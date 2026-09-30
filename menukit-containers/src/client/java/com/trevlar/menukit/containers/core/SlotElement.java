@@ -2,6 +2,7 @@ package com.trevlar.menukit.containers.core;
 
 import com.trevlar.menukit.inject.SlotGroupId;
 
+import com.trevlar.menukit.core.AbstractPanelElement;
 import com.trevlar.menukit.core.PanelElement;
 import com.trevlar.menukit.core.RenderContext;
 import com.trevlar.menukit.core.SlotRendering;
@@ -19,7 +20,7 @@ import net.minecraft.world.inventory.Slot;
 
 import org.jspecify.annotations.Nullable;
 
-import java.util.function.Supplier;
+import java.util.Objects;
 
 /**
  * A registered MKC slot presented as a {@link PanelElement} — the keystone of
@@ -95,64 +96,44 @@ import java.util.function.Supplier;
  * {@link SlotElementRegistry} tells the library's screen hook which panels
  * currently host a {@code SlotElement}.
  */
-public final class SlotElement implements PanelElement {
+public final class SlotElement extends AbstractPanelElement {
 
-    /** Off-screen — where a slot sits when no panel is presenting it this frame. */
+    /** Off-screen: where a slot sits when no panel is presenting it this frame. */
     private static final int PARKED = MKCSlots.OFFSCREEN;
 
     private final String panelId;
     private final Address address;
-    private final int childX;
-    private final int childY;
 
     /** Whether a panel presented (placed) this element's slot this frame. Render thread only. */
     private boolean presented = false;
 
-    /** Optional hover tooltip — slots are direct PanelElement implementors,
-     *  so they carry their own supplier rather than inheriting one. */
-    private @Nullable Supplier<Component> tooltipSupplier;
+    private SlotElement(Builder b) {
+        super(b);
+        this.panelId = b.group.panelId();
+        this.address = Address.createdSlot(b.group, b.index);
+        this.width = SlotRendering.DEFAULT_SIZE;
+        this.authoredWidth = SlotRendering.DEFAULT_SIZE;
+        this.height = SlotRendering.DEFAULT_SIZE;
+    }
 
     /**
-     * @param panelId    the registered slot's panel id (as given to
-     *                   {@link MKCSlots.Builder#panel})
-     * @param groupId    the registered slot's group id ({@link MKCSlots.Builder#group})
-     * @param localIndex the slot's index within its group (0-based)
-     * @param childX     panel-local X (within the panel's content area, after padding)
-     * @param childY     panel-local Y
+     * A slot element: {@code SlotElement.builder().slot(MKCSlots.groupId(panel, group), i).at(x, y).build()}.
+     * The shared vocabulary applies: {@code at}, {@code visibleWhen} (on top of the
+     * slot's own reveal), {@code tooltip} (shown over an empty slot; a slot with an item
+     * shows the item's). A slot is never solid, so {@code opaque} has no effect.
      */
-    public SlotElement(String panelId, String groupId, int localIndex,
-                       int childX, int childY) {
-        this.panelId = panelId;
-        this.address = Address.createdSlot(SlotGroupId.created(panelId, groupId), localIndex);
-        this.childX = childX;
-        this.childY = childY;
+    public static Builder builder() {
+        return new Builder();
     }
 
     /** The registered slot's panel id this element presents (its registry key). */
     public String panelId() { return panelId; }
 
-    /** Attaches a hover tooltip with fixed text to this slot. Chainable. */
-    public SlotElement tooltip(Component text) {
-        return tooltip(() -> text);
-    }
+    /** The element's size is the slot's frame and never shrinks. */
+    @Override public void layoutWithin(int budget) {}
 
-    /** Attaches a hover tooltip with supplier-driven text to this slot. Chainable. */
-    public SlotElement tooltip(@Nullable Supplier<Component> supplier) {
-        this.tooltipSupplier = supplier;
-        return this;
-    }
-
-    /** The universal {@link PanelElement} tooltip contract — slots are first-class
-     *  tooltip citizens via their own supplier field. */
-    @Override
-    public @Nullable Supplier<Component> tooltipSupplier() {
-        return tooltipSupplier;
-    }
-
-    @Override public int getChildX() { return childX; }
-    @Override public int getChildY() { return childY; }
-    @Override public int getWidth()  { return SlotRendering.DEFAULT_SIZE; }
-    @Override public int getHeight() { return SlotRendering.DEFAULT_SIZE; }
+    /** The element's size is the slot's frame. */
+    @Override public void fillWidth(int width) {}
 
     /**
      * Not solid: on a transparent panel a slot claims nothing itself; vanilla's
@@ -178,10 +159,10 @@ public final class SlotElement implements PanelElement {
         return relX >= slot.x - 1 && relX < slot.x + 17 && relY >= slot.y - 1 && relY < slot.y + 17;
     }
 
-    /** Hidden when the slot can't be resolved on this screen, or its panel is hidden. */
+    /** Hidden by its own {@code visibleWhen}, when the slot can't be resolved on this screen, or when its panel is hidden. */
     @Override
     public boolean isVisible() {
-        return presented(currentMenu()) != null;
+        return super.isVisible() && presented(currentMenu()) != null;
     }
 
     @Override
@@ -191,8 +172,8 @@ public final class SlotElement implements PanelElement {
         Slot slot = presented(acs.getMenu());
         if (slot == null) return;
 
-        int screenX = ctx.originX() + childX;
-        int screenY = ctx.originY() + childY;
+        int screenX = ctx.originX() + getChildX();
+        int screenY = ctx.originY() + getChildY();
 
         // Place the live slot where the panel put this element, in vanilla's
         // slot coordinate space (frame-relative; x/y name the 16×16 item box,
@@ -267,5 +248,32 @@ public final class SlotElement implements PanelElement {
     @Override
     public void onDetach(Screen screen) {
         SlotElementRegistry.remove(this);
+    }
+
+    /** Builds a {@link SlotElement}. {@link #slot} is required. */
+    public static final class Builder extends AbstractPanelElement.Builder<SlotElement, Builder> {
+        private SlotGroupId.@org.jspecify.annotations.Nullable Created group;
+        private int index = -1;
+
+        private Builder() {}
+
+        @Override protected Builder self() { return this; }
+
+        /**
+         * The created slot to present: its group ({@code MKCSlots.groupId(panelId, groupId)}
+         * or {@code MKCContainerPanel.groupId(...)}) and its index in the group.
+         */
+        public Builder slot(SlotGroupId.Created group, int index) {
+            this.group = Objects.requireNonNull(group, "group");
+            if (index < 0) throw new IllegalArgumentException("index must not be negative, got " + index);
+            this.index = index;
+            return this;
+        }
+
+        @Override
+        public SlotElement build() {
+            require(group != null, "slot(group, index) is required");
+            return new SlotElement(this);
+        }
     }
 }

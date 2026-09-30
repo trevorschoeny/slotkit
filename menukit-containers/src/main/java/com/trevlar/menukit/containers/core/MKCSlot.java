@@ -1,6 +1,5 @@
 package com.trevlar.menukit.containers.core;
 
-import com.trevlar.menukit.core.Panel;
 import com.trevlar.menukit.core.Storage;
 
 import com.trevlar.menukit.window.Address;
@@ -51,7 +50,7 @@ public class MKCSlot extends Slot {
     private final SlotGroup group;
 
     // ── Owning panel (final — visibility query target for inertness) ────
-    private final Panel panel;
+    private final MenuPanel panel;
 
     // Presentation position: vanilla's own Slot.x/y, nothing else. The panel
     // that presents this slot (its SlotElement) writes the panel-resolved
@@ -68,17 +67,17 @@ public class MKCSlot extends Slot {
      * @param x              screen x position
      * @param y              screen y position
      * @param group          owning SlotGroup (behavior delegation target)
-     * @param panel          owning Panel (visibility query target for inertness)
+     * @param panel          owning panel as the menu knows it (visibility query target for inertness)
      * @param groupId        group identifier within the panel
      * @param localIndex     slot index within the group (0-based)
      */
     public MKCSlot(Container container, int containerIndex, int x, int y,
-                       SlotGroup group, Panel panel, String groupId,
+                       SlotGroup group, MenuPanel panel, String groupId,
                        int localIndex) {
         super(container, containerIndex, x, y);
         this.group = group;
         this.panel = panel;
-        this.panelId = panel.getId();
+        this.panelId = panel.id();
         this.groupId = groupId;
         this.localIndex = localIndex;
     }
@@ -124,7 +123,7 @@ public class MKCSlot extends Slot {
      * explicitly rather than relying on the behavioral methods.
      */
     public boolean isInert() {
-        return !panel.isVisible();
+        return !panel.isShown();
     }
 
     // ── Behavioral Overrides (the substitutability contract) ────────────

@@ -74,9 +74,6 @@ dependencies {
     // (26.x: the remap layer is gone, so the `namedElements` variant no
     // longer exists — a plain project dep is THE artifact now.)
     api project(':menukit')
-    // MenuKit's client half (MenuKit splits its source sets, §0062); a published
-    // jar holds both, this is only how a project dependency sees it.
-    implementation rootProject.project(':menukit').sourceSets.client.output
 
     // @ApiStatus.Internal markers. Compile-only so consumers don't transitively
     // depend on jetbrains-annotations at runtime; the annotation is a doc/IDE
@@ -100,6 +97,15 @@ dependencies {
 }
 
 loom {
+    // §0062, §0067: what touches a screen lives in src/client; src/main is what runs on
+    // both sides, and the compiler refuses a main class that reaches a client one.
+    splitEnvironmentSourceSets()
+    mods {
+        'menukit-containers' {
+            sourceSet sourceSets.main
+            sourceSet sourceSets.client
+        }
+    }
     runs {
         client { ideConfigGenerated = false }
         // Test Gallery: boots straight into the generated test world in run/saves/TestGallery.
@@ -112,6 +118,13 @@ loom {
         }
         server { ideConfigGenerated = false }
     }
+}
+
+// Declared after loom {} so the client source set exists. MenuKit's client half (MenuKit
+// splits its source sets too); a published jar holds both, this is only how a project
+// dependency sees it.
+dependencies {
+    clientImplementation rootProject.project(':menukit').sourceSets.client.output
 }
 
 jar {

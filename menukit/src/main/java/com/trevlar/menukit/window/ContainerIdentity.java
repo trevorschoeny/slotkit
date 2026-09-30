@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Function;
@@ -45,10 +46,11 @@ import java.util.function.Function;
  *       resolver for its class, else its UUID.</li>
  * </ol>
  *
- * The ender chest does not resolve yet (the container has no owner link), and
- * horse-family storage has no link back to its entity; both fall through to no
- * identity, so their slots are addressed through the menu. A double chest splits
- * its global index to the half that owns the slot.
+ * A player's ender chest resolves to its player (the player records it as it is
+ * built, since the container has no owner link; §0067). Horse-family storage has
+ * no link back to its entity and falls through to no identity, so its slots are
+ * addressed through the menu. A double chest splits its global index to the half
+ * that owns the slot.
  */
 @ApiStatus.Internal
 public final class ContainerIdentity {
@@ -69,6 +71,18 @@ public final class ContainerIdentity {
     }
 
     /** A modded block entity class resolves through {@code resolver} instead of its position. */
+    // A player's ender chest container carries no link to its player, so the player
+    // records it as it is built (MKEnderChestOwnerMixin). Weak keys: the container goes
+    // with its player. Server side is what reads it; the client's ender chest menu is
+    // over a plain container.
+    private static final Map<Container, UUID> ENDER_OWNERS =
+            java.util.Collections.synchronizedMap(new java.util.WeakHashMap<>());
+
+    /** Records whose ender chest {@code container} is. Called as a player is built. */
+    public static void recordEnderChestOwner(Container container, UUID owner) {
+        ENDER_OWNERS.put(Objects.requireNonNull(container, "container"), Objects.requireNonNull(owner, "owner"));
+    }
+
     public static <T extends BlockEntity> void registerBlockEntityResolver(
             Class<T> type, Function<T, PersistentContainerKey> resolver) {
         com.trevlar.menukit.window.Declarations.requireOpen("a block-entity container resolver for " + type.getName());
@@ -115,7 +129,8 @@ public final class ContainerIdentity {
             return Optional.of(new PersistentContainerKey.PlayerInventory(inv.player.getUUID()));
         }
         if (container instanceof PlayerEnderChestContainer) {
-            return Optional.empty(); // no owner link on the container itself; see the class doc
+            UUID owner = ENDER_OWNERS.get(container);
+            return owner == null ? Optional.empty() : Optional.of(new PersistentContainerKey.EnderChest(owner));
         }
         if (container instanceof BlockEntity be) {
             Optional<PersistentContainerKey> registered = byClass(BE_RESOLVERS, be);
@@ -177,7 +192,6 @@ public final class ContainerIdentity {
 
     /** A deterministic, side-stable string for a key. */
     public static String stableId(PersistentContainerKey key) {
-        if (key instanceof PersistentContainerKey.Modded) return buildId(key); // payload is mutable NBT
         String id = IDS.get(key);
         if (id != null) return id;
         if (IDS.size() >= MAX_IDS) IDS.clear();

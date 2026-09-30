@@ -1,37 +1,28 @@
 package com.trevlar.menukit.containers.state;
 
-import com.mojang.serialization.Codec;
 import com.trevlar.menukit.containers.core.SlotStateChannel;
 
-import net.minecraft.nbt.NbtOps;
-import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
 import net.minecraft.world.inventory.Slot;
+import org.jetbrains.annotations.ApiStatus;
 
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.WeakHashMap;
-import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Client-side session cache for per-slot state. Populated by snapshot + update
- * packet receivers; queried by {@link SlotStateChannel#get(Slot)}.
- *
- * <p>Keyed first by {@link Container} (weak so containers can GC with menu
- * close), then by container-relative slot index, then by channel id. Mirrors
- * the {@code ClientLockStateHolder} structure that M1 supersedes — the data
- * shape was already right; M1 generalizes it.
- *
- * <p>Values are the decoded consumer-typed objects (not raw {@link Tag}s) so
- * reads don't pay the decode cost per frame.
+ * The client's slot-state values, by container and index, as the server last sent
+ * them or as this client last wrote them (optimistically; the server's answer
+ * overwrites it). A value equal to the channel's default is no entry at all. Only
+ * decoded values of registered channels are kept.
  */
 @ApiStatus.Internal
 public final class SlotStateClientCache {
 
-    // WeakHashMap outer so container refs GC with menu close; synchronized
-    // wrapper for defensive thread safety across the client + render threads.
+    // Weak outer keys: a container's values go with its menu.
     private static final Map<Container, Map<Integer, Map<Identifier, Object>>> CACHE =
             Collections.synchronizedMap(new WeakHashMap<>());
 
@@ -39,65 +30,28 @@ public final class SlotStateClientCache {
 
     @SuppressWarnings("unchecked")
     public static <T> T read(SlotStateChannel<T> channel, Slot slot) {
-        Container container = slot.container;
-        int index = slot.getContainerSlot();
         synchronized (CACHE) {
-            Map<Integer, Map<Identifier, Object>> byIndex = CACHE.get(container);
-            if (byIndex == null) return channel.defaultValue();
-            Map<Identifier, Object> byChannel = byIndex.get(index);
-            if (byChannel == null) return channel.defaultValue();
-            Object v = byChannel.get(channel.id());
-            if (v == null) return channel.defaultValue();
-            return (T) v;
+            Map<Integer, Map<Identifier, Object>> byIndex = CACHE.get(slot.container);
+            Map<Identifier, Object> byChannel = byIndex == null ? null : byIndex.get(slot.getContainerSlot());
+            Object v = byChannel == null ? null : byChannel.get(channel.id());
+            return v == null ? channel.defaultValue() : (T) v;
         }
     }
 
-    /** Writes the decoded value into the cache. Called by the update-packet receiver. */
-    public static <T> void write(SlotStateChannel<T> channel, Container container,
-                                  int containerSlotIndex, T value) {
+    public static <T> void write(SlotStateChannel<T> channel, Container container, int containerSlotIndex, T value) {
         synchronized (CACHE) {
+            if (Objects.equals(value, channel.defaultValue())) {
+                Map<Integer, Map<Identifier, Object>> byIndex = CACHE.get(container);
+                Map<Identifier, Object> byChannel = byIndex == null ? null : byIndex.get(containerSlotIndex);
+                if (byChannel != null) byChannel.remove(channel.id());
+                return;
+            }
             CACHE.computeIfAbsent(container, c -> new HashMap<>())
                  .computeIfAbsent(containerSlotIndex, i -> new HashMap<>())
                  .put(channel.id(), value);
         }
     }
 
-    /**
-     * Writes a raw Tag value into the cache — used when the channel isn't
-     * registered on this client (unknown channel from another mod). Stored
-     * under the Tag so a later registration could decode it.
-     */
-    public static void writeRaw(Identifier channelId, Container container,
-                                 int containerSlotIndex, Tag tag) {
-        synchronized (CACHE) {
-            CACHE.computeIfAbsent(container, c -> new HashMap<>())
-                 .computeIfAbsent(containerSlotIndex, i -> new HashMap<>())
-                 .put(channelId, tag);
-        }
-    }
-
-    /** Helper: decode a Tag via the channel's Codec + NbtOps. */
-    public static <T> T decode(SlotStateChannel<T> channel, Tag tag) {
-        Codec<T> codec = channel.codec();
-        return codec.parse(NbtOps.INSTANCE, tag)
-                    .getOrThrow(err -> new IllegalStateException(
-                            "Codec failed to parse Tag for channel " + channel.id() + ": " + err));
-    }
-
-    /**
-     * Writes a decoded value under the given channel id, taking {@code Object}
-     * to bridge through generic wildcards at the snapshot-receive site.
-     */
-    public static void writeDecoded(Identifier channelId, Container container,
-                                     int containerSlotIndex, Object decoded) {
-        synchronized (CACHE) {
-            CACHE.computeIfAbsent(container, c -> new HashMap<>())
-                 .computeIfAbsent(containerSlotIndex, i -> new HashMap<>())
-                 .put(channelId, decoded);
-        }
-    }
-
-    /** Clears the entire cache. Used on disconnect or for /mkverify cleanup. */
     public static void clear() {
         synchronized (CACHE) {
             CACHE.clear();

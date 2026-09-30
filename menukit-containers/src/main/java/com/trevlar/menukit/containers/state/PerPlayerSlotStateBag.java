@@ -73,6 +73,12 @@ public final class PerPlayerSlotStateBag {
     }
 
     /** Returns the bag for {@code playerId} or {@code null} if no entry exists. */
+    /** The shared bag, or {@code null} when none is stored. Creates nothing (reads never write). */
+    public @org.jspecify.annotations.Nullable SlotStateBag getShared() {
+        if (!backing.contains(SHARED_KEY)) return null;
+        return new SlotStateBag(backing.getCompoundOrEmpty(SHARED_KEY));
+    }
+
     public SlotStateBag get(UUID playerId) {
         String key = playerId.toString();
         if (!backing.contains(key)) return null;

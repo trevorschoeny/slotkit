@@ -1,11 +1,14 @@
 package com.trevlar.menukit.containers.core;
 
+import com.trevlar.menukit.core.AbstractPanelElement;
 import com.trevlar.menukit.core.PanelElement;
 import com.trevlar.menukit.core.RenderContext;
 
 import net.minecraft.client.gui.screens.Screen;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * The reactive slot-wrapping primitive — the slot analogue of element/text
@@ -49,7 +52,7 @@ import java.util.List;
  * claim through {@link #presentsSlotAt}; the empty cells of a partial last row are
  * the panel's, and inert.
  */
-public final class SlotFlowElement implements PanelElement {
+public final class SlotFlowElement extends AbstractPanelElement {
 
     private static final int PITCH = MKCSlots.SLOT_PITCH;
 
@@ -64,21 +67,22 @@ public final class SlotFlowElement implements PanelElement {
      *  group's slots simply join the stream and wrap with everything else. */
     private final List<SlotElement> slots;
 
-    private final int childX;
-    private final int childY;
-
     /** The width the flow may occupy before wrapping — the panel's stable
      *  screen-edge ceiling. See the class doc. */
     private int budget = DEFAULT_BUDGET;
 
-    public SlotFlowElement(List<SlotElement> slots, int childX, int childY) {
-        this.slots = List.copyOf(slots);
-        this.childX = childX;
-        this.childY = childY;
+    private SlotFlowElement(Builder b) {
+        super(b);
+        this.slots = List.copyOf(b.slots);
     }
 
-    @Override public int getChildX() { return childX; }
-    @Override public int getChildY() { return childY; }
+    /** A flow of slot elements: {@code SlotFlowElement.builder().addAll(slots).at(x, y).build()}. */
+    public static Builder builder() {
+        return new Builder();
+    }
+
+    /** Column fill does not apply: the flow hugs its visible slots. */
+    @Override public void fillWidth(int width) {}
 
     /**
      * The panel hands this the content-width budget; we store it as the wrap
@@ -133,10 +137,11 @@ public final class SlotFlowElement implements PanelElement {
         return rows * PITCH;
     }
 
-    /** Visible only while at least one child slot is visible — so the owning
+    /** Visible only while at least one child slot is visible, so the owning
      *  panel reserves no space (and draws no frame) when every group is hidden. */
     @Override
     public boolean isVisible() {
+        if (!super.isVisible()) return false;
         for (SlotElement s : slots) if (s.isVisible()) return true;
         return false;
     }
@@ -159,8 +164,8 @@ public final class SlotFlowElement implements PanelElement {
     @Override
     public void render(RenderContext ctx) {
         int cols = columns();
-        int originX = ctx.originX() + childX;
-        int originY = ctx.originY() + childY;
+        int originX = ctx.originX() + getChildX();
+        int originY = ctx.originY() + getChildY();
         int k = 0;
         for (SlotElement slot : slots) {
             if (!slot.isVisible()) continue;
@@ -170,12 +175,7 @@ public final class SlotFlowElement implements PanelElement {
             // frame, sets its tooltip) at a per-cell shifted
             // origin. The child's own childX/childY are 0, so the shifted
             // origin IS its on-screen cell — the flow owns positioning.
-            RenderContext cell = new RenderContext(
-                    ctx.graphics(),
-                    originX + col * PITCH,
-                    originY + row * PITCH,
-                    ctx.mouseX(), ctx.mouseY());
-            slot.render(cell);
+            slot.render(ctx.at(originX + col * PITCH, originY + row * PITCH));
             k++;
         }
     }
@@ -191,5 +191,31 @@ public final class SlotFlowElement implements PanelElement {
     @Override
     public void onDetach(Screen screen) {
         for (SlotElement s : slots) s.onDetach(screen);
+    }
+
+    /** Builds a {@link SlotFlowElement} over slot elements, in flow order. */
+    public static final class Builder extends AbstractPanelElement.Builder<SlotFlowElement, Builder> {
+        private final List<SlotElement> slots = new ArrayList<>();
+
+        private Builder() {}
+
+        @Override protected Builder self() { return this; }
+
+        /** Adds one slot element to the flow. */
+        public Builder add(SlotElement slot) {
+            slots.add(Objects.requireNonNull(slot, "slot"));
+            return this;
+        }
+
+        /** Adds slot elements to the flow, in order. */
+        public Builder addAll(List<SlotElement> slots) {
+            slots.forEach(this::add);
+            return this;
+        }
+
+        @Override
+        public SlotFlowElement build() {
+            return new SlotFlowElement(this);
+        }
     }
 }

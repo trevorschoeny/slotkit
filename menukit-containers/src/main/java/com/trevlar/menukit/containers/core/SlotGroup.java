@@ -1,7 +1,5 @@
 package com.trevlar.menukit.containers.core;
 
-import com.trevlar.menukit.core.Click;
-import com.trevlar.menukit.core.Panel;
 import com.trevlar.menukit.core.SlotGroupCategory;
 import com.trevlar.menukit.core.SlotGroupLike;
 import com.trevlar.menukit.core.Storage;
