@@ -14,7 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * §0052 Phase 2 — the grave-capture surface. Generic over every death-droppable
+ * §0055 Phase 2 — the grave-capture surface. Generic over every death-droppable
  * MKC player content slot (the {@code PLAYER_DEATH_DROP} registry). A grave-mod
  * adapter captures (reads + clears) the slots into the grave's data and restores
  * them on collect by calling <em>this surface</em> — never individual slots. So

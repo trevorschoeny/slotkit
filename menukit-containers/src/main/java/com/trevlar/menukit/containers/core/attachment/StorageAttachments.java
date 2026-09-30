@@ -1,5 +1,6 @@
 package com.trevlar.menukit.containers.core.attachment;
 
+import com.trevlar.menukit.containers.api.storage.CustomAttachmentSpec;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.minecraft.core.NonNullList;
@@ -8,7 +9,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
 
 import com.mojang.serialization.Codec;
-import com.trevlar.menukit.containers.core.DropRule;
+import com.trevlar.menukit.containers.api.slot.DropRule;
 
 import org.jspecify.annotations.Nullable;
 
@@ -64,7 +65,7 @@ public final class StorageAttachments {
     private static final ConcurrentHashMap<AttachmentType<ItemContainerContents>, DropRule>
             PLAYER_DEATH_DROP = new ConcurrentHashMap<>();
 
-    // §0052 completion — custom (consumer-defined) player-anchored content
+    // §0055 completion — custom (consumer-defined) player-anchored content
     // specs enrolled for death handling. A custom spec has no library-owned
     // AttachmentType to set copyOnDeath on (the consumer owns the storage), so
     // it can't sit in PLAYER_DEATH_DROP. The library owns only the
@@ -91,7 +92,7 @@ public final class StorageAttachments {
      */
     public static AttachmentType<ItemContainerContents> registerContainerAttachment(
             Identifier id, int defaultSlots) {
-        com.trevlar.menukit.window.Declarations.requireOpen("a storage attachment");
+        com.trevlar.menukit.api.window.Declarations.requireOpen("a storage attachment");
         AttachmentType<ItemContainerContents> type = CACHE.computeIfAbsent(id, k ->
                 AttachmentRegistry.<ItemContainerContents>builder()
                         .persistent(ItemContainerContents.CODEC)
@@ -110,11 +111,11 @@ public final class StorageAttachments {
      * ({@link PlayerDeathDropHandler}) iterates the registry and owns the
      * {@code keepInventory} check; the consumer overrides the per-attachment rule
      * via {@code StorageAttachment.dropsOnDeath(...)}. Called by
-     * {@link com.trevlar.menukit.containers.core.StorageAttachment#playerAttached(String, String, int)}.
+     * {@link com.trevlar.menukit.containers.api.storage.StorageAttachment#playerAttached(String, String, int)}.
      */
     public static AttachmentType<ItemContainerContents> registerPlayerContentAttachment(
             Identifier id, int defaultSlots) {
-        com.trevlar.menukit.window.Declarations.requireOpen("a storage attachment");
+        com.trevlar.menukit.api.window.Declarations.requireOpen("a storage attachment");
         AttachmentType<ItemContainerContents> type = CACHE.computeIfAbsent(id, k ->
                 AttachmentRegistry.<ItemContainerContents>builder()
                         .persistent(ItemContainerContents.CODEC)
@@ -131,11 +132,11 @@ public final class StorageAttachments {
      * {@link #registerContainerAttachment(Identifier, int)} plus enrollment
      * in the block-scoped registry that the drop-on-break mixin dispatches
      * against. Called by
-     * {@link com.trevlar.menukit.containers.core.StorageAttachment#blockScoped(String, String, int)}.
+     * {@link com.trevlar.menukit.containers.api.storage.StorageAttachment#blockScoped(String, String, int)}.
      */
     public static AttachmentType<ItemContainerContents> registerBlockScopedAttachment(
             Identifier id, int defaultSlots) {
-        com.trevlar.menukit.window.Declarations.requireOpen("a storage attachment");
+        com.trevlar.menukit.api.window.Declarations.requireOpen("a storage attachment");
         AttachmentType<ItemContainerContents> type =
                 registerContainerAttachment(id, defaultSlots);
         if (!BLOCK_SCOPED_ATTACHMENTS.contains(type)) {
@@ -178,7 +179,7 @@ public final class StorageAttachments {
      * DROP/DESTROY; the consumer's storage owns KEEP-across-respawn survival.
      */
     public static void registerCustomPlayerDeathSpec(CustomAttachmentSpec<?, ?> spec, DropRule rule) {
-        com.trevlar.menukit.window.Declarations.requireOpen("a death drop spec");
+        com.trevlar.menukit.api.window.Declarations.requireOpen("a death drop spec");
         CUSTOM_PLAYER_DEATH_DROP.put(spec, rule);
     }
 
@@ -195,7 +196,7 @@ public final class StorageAttachments {
 
     /**
      * The Identifier a content attachment was registered under, or null if it
-     * isn't in the cache. Used by the §0052 Phase 2 capture surface to tag a
+     * isn't in the cache. Used by the §0055 Phase 2 capture surface to tag a
      * captured slot with a stable, serializable id (for grave round-trips).
      */
     public static @Nullable Identifier identifierOf(AttachmentType<ItemContainerContents> type) {

@@ -1,6 +1,6 @@
 package com.trevlar.menukit.containers.mixin;
 
-import com.trevlar.menukit.containers.core.MKCSlot;
+import com.trevlar.menukit.containers.api.slot.CreatedSlot;
 
 import net.minecraft.network.protocol.game.ServerboundSetCreativeModeSlotPacket;
 import net.minecraft.server.MinecraftServer;
@@ -18,29 +18,29 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * §0051 Fix 1 — the creative-set-slot bridge: makes §0045 registered slots
+ * §0055 Fix 1 — the creative-set-slot bridge: makes §0055 registered slots
  * round-trip in creative, closing the silent-drop gap that the consumer cannot
  * fix (Inventory Max Equipment Slots).
  *
- * <h3>Why this layer (§0051 / §0019)</h3>
+ * <h3>Why this layer (§0055 / §0019)</h3>
  *
  * Survival slot edits ride {@code ServerboundContainerClickPacket → menu.clicked},
- * which reaches a registered {@link MKCSlot} like any other slot. Creative edits
+ * which reaches a registered {@link CreatedSlot} like any other slot. Creative edits
  * ride a <em>different</em> server path —
  * {@code ServerboundSetCreativeModeSlotPacket → handleSetCreativeModeSlot} —
  * which is <b>index-bounded to vanilla slots</b>: it writes
  * {@code player.inventoryMenu.getSlot(n)} only for {@code n} in {@code [1, 45]},
  * drops {@code n < 0}, and <b>silently discards everything else</b>. A registered
- * slot lives <em>past</em> index 45 (§0045 appends it after the offhand), so its
+ * slot lives <em>past</em> index 45 (§0055 appends it after the offhand), so its
  * creative placement falls into the discard path and the item vanishes
- * server-side. This is the upstream injection point §0051 mandates — the packet
+ * server-side. This is the upstream injection point §0055 mandates — the packet
  * handler, above the per-mode divergence — not a per-screen mixin creative would
  * defeat.
  *
  * <h3>What it does</h3>
  *
  * At HEAD, for a creative player, if the incoming slot index resolves to a
- * registered {@link MKCSlot} on the inventory menu, it replicates vanilla's
+ * registered {@link CreatedSlot} on the inventory menu, it replicates vanilla's
  * <em>own</em> in-bounds write path for that index — {@code setByPlayer} (which
  * routes through the slot's {@code StorageContainerAdapter} to the backing
  * {@code Storage}, and bypasses {@code mayPlace} exactly as vanilla creative
@@ -51,9 +51,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *
  * <h3>Generic, no per-consumer schema (§0048 shape)</h3>
  *
- * RegisteredSlots slots are detected by type ({@code instanceof MKCSlot}), not a
- * registry — the library ships no slot registry (§0045), and every slot uses
- * {@link MKCSlot}, so this is generic over all registered slots with no
+ * RegisteredSlots slots are detected by type ({@code instanceof CreatedSlot}), not a
+ * registry — the library ships no slot registry (§0055), and every slot uses
+ * {@link CreatedSlot}, so this is generic over all registered slots with no
  * per-feature knowledge. The library is the only layer that knows a slot is
  * registered, so this bridge is library-owned by necessity (§0019-clean: it routes
  * the consumer's own slot, it does not decide consumer behavior).
@@ -86,11 +86,11 @@ public class CreativeSetSlotMixin {
 
         // Defer to vanilla for everything that isn't a registered slot: the drop
         // sentinel (n < 0), out-of-range indices, and real vanilla slots all
-        // stay vanilla's job. Only a MKCSlot past vanilla's range is ours —
+        // stay vanilla's job. Only a CreatedSlot past vanilla's range is ours —
         // it is exactly the index vanilla would silently discard.
         if (slotNum < 0 || slotNum >= menu.slots.size()) return;
         Slot slot = menu.getSlot(slotNum);
-        if (!(slot instanceof MKCSlot)) return;
+        if (!(slot instanceof CreatedSlot)) return;
 
         // The registered index is ours; vanilla would vanish it. Replicate vanilla's
         // in-bounds write for valid stacks, then cancel either way (we own this

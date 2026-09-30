@@ -1,13 +1,13 @@
 package com.trevlar.menukit.containers.state;
 
-import com.trevlar.menukit.containers.core.SlotStateChannel;
+import com.trevlar.menukit.containers.api.state.SlotStateChannel;
 import com.trevlar.menukit.containers.network.SlotStateSnapshotS2CPayload;
 import com.trevlar.menukit.containers.network.SlotStateUpdateC2SPayload;
 import com.trevlar.menukit.containers.network.SlotStateUpdateS2CPayload;
 import com.trevlar.menukit.containers.network.SlotStateWire;
-import com.trevlar.menukit.window.PersistentContainerKey;
+import com.trevlar.menukit.api.window.PersistentContainerKey;
 import com.trevlar.menukit.window.ResolvedSlot;
-import com.trevlar.menukit.window.SlotRef;
+import com.trevlar.menukit.api.window.SlotRef;
 
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
@@ -82,7 +82,7 @@ public final class SlotStateHooks {
         List<SlotStateSnapshotS2CPayload.Entry> entries = buildEntries(menu, player,
                 key -> key instanceof PersistentContainerKey.PlayerInventory
                     || key instanceof PersistentContainerKey.EnderChest
-                    // §0045: player-scoped created slots (pockets, equipment) resolve to Modded keys.
+                    // §0055: player-scoped created slots (pockets, equipment) resolve to Modded keys.
                     || key instanceof PersistentContainerKey.Modded);
         if (!entries.isEmpty()) {
             ServerPlayNetworking.send(player, new SlotStateSnapshotS2CPayload(menu.containerId, entries));
@@ -95,7 +95,7 @@ public final class SlotStateHooks {
         List<SlotStateSnapshotS2CPayload.Entry> entries = new ArrayList<>();
         for (int i = 0; i < menu.slots.size(); i++) {
             Slot slot = menu.slots.get(i);
-            // §0050: a double chest splits each slot to its owning half's key.
+            // §0055: a double chest splits each slot to its owning half's key.
             Optional<ResolvedSlot> resolved = SlotStateRegistry.resolve(slot.container, slot.getContainerSlot());
             if (resolved.isEmpty()) continue;
             if (keyFilter != null && !keyFilter.test(resolved.get().key())) continue;
@@ -202,7 +202,7 @@ public final class SlotStateHooks {
     /**
      * Sends a value to every player viewing the slot at {@code key} and
      * {@code localSlotIndex}, matched in each viewer's own open menu by the slot's
-     * resolved container key (§0050, §0067), and sent with that viewer's own menu id and
+     * resolved container key (§0055, §0067), and sent with that viewer's own menu id and
      * slot index. {@code includeOrigin}: whether the writer hears it too (false when the
      * writer's client already applied it).
      */

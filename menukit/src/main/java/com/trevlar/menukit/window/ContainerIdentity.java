@@ -1,5 +1,7 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.PersistentContainerKey;
+import com.trevlar.menukit.api.window.Address;
 import com.trevlar.menukit.mixin.CompoundContainerAccessor;
 
 import net.minecraft.core.BlockPos;
@@ -66,7 +68,7 @@ public final class ContainerIdentity {
 
     /** A library's own containers (Containers' key-carrying storages); consulted first. */
     public static void extend(Function<Container, Optional<PersistentContainerKey>> extension) {
-        com.trevlar.menukit.window.Declarations.requireOpen("ContainerIdentity.extend");
+        com.trevlar.menukit.api.window.Declarations.requireOpen("ContainerIdentity.extend");
         EXTENSIONS.add(Objects.requireNonNull(extension, "extension"));
     }
 
@@ -85,7 +87,7 @@ public final class ContainerIdentity {
 
     public static <T extends BlockEntity> void registerBlockEntityResolver(
             Class<T> type, Function<T, PersistentContainerKey> resolver) {
-        com.trevlar.menukit.window.Declarations.requireOpen("a block-entity container resolver for " + type.getName());
+        com.trevlar.menukit.api.window.Declarations.requireOpen("a block-entity container resolver for " + type.getName());
         if (BE_RESOLVERS.putIfAbsent(type, resolver) != null) {
             throw new IllegalStateException("A block-entity container resolver for " + type.getName() + " is already registered");
         }
@@ -94,7 +96,7 @@ public final class ContainerIdentity {
     /** A modded entity class resolves through {@code resolver} instead of its UUID. */
     public static <T extends Entity> void registerEntityResolver(
             Class<T> type, Function<T, PersistentContainerKey> resolver) {
-        com.trevlar.menukit.window.Declarations.requireOpen("an entity container resolver for " + type.getName());
+        com.trevlar.menukit.api.window.Declarations.requireOpen("an entity container resolver for " + type.getName());
         if (ENTITY_RESOLVERS.putIfAbsent(type, resolver) != null) {
             throw new IllegalStateException("An entity container resolver for " + type.getName() + " is already registered");
         }

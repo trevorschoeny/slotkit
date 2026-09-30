@@ -2,9 +2,9 @@ package com.trevlar.menukit.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
-import com.trevlar.menukit.window.BehaviorKeys;
-import com.trevlar.menukit.window.SlotOperations;
-import com.trevlar.menukit.window.SlotRef;
+import com.trevlar.menukit.api.window.BehaviorKeys;
+import com.trevlar.menukit.api.window.SlotOperations;
+import com.trevlar.menukit.api.window.SlotRef;
 
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.entity.player.Inventory;

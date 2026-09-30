@@ -9,7 +9,7 @@ import org.jetbrains.annotations.ApiStatus;
 
 /**
  * Resolver-namespaced slot-state bags for player-scoped registered slots
- * (§0045). Wraps a {@link CompoundTag} whose keys are slot resolver-id
+ * (§0055). Wraps a {@link CompoundTag} whose keys are slot resolver-id
  * strings and whose values are {@link SlotStateBag}s. Attached to a
  * {@code Player} via {@link SlotStateAttachments#MODDED_PLAYER}.
  *

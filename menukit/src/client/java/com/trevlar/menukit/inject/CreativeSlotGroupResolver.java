@@ -1,6 +1,7 @@
 package com.trevlar.menukit.inject;
 
-import com.trevlar.menukit.core.SlotGroupCategory;
+import com.trevlar.menukit.api.slot.SlotGroupCategories;
+import com.trevlar.menukit.api.slot.SlotGroupCategory;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -17,7 +18,7 @@ public final class CreativeSlotGroupResolver {
 
     private CreativeSlotGroupResolver() {}
 
-    /** Called once from {@code MKClient}. */
+    /** Called once from {@code MenuKitClient}. */
     public static void registerClient() {
         register();
     }

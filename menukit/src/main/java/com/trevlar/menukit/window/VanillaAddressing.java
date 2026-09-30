@@ -1,5 +1,6 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.Address;
 import com.trevlar.menukit.inject.Slots;
 
 import net.minecraft.resources.Identifier;
@@ -52,7 +53,7 @@ public final class VanillaAddressing {
     /**
      * The container-based {@link Address} of a slot reached WITHOUT a menu — an
      * automation seam (hopper/dispenser) that has only {@code (container, index)}.
-     * Empty when the container has no §0050 identity (then no gating applies — the
+     * Empty when the container has no §0055 identity (then no gating applies — the
      * interaction stays vanilla). There is no menu fallback here: automation is not
      * a menu interaction.
      *

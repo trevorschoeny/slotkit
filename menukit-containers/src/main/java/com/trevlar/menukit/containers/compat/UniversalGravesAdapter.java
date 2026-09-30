@@ -17,14 +17,14 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 /**
- * §0052 Phase 2 — Universal Graves adapter. Makes MKC player-slot contents land
+ * §0055 Phase 2 — Universal Graves adapter. Makes MKC player-slot contents land
  * <em>in</em> a UG grave (and restore on collect), generic over every
  * death-droppable player content slot via {@link PlayerSlotCapture}.
  *
  * <p><b>Optional dependency.</b> This class references UG types
  * ({@code eu.pb4.graves.*}, {@code modCompileOnly}) and is loaded ONLY behind a
  * {@code FabricLoader.isModLoaded("universal-graves")} guard (in
- * {@code MKC.init}). When UG is absent the class never loads, and
+ * {@code MenuKitContainers.init}). When UG is absent the class never loads, and
  * the Phase-1 floor drops the slots beside the death spot. MKC hard-depends on UG
  * not at all.
  *

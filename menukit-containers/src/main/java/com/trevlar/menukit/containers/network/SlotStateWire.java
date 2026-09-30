@@ -1,6 +1,6 @@
 package com.trevlar.menukit.containers.network;
 
-import com.trevlar.menukit.containers.core.SlotStateChannel;
+import com.trevlar.menukit.containers.api.state.SlotStateChannel;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;

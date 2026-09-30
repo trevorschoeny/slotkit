@@ -5,7 +5,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import java.util.Set;
 
 /**
- * §0052 floor refinement — detects whether any known <b>grave-container</b> mod
+ * §0055 floor refinement — detects whether any known <b>grave-container</b> mod
  * is installed (a mod that holds a dead player's items in a persistent grave,
  * chest, or bag).
  *

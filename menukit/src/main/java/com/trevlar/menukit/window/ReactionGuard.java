@@ -1,5 +1,7 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.Address;
+import com.trevlar.menukit.api.window.BehaviorKey;
 import java.util.HashSet;
 import java.util.Set;
 

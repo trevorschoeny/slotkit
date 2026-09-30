@@ -13,10 +13,10 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 /**
  * MenuKit-Containers internal invoker — exposes vanilla's {@code protected}
  * {@link AbstractContainerMenu#addSlot(Slot)} so the consumer-invoked
- * slot-slot helper ({@link com.trevlar.menukit.containers.core.MKCSlots})
+ * slot-slot helper ({@link com.trevlar.menukit.containers.api.slot.CreatedSlots})
  * can append registered slots to a vanilla menu it does not subclass.
  *
- * <p><b>§0019 / §0045 note.</b> This is a pure access shim: it exposes an
+ * <p><b>§0019 / §0055 note.</b> This is a pure access shim: it exposes an
  * existing vanilla method, injects no behavior, registers no hook, and owns
  * no code path. The slot itself is performed by the <em>consumer's</em>
  * mixin (which calls the helper); this invoker only lets the helper reach a

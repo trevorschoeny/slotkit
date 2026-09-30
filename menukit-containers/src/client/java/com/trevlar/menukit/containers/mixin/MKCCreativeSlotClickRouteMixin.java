@@ -1,7 +1,7 @@
 package com.trevlar.menukit.containers.mixin;
 
-import com.trevlar.menukit.containers.core.MKCSlotAccess;
-import com.trevlar.menukit.containers.core.MKCSlot;
+import com.trevlar.menukit.containers.core.CreatedSlotAccess;
+import com.trevlar.menukit.containers.api.slot.CreatedSlot;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
@@ -33,7 +33,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * and the {@code CreativeInventoryListener} vanilla keeps on {@code inventoryMenu}
  * for the whole creative screen publishes every changed slot via
  * {@code ServerboundSetCreativeModeSlotPacket} — whose out-of-range slot index the
- * §0051 server bridge ({@code CreativeSetSlotMixin}) writes.
+ * §0055 server bridge ({@code CreativeSetSlotMixin}) writes.
  *
  * <h3>What it does</h3>
  *
@@ -56,7 +56,7 @@ public abstract class MKCCreativeSlotClickRouteMixin {
     private void mk$routeSlotClick(Slot slot, int slotId, int button,
                                          ContainerInput clickType, CallbackInfo ci) {
         if (slot == null) return;
-        MKCSlot mkcSlot = MKCSlotAccess.asMKCSlot(slot);
+        CreatedSlot mkcSlot = CreatedSlotAccess.asMKCSlot(slot);
         if (mkcSlot == null) return;
         // Vanilla already routes inventory-tab slot clicks correctly; only the
         // other tabs (client-only base-set click path) need re-routing.

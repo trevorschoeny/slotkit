@@ -1,5 +1,9 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.Address;
+import com.trevlar.menukit.api.window.SlotOperations;
+import com.trevlar.menukit.api.window.SlotRef;
+import com.trevlar.menukit.api.window.WindowSignals;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 
@@ -50,7 +54,7 @@ public final class ClientSlotAddressing {
 
     /** MKC installs its kind-aware {@code SlotAddresses.of} here from common init, on both sides. */
     public static void install(SlotAddressFn impl) {
-        com.trevlar.menukit.window.Declarations.requireOpen("ClientSlotAddressing.install");
+        com.trevlar.menukit.api.window.Declarations.requireOpen("ClientSlotAddressing.install");
         fn = Objects.requireNonNull(impl, "impl");
     }
 

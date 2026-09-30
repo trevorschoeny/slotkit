@@ -1,6 +1,6 @@
 package com.trevlar.menukit.containers.mixin;
 
-import com.trevlar.menukit.containers.core.MKCSlotProjection;
+import com.trevlar.menukit.containers.core.CreatedSlotProjection;
 
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -26,7 +26,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * a guaranteed {@code remoteSlots} desync. Injecting at {@code initMenu} HEAD puts
  * the slots on the menu just before the same method sends content, so the initial
  * packet already carries them. The client's {@code AFTER_INIT} append (also before
- * its content packet) mirrors this exactly. See {@link MKCSlotProjection} for the
+ * its content packet) mirrors this exactly. See {@link CreatedSlotProjection} for the
  * full sync-safety contract.
  *
  * <p>A no-op for any menu with no registered projection source (the player's own
@@ -40,6 +40,6 @@ public abstract class PlayerInitMenuProjectionMixin {
 
     @Inject(method = "initMenu", at = @At("HEAD"))
     private void mk$projectSlots(AbstractContainerMenu menu, CallbackInfo ci) {
-        MKCSlotProjection.appendProjectedSlots(menu, (ServerPlayer) (Object) this);
+        CreatedSlotProjection.appendProjectedSlots(menu, (ServerPlayer) (Object) this);
     }
 }

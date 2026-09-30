@@ -24,7 +24,7 @@ import org.jetbrains.annotations.ApiStatus;
  *   <li>{@link VanillaSlotResolver} reads {@code target.container} +
  *       {@code target.getContainerSlot()} to find a vanilla player-inventory
  *       slot's on-screen position;</li>
- *   <li>MenuKit-Containers' {@code MKCSlotAccess.asMKCSlot} tests whether
+ *   <li>MenuKit-Containers' {@code CreatedSlotAccess.asMKCSlot} tests whether
  *       {@code target} is a registered slot.</li>
  * </ul>
  *
@@ -38,7 +38,7 @@ import org.jetbrains.annotations.ApiStatus;
  *
  * <p><b>Internal plumbing.</b> The creative-wrapper unwrap is a library-internal
  * detail of how MK resolves a raw vanilla {@code Slot}'s identity; it is not a
- * consumer surface. Consumers address slots by {@link com.trevlar.menukit.window.Address},
+ * consumer surface. Consumers address slots by {@link com.trevlar.menukit.api.window.Address},
  * never by handing MK a raw {@code Slot} to unwrap.
  */
 @ApiStatus.Internal
@@ -61,12 +61,12 @@ public final class Slots {
     }
 
     // The creative wrapper is a client class, so the client installs the unwrap
-    // (MKClient); on a server there are no wrappers and a slot is its own target.
+    // (MenuKitClient); on a server there are no wrappers and a slot is its own target.
     private static volatile java.util.function.UnaryOperator<Slot> unwrap = java.util.function.UnaryOperator.identity();
 
-    /** MKClient installs the creative-wrapper unwrap at client init. */
+    /** MenuKitClient installs the creative-wrapper unwrap at client init. */
     public static void installUnwrap(java.util.function.UnaryOperator<Slot> impl) {
-        com.trevlar.menukit.window.Declarations.requireOpen("Slots.installUnwrap");
+        com.trevlar.menukit.api.window.Declarations.requireOpen("Slots.installUnwrap");
         unwrap = java.util.Objects.requireNonNull(impl, "impl");
     }
 }

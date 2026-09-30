@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  * vanilla-screen-geometry concern, not a slot concern: a pure-MK panel consumer
  * anchoring to a vanilla slot needs it just as much as a slot consumer does.
  * The library-internal {@link com.trevlar.menukit.inject.Slots#target(Slot)}
- * wraps this accessor; MenuKit-Containers' {@code MKCSlotAccess.asMKCSlot} rides
+ * wraps this accessor; MenuKit-Containers' {@code CreatedSlotAccess.asMKCSlot} rides
  * that same path so there is one unwrap, not two. (Both are
  * {@code @ApiStatus.Internal} — consumers address slots by {@code Address}, not by
  * unwrapping raw {@code Slot}s.)

@@ -1,10 +1,12 @@
 package com.trevlar.menukit.containers.core;
 
-import com.trevlar.menukit.core.SlotGroupCategory;
+import com.trevlar.menukit.containers.api.slot.CreatedSlot;
+import com.trevlar.menukit.api.slot.SlotGroupResolver;
+import com.trevlar.menukit.api.slot.SlotGroupCategory;
 
-import com.trevlar.menukit.inject.SlotGroupCategories;
-import com.trevlar.menukit.window.Address;
-import com.trevlar.menukit.window.SlotOperations;
+import com.trevlar.menukit.api.slot.SlotGroupCategories;
+import com.trevlar.menukit.api.window.Address;
+import com.trevlar.menukit.api.window.SlotOperations;
 import com.trevlar.menukit.inject.CreatedGroupResolver;
 
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -27,12 +29,12 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <p>One universal {@link SlotGroupResolver}, installed once at client init
  * through {@link SlotGroupCategories#extendEvery}: for whatever menu is being
- * resolved, walk {@code menu.slots}, and report each {@link MKCSlot} under its
- * group's {@link com.trevlar.menukit.core.SlotGroupCategory} (the creative
- * wrapper is unwrapped by {@link MKCSlotAccess}, so the reported index is the
+ * resolved, walk {@code menu.slots}, and report each {@link CreatedSlot} under its
+ * group's {@link com.trevlar.menukit.api.slot.SlotGroupCategory} (the creative
+ * wrapper is unwrapped by {@link CreatedSlotAccess}, so the reported index is the
  * in-menu one). Groups on the player's inventory menu, projected onto a chest,
  * or wrapped on the creative tab all resolve wherever they sit; an inert group's
- * slots are skipped (§0058: a hidden thing is invisible to every observer).
+ * slots are skipped (§0065: a hidden thing is invisible to every observer).
  *
  * <p>Consumers never call this. They declare the category on the spec and read
  * the registry with MK types only.
@@ -42,7 +44,7 @@ public final class CreatedSlotCategories {
 
     private CreatedSlotCategories() {}
 
-    /** Installs the universal resolver. Called once from {@code MKCClient}. */
+    /** Installs the universal resolver. Called once from {@code MenuKitContainersClient}. */
     public static void install() {
         SlotGroupCategories.extendEvery(CreatedSlotCategories::resolve);
     }
@@ -52,20 +54,20 @@ public final class CreatedSlotCategories {
      * own contribution. Bucketed by {@code (panelId, groupId)}, NOT by category:
      * several created groups can declare the same category, and folding them
      * together would hand the anchor layer one bounding box spanning all of them —
-     * the 2026-09-09 regression this split fixes. Inert groups are absent (§0058:
+     * the 2026-09-09 regression this split fixes. Inert groups are absent (§0065:
      * a hidden thing is invisible on every surface).
      */
     private static List<CreatedGroupResolver.Contribution> resolve(AbstractContainerMenu menu) {
         Map<String, GroupAccumulator> byGroup = new LinkedHashMap<>();
         for (int i = 0; i < menu.slots.size(); i++) {
             Slot slot = menu.slots.get(i);
-            MKCSlot mk = MKCSlotAccess.asMKCSlot(slot);
+            CreatedSlot mk = CreatedSlotAccess.asMKCSlot(slot);
             if (mk == null || mk.isInert()) continue;
             // NUL separator — never appears in a normal id, so the composite key is
             // injective over distinct (panelId, groupId) pairs.
-            String key = mk.getPanelId() + '\0' + mk.getGroupId();
+            String key = mk.panelId() + '\0' + mk.groupId();
             byGroup.computeIfAbsent(key, k -> new GroupAccumulator(
-                            mk.getPanelId(), mk.getGroupId(), mk.getGroup().getCategory()))
+                            mk.panelId(), mk.groupId(), mk.getGroup().getCategory()))
                     .indices.add(i);
         }
         if (byGroup.isEmpty()) return List.of();

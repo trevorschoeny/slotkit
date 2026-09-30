@@ -1,5 +1,11 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.Address;
+import com.trevlar.menukit.api.window.BehaviorKeys;
+import com.trevlar.menukit.api.window.GatingContext;
+import com.trevlar.menukit.api.window.SlotGate;
+import com.trevlar.menukit.api.window.SlotRef;
+import com.trevlar.menukit.api.window.WindowEngine;
 import com.trevlar.menukit.inject.Slots;
 
 import net.minecraft.world.Container;

@@ -4,11 +4,11 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
 import com.llamalad7.mixinextras.sugar.Local;
 import com.trevlar.menukit.window.ActingPlayer;
-import com.trevlar.menukit.window.BehaviorKeys;
+import com.trevlar.menukit.api.window.BehaviorKeys;
 import com.trevlar.menukit.window.ClickOperations;
 import com.trevlar.menukit.window.SlotGating;
-import com.trevlar.menukit.window.SlotOperations;
-import com.trevlar.menukit.window.SlotRef;
+import com.trevlar.menukit.api.window.SlotOperations;
+import com.trevlar.menukit.api.window.SlotRef;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;

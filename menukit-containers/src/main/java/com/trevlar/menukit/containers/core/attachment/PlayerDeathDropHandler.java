@@ -1,7 +1,8 @@
 package com.trevlar.menukit.containers.core.attachment;
 
+import com.trevlar.menukit.containers.api.storage.CustomAttachmentSpec;
 import com.trevlar.menukit.containers.compat.GraveModPresence;
-import com.trevlar.menukit.containers.core.DropRule;
+import com.trevlar.menukit.containers.api.slot.DropRule;
 
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.minecraft.core.NonNullList;
@@ -83,7 +84,7 @@ public final class PlayerDeathDropHandler {
                         // the same call vanilla's Inventory.dropAll uses. The slot
                         // is left EMPTY in `remaining` (cleared).
                         ItemEntity dropped = player.drop(stack, true, false);
-                        // Grave-parity (§0052): when a grave-container mod is
+                        // Grave-parity (§0055): when a grave-container mod is
                         // installed, the player recovers their vanilla inventory
                         // from a NON-expiring grave — so the slots that mod did not
                         // capture (ours) must not expire either, or they'd vanish
@@ -112,7 +113,7 @@ public final class PlayerDeathDropHandler {
             }
         }
 
-        // §0052 completion — custom (consumer-defined) player-anchored specs.
+        // §0055 completion — custom (consumer-defined) player-anchored specs.
         // These have no library-owned AttachmentType (the consumer owns the
         // storage), so they live in a parallel registry. Same per-stack
         // DROP/DESTROY/KEEP resolution, sourced through the spec. KEEP relies on

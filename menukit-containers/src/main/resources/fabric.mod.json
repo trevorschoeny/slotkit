@@ -4,13 +4,13 @@
   "version": "${version}",
   "name": "MenuKit: Containers",
   "icon": "icon.png",
-  "description": "MenuKit: Containers adds slots to MenuKit: custom container menus (MKCScreenHandler), per-slot state (M1), slot-group regions, custom payloads, contract verification. Required for mods that build custom container menus. Depends on the MenuKit UI library.",
+  "description": "Adds slots to MenuKit: slots that persist and sync, custom container menus, and per-slot state the server checks. Needed on both the client and the server.",
   "authors": ["trevorschoeny"],
   "license": "MIT",
   "environment": "*",
   "entrypoints": {
-    "main": ["com.trevlar.menukit.containers.MKC"],
-    "client": ["com.trevlar.menukit.containers.MKCClient"]
+    "main": ["com.trevlar.menukit.containers.MenuKitContainers"],
+    "client": ["com.trevlar.menukit.containers.MenuKitContainersClient"]
   },
   "mixins": ["menukit-containers.mixins.json"],
   "depends": {

@@ -1,6 +1,6 @@
 package com.trevlar.menukit.containers.mixin;
 
-import com.trevlar.menukit.containers.core.MKCSlot;
+import com.trevlar.menukit.containers.api.slot.CreatedSlot;
 
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 
@@ -33,7 +33,7 @@ import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
  * Vanilla itself parks its 2×2 craft slots at extreme coords the same way, so this
  * is a blessed pattern.
  *
- * <p>Generic: detects a slot by {@code target instanceof MKCSlot}; no
+ * <p>Generic: detects a slot by {@code target instanceof CreatedSlot}; no
  * per-consumer knowledge. Client-only (creative screen is a client type).
  */
 @Mixin(CreativeModeInventoryScreen.class)
@@ -48,8 +48,8 @@ public abstract class MKCCreativeSlotParkMixin {
                     target = "Lnet/minecraft/client/gui/screens/inventory/CreativeModeInventoryScreen$SlotWrapper;"
                             + "<init>(Lnet/minecraft/world/inventory/Slot;III)V"))
     private void mk$parkSlotWrappers(Args args) {
-        // arg 0 is the wrapped target slot; slots wrap a raw MKCSlot.
-        if (args.<Object>get(0) instanceof MKCSlot) {
+        // arg 0 is the wrapped target slot; slots wrap a raw CreatedSlot.
+        if (args.<Object>get(0) instanceof CreatedSlot) {
             args.set(2, SLOT_OFFSCREEN); // x
             args.set(3, SLOT_OFFSCREEN); // y
         }

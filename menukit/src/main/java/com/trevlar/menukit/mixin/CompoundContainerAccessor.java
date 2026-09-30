@@ -11,9 +11,9 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  * MenuKit-Containers internal accessor — exposes vanilla's two {@code private
  * final} halves of a {@link CompoundContainer} (the double chest's backing
  * pair) so M1's container resolver can split a composite container's global
- * slot index to the owning half's block-entity and its local index (§0050).
+ * slot index to the owning half's block-entity and its local index (§0055).
  *
- * <p><b>§0019 / §0050 note.</b> This is a pure access shim: it reads two
+ * <p><b>§0019 / §0055 note.</b> This is a pure access shim: it reads two
  * existing vanilla fields, injects no behavior, registers no hook, and owns no
  * code path. The composite-resolution <em>policy</em> (which half owns which
  * slot, where the value is stored) lives in {@code ContainerIdentity}; this

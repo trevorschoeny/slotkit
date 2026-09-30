@@ -1,9 +1,9 @@
 package com.trevlar.menukit.containers.state;
 
 import com.mojang.serialization.Codec;
-import com.trevlar.menukit.containers.core.KeyedStorages;
-import com.trevlar.menukit.window.PersistentContainerKey;
-import com.trevlar.menukit.containers.core.SlotStateChannel;
+import com.trevlar.menukit.containers.api.storage.KeyedStorages;
+import com.trevlar.menukit.api.window.PersistentContainerKey;
+import com.trevlar.menukit.containers.api.state.SlotStateChannel;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentTarget;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.minecraft.nbt.CompoundTag;
@@ -79,7 +79,7 @@ public final class SlotStateServer {
     }
 
     /**
-     * §0050: the menu-free read, with {@code explicitServer} when there is no viewer to
+     * §0055: the menu-free read, with {@code explicitServer} when there is no viewer to
      * derive the server from (automation reading a placed container by index).
      */
     public static @Nullable Tag readTag(PersistentContainerKey key, @Nullable Player viewer,
@@ -132,7 +132,7 @@ public final class SlotStateServer {
     private static @Nullable SlotStateBag resolveBag(PersistentContainerKey key, @Nullable Player viewer,
                                                      boolean forWrite, boolean shared,
                                                      @Nullable MinecraftServer explicitServer) {
-        // §0050: prefer an explicit server (menu-free reads carry no viewer to derive
+        // §0055: prefer an explicit server (menu-free reads carry no viewer to derive
         // it from); otherwise derive it from the viewer.
         MinecraftServer server = explicitServer;
         if (server == null && viewer instanceof ServerPlayer sp) {
@@ -141,7 +141,7 @@ public final class SlotStateServer {
         }
 
         // Player-scoped keys resolve the owner via resolvePlayer (prefers the held
-        // viewer): at connection JOIN the player is not in the player list yet (§0045).
+        // viewer): at connection JOIN the player is not in the player list yet (§0055).
         if (key instanceof PersistentContainerKey.PlayerInventory pi) {
             ServerPlayer target = resolvePlayer(server, viewer, pi.playerId());
             return target == null ? null : attached(target, SlotStateAttachments.PLAYER_INVENTORY, forWrite,
@@ -183,7 +183,7 @@ public final class SlotStateServer {
         }
 
         if (key instanceof PersistentContainerKey.Modded modded) {
-            // §0045: player-scoped registered slots (pockets, equipment). Keys made by
+            // §0055: player-scoped registered slots (pockets, equipment). Keys made by
             // KeyedStorages.player(...) carry the owning player; other Modded keys have
             // no library-known owner and resolve to nothing.
             CompoundTag payload = modded.payload();

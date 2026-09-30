@@ -1,5 +1,12 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.ReactiveHook;
+import com.trevlar.menukit.api.window.Address;
+import com.trevlar.menukit.api.window.BehaviorKey;
+import com.trevlar.menukit.api.window.BehaviorKeys;
+import com.trevlar.menukit.api.window.ReactCause;
+import com.trevlar.menukit.api.window.ReactEvent;
+import com.trevlar.menukit.api.window.WindowEngine;
 import net.minecraft.world.item.ItemStack;
 
 /**

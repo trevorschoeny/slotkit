@@ -1,7 +1,7 @@
 package com.trevlar.menukit.containers.mixin;
 
 import com.trevlar.menukit.containers.core.CreativeSlotWrapper;
-import com.trevlar.menukit.containers.core.MKCSlot;
+import com.trevlar.menukit.containers.api.slot.CreatedSlot;
 
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.world.entity.player.Player;
@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Creative <em>non-inventory</em>-tab slot parity (the other half of §0051) —
+ * Creative <em>non-inventory</em>-tab slot parity (the other half of §0055) —
  * makes registered slots (pockets / equipment) appear and work on the combat / tools
  * / search / etc. tabs, not just the inventory tab.
  *
@@ -47,7 +47,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * path by {@code MKCCreativeSlotClickRouteMixin} (the base-set click path is
  * client-only and would not reach the slot's backing storage).
  *
- * <p>Generic — detects a slot by {@code instanceof MKCSlot}, no per-consumer
+ * <p>Generic — detects a slot by {@code instanceof CreatedSlot}, no per-consumer
  * knowledge. Client-only (the creative screen is a client type).
  */
 @Mixin(CreativeModeInventoryScreen.ItemPickerMenu.class)
@@ -72,7 +72,7 @@ public abstract class MKCCreativeSlotItemPickerMixin {
         // shim, which targets the superclass and so applies to this subclass too.
         AbstractContainerMenuInvoker self = (AbstractContainerMenuInvoker) (Object) this;
         for (Slot slot : this.inventoryMenu.slots) {
-            if (slot instanceof MKCSlot mk) {
+            if (slot instanceof CreatedSlot mk) {
                 self.mk$addSlot(new CreativeSlotWrapper(mk, SLOT_OFFSCREEN, SLOT_OFFSCREEN));
             }
         }

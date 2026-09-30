@@ -1,5 +1,7 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.Address;
+import com.trevlar.menukit.api.window.KindTag;
 import net.minecraft.resources.Identifier;
 
 import java.util.Objects;
@@ -19,7 +21,7 @@ import java.util.Objects;
  *       it derives from its registration-order coordinate (group + localIndex);
  *       for a panel element it is the consumer-supplied {@code declId} or, absent
  *       that, its registration position in the panel's element list (see
- *       {@code PanelElement.getElementDeclId()}). String form keeps it
+ *       {@code PanelElement.declId()}). String form keeps it
  *       deterministic + serializable; interning to a long is a later perf-only
  *       option.</li>
  *   <li>{@link RegToken} — a panel's registration key, identifying the panel
@@ -40,7 +42,7 @@ public sealed interface Token permits Token.IndexToken, Token.DeclToken, Token.R
     /** A deterministic declaration id (created slot / panel element). */
     record DeclToken(String declId) implements Token {
         // Fail loud: a null/blank decl id is a mint-site bug (e.g. a forgotten
-        // position fallback for a null getElementDeclId()) that would otherwise
+        // position fallback for a null declId()) that would otherwise
         // silently collide. Everything keys on this — refuse to mint it.
         public DeclToken {
             Objects.requireNonNull(declId, "declId");

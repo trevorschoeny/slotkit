@@ -1,10 +1,10 @@
 package com.trevlar.menukit.containers.mixin;
 
-import com.trevlar.menukit.window.WindowEngine;
-import com.trevlar.menukit.containers.core.MendingCandidates;
-import com.trevlar.menukit.containers.core.MKCBehaviorKeys;
-import com.trevlar.menukit.containers.core.MKCSlot;
-import com.trevlar.menukit.window.Address;
+import com.trevlar.menukit.api.window.WindowEngine;
+import com.trevlar.menukit.containers.api.slot.MendingCandidates;
+import com.trevlar.menukit.containers.api.slot.ContainerKeys;
+import com.trevlar.menukit.containers.api.slot.CreatedSlot;
+import com.trevlar.menukit.api.window.Address;
 import com.trevlar.menukit.window.VanillaAddressing;
 
 import net.minecraft.core.component.DataComponentType;
@@ -34,10 +34,10 @@ import java.util.function.Predicate;
 /**
  * The mending primitive's <b>intercept</b> — widens vanilla's XP-orb repair pool
  * so a damaged Mending item in a registered slot opted in by Address via the engine
- * {@code MKCBehaviorKeys.MENDING} key, or a consumer-contributed source
+ * {@code ContainerKeys.MENDING} key, or a consumer-contributed source
  * ({@link MendingCandidates}), repairs from XP exactly like worn armor does.
- * Library-owned registered-slot vanilla mechanic, the same line as death-drop (§0052)
- * and binding (§0053).
+ * Library-owned registered-slot vanilla mechanic, the same line as death-drop (§0055)
+ * and binding (§0055).
  *
  * <h3>One unified pool, once</h3>
  * Vanilla's {@code repairPlayerItems} picks a single damaged Mending item via
@@ -55,7 +55,7 @@ import java.util.function.Predicate;
  * behavior. Vanilla equipped items keep their exact selection + break semantics
  * (via the original {@code getRandomItemWith} call).
  *
- * <h3>Fair selection (§0053)</h3>
+ * <h3>Fair selection (§0055)</h3>
  * Uniform random pick across the unified pool — matching vanilla's per-orb
  * randomness. Each equipped mendable item is expanded into its own pool entry
  * (rather than vanilla's single pre-collapsed {@code getRandomItemWith} pick), so a
@@ -138,7 +138,7 @@ public class ExperienceOrbMendMixin {
 
         // Opted-in slots on the player's own inventory menu — MENDING resolved from the
         // engine by the slot's address. Two flavors:
-        //  - created slot (MKCSlot): address by id; its storage returns a COPY, so we
+        //  - created slot (CreatedSlot): address by id; its storage returns a COPY, so we
         //    queue a write-back commit (flushed before the next scan / at drain).
         //  - vanilla inventory slot: opted in by its container address; the item is the
         //    REAL inventory stack, so vanilla's in-place repair persists + syncs natively
@@ -146,8 +146,8 @@ public class ExperienceOrbMendMixin {
         // Skip the per-slot scan entirely when no behavior is set anywhere — keeps
         // normal XP pickup (the overwhelming common case) zero-cost.
         for (Slot slot : !WindowEngine.hasServerDeclarations() ? List.<Slot>of() : player.inventoryMenu.slots) {
-            if (slot instanceof MKCSlot mk) {
-                if (WindowEngine.resolve(mk.address(), MKCBehaviorKeys.MENDING).asBoolean()) {
+            if (slot instanceof CreatedSlot mk) {
+                if (WindowEngine.resolve(mk.address(), ContainerKeys.MENDING).asBoolean()) {
                     ItemStack stack = mk.getItem();
                     if (mk$mendable(stack)) {
                         pool.add(new EnchantedItemInUse(stack, null, player, item -> {}));
@@ -158,7 +158,7 @@ public class ExperienceOrbMendMixin {
             } else {
                 Address a = VanillaAddressing.addressOf(slot.container, slot.getContainerSlot())
                         .orElse(null);
-                if (a != null && WindowEngine.resolve(a, MKCBehaviorKeys.MENDING).asBoolean()) {
+                if (a != null && WindowEngine.resolve(a, ContainerKeys.MENDING).asBoolean()) {
                     ItemStack stack = slot.getItem();
                     if (mk$mendable(stack)) {
                         pool.add(new EnchantedItemInUse(stack, null, player, item -> {}));
@@ -181,7 +181,7 @@ public class ExperienceOrbMendMixin {
         // Nothing opted in → vanilla behavior, untouched.
         if (extras == 0) return vanilla;
 
-        // §0053 fair weighting: add EVERY equipped mendable item as its own pool
+        // §0055 fair weighting: add EVERY equipped mendable item as its own pool
         // entry — not vanilla's single pre-collapsed pick — so the opted-in registered /
         // consumer candidates aren't over-represented versus equipped-as-a-group.
         // (Vanilla's getRandomItemWith collapses all equipped matches to one entry;

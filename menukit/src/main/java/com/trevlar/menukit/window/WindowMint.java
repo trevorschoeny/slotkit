@@ -1,5 +1,6 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.Address;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -53,7 +54,7 @@ public final class WindowMint {
      * two namespacing sources: the active creative tab → {@code OwnerScope.tab(
      * BuiltInRegistries.CREATIVE_MODE_TAB.getKey(selectedTab))} (client-tier; via
      * a creative-screen accessor), and a composite/double-chest backing →
-     * {@code OwnerScope.sub(backingId)} from §0050. Until then a creative-tab or
+     * {@code OwnerScope.sub(backingId)} from §0055. Until then a creative-tab or
      * composite address simply won't match (resolves empty) — safe, never wrong.
      */
     public static OwnerScope scopeOf(AbstractContainerMenu menu) {

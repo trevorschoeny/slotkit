@@ -1,5 +1,6 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.Address;
 import net.minecraft.resources.Identifier;
 
 import java.util.Locale;

@@ -1,5 +1,6 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.Address;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.ArrayList;

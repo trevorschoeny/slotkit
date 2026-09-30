@@ -1,5 +1,6 @@
 package com.trevlar.menukit.containers.core;
 
+import com.trevlar.menukit.containers.api.slot.SlotElement;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.IdentityHashMap;
@@ -12,10 +13,10 @@ import java.util.Set;
  *
  * <h3>Why this is needed</h3>
  *
- * The {@code getHoveredSlot} interception fans through {@link MKCSlotScreenHook},
+ * The {@code getHoveredSlot} interception fans through {@link CreatedSlotScreenHook},
  * which needs to know which panels currently host a live {@link SlotElement} so it
  * can resolve only those. This registry supplies that set, and the hook resolves
- * them through the creative-aware {@link MKCSlotInput#resolveHoveredSlot} path — so
+ * them through the creative-aware {@link CreatedSlotInput#resolveHoveredSlot} path — so
  * a slot in a panel becomes clickable and hover-correct with zero boilerplate.
  *
  * <h3>Lifecycle</h3>
@@ -38,12 +39,12 @@ public final class SlotElementRegistry {
     private SlotElementRegistry() {}
 
     /** Registers a SlotElement as attached to the current screen. */
-    static void add(SlotElement element) {
+    public static void add(SlotElement element) {
         ACTIVE.add(element);
     }
 
     /** Removes a SlotElement on screen detach. Idempotent. */
-    static void remove(SlotElement element) {
+    public static void remove(SlotElement element) {
         ACTIVE.remove(element);
     }
 

@@ -1,5 +1,6 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.GroupKey;
 import net.minecraft.resources.Identifier;
 
 import org.jetbrains.annotations.ApiStatus;

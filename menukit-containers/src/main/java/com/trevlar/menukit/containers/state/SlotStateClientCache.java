@@ -1,6 +1,6 @@
 package com.trevlar.menukit.containers.state;
 
-import com.trevlar.menukit.containers.core.SlotStateChannel;
+import com.trevlar.menukit.containers.api.state.SlotStateChannel;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;

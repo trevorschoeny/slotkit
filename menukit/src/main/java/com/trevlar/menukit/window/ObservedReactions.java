@@ -1,5 +1,9 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.Address;
+import com.trevlar.menukit.api.window.ReactCause;
+import com.trevlar.menukit.api.window.ReactiveHook;
+import com.trevlar.menukit.api.window.WindowSignals;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;

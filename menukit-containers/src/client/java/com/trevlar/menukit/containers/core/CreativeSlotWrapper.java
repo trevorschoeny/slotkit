@@ -1,5 +1,6 @@
 package com.trevlar.menukit.containers.core;
 
+import com.trevlar.menukit.containers.api.slot.CreatedSlot;
 import com.trevlar.menukit.mixin.SlotWrapperAccessor;
 
 import net.minecraft.world.entity.player.Player;
@@ -9,8 +10,8 @@ import net.minecraft.world.item.ItemStack;
 /**
  * A library-built stand-in for vanilla's package-private
  * {@code CreativeModeInventoryScreen$SlotWrapper}, used to carry a registered
- * {@link MKCSlot} into the creative <em>non-inventory</em> tabs so it draws
- * and routes there exactly as it does on the inventory tab (§0051 creative parity,
+ * {@link CreatedSlot} into the creative <em>non-inventory</em> tabs so it draws
+ * and routes there exactly as it does on the inventory tab (§0055 creative parity,
  * extended to all tabs).
  *
  * <h3>Why a custom wrapper</h3>
@@ -25,7 +26,7 @@ import net.minecraft.world.item.ItemStack;
  * every tab. We can't construct vanilla's {@code SlotWrapper} (package-private),
  * so this mirrors its delegation and, crucially, implements the same
  * {@link SlotWrapperAccessor} unwrap seam MenuKit applies to vanilla's wrapper —
- * so {@code Slots.target}/{@code MKCSlotAccess.asMKCSlot} resolve it to the slot with
+ * so {@code Slots.target}/{@code CreatedSlotAccess.asMKCSlot} resolve it to the slot with
  * no special case.
  *
  * <h3>Parked, like the inventory-tab wrappers</h3>
@@ -41,14 +42,14 @@ import net.minecraft.world.item.ItemStack;
  */
 public final class CreativeSlotWrapper extends Slot implements SlotWrapperAccessor {
 
-    private final MKCSlot target;
+    private final CreatedSlot target;
 
     /**
      * @param target the registered slot on {@code player.inventoryMenu} this stands in for
      * @param x      parked screen x (the dispatcher draws the slot at {@code renderX} instead)
      * @param y      parked screen y
      */
-    public CreativeSlotWrapper(MKCSlot target, int x, int y) {
+    public CreativeSlotWrapper(CreatedSlot target, int x, int y) {
         super(target.container, target.getContainerSlot(), x, y);
         this.target = target;
     }

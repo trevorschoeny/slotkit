@@ -1,6 +1,6 @@
 package com.trevlar.menukit.containers.state;
 
-import com.trevlar.menukit.containers.core.SlotStateChannel;
+import com.trevlar.menukit.containers.api.state.SlotStateChannel;
 
 import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;

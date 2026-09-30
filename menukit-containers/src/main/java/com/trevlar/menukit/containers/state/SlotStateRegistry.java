@@ -3,8 +3,8 @@ package com.trevlar.menukit.containers.state;
 import com.trevlar.menukit.window.ContainerIdentity;
 import com.trevlar.menukit.window.ResolvedSlot;
 
-import com.trevlar.menukit.window.PersistentContainerKey;
-import com.trevlar.menukit.containers.core.SlotStateChannel;
+import com.trevlar.menukit.api.window.PersistentContainerKey;
+import com.trevlar.menukit.containers.api.state.SlotStateChannel;
 
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.Container;
@@ -22,7 +22,7 @@ import org.jetbrains.annotations.ApiStatus;
 /**
  * Internal registry for M1 channels + container resolvers. Not public API —
  * consumers reach it indirectly via
- * {@link com.trevlar.menukit.containers.core.MKSlotState}.
+ * {@link com.trevlar.menukit.containers.api.state.SlotState}.
  */
 @ApiStatus.Internal
 public final class SlotStateRegistry {
@@ -43,7 +43,7 @@ public final class SlotStateRegistry {
     }
 
     public static void registerChannel(SlotStateChannel<?> channel) {
-        com.trevlar.menukit.window.Declarations.requireOpen("a slot-state channel " + channel.id());
+        com.trevlar.menukit.api.window.Declarations.requireOpen("a slot-state channel " + channel.id());
         if (CHANNELS.putIfAbsent(channel.id(), channel) != null) {
             throw new IllegalStateException("A slot-state channel " + channel.id() + " is already registered");
         }

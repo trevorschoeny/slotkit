@@ -1,7 +1,8 @@
 package com.trevlar.menukit.containers.core;
 
+import com.trevlar.menukit.containers.api.slot.CreatedSlot;
 import com.trevlar.menukit.inject.Slots;
-import com.trevlar.menukit.window.Address;
+import com.trevlar.menukit.api.window.Address;
 import com.trevlar.menukit.window.ClientSlotAddressing;
 import com.trevlar.menukit.window.VanillaAddressing;
 
@@ -13,7 +14,7 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Containers' kind-aware slot addressing rule, installed into MenuKit at common
- * init: a created slot ({@link MKCSlot}, or the creative wrapper around one)
+ * init: a created slot ({@link CreatedSlot}, or the creative wrapper around one)
  * resolves to its menu-independent created address; a vanilla slot to its
  * container identity, else its menu address. One rule for the client's observers,
  * the operation seams, the vetoes and the slot-level gate, so a behaviour set on
@@ -36,7 +37,7 @@ public final class SlotAddresses {
 
         @Override
         public @Nullable Address addressOf(Slot slot) {
-            MKCSlot created = MKCSlotAccess.asMKCSlot(slot);
+            CreatedSlot created = CreatedSlotAccess.asMKCSlot(slot);
             if (created != null) return CreatedSlotAdapter.addressOf(created);
             Slot target = Slots.target(slot);
             return VanillaAddressing.addressOf(target.container, target.getContainerSlot()).orElse(null);
@@ -45,7 +46,7 @@ public final class SlotAddresses {
 
     /** The address of {@code slot} as it sits in {@code menu}, kind-dispatched. */
     public static Address of(AbstractContainerMenu menu, Slot slot) {
-        MKCSlot created = MKCSlotAccess.asMKCSlot(slot);
+        CreatedSlot created = CreatedSlotAccess.asMKCSlot(slot);
         if (created != null) return CreatedSlotAdapter.addressOf(created);
         return VanillaAddressing.addressOf(menu, slot);
     }

@@ -1,10 +1,11 @@
 package com.trevlar.menukit.containers.core;
 
-import com.trevlar.menukit.inject.SlotGroupId;
+import com.trevlar.menukit.containers.api.slot.ContainerPanel;
+import com.trevlar.menukit.containers.api.slot.CreatedSlot;
+import com.trevlar.menukit.api.slot.SlotGroupId;
 
-import com.trevlar.menukit.window.Address;
-import com.trevlar.menukit.window.CreatedSlotResolver;
-import com.trevlar.menukit.window.KindTag;
+import com.trevlar.menukit.api.window.Address;
+import com.trevlar.menukit.api.window.KindTag;
 import com.trevlar.menukit.window.OwnerRef;
 import com.trevlar.menukit.window.OwnerScope;
 import com.trevlar.menukit.window.PanelAddressing;
@@ -22,7 +23,7 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 /**
- * MKC's implementation of MK's {@link CreatedSlotResolver} port — resolves a
+ * MKC's created-slot resolver — resolves a
  * {@code CREATED_SLOT} {@link Address} to its live in-menu slot (position is
  * read off that slot's own {@code x/y}, like a vanilla slot's). This is the MKC half of THE ONE WINDOW Phase 2, and the home of the
  * canonical created-slot {@link #addressOf} encoding that mint and resolve share.
@@ -49,7 +50,7 @@ import java.util.WeakHashMap;
  * cache holds only {@code int} indices — NO {@code Slot} or container reference
  * (§3.7). Client-thread only.
  */
-public final class CreatedSlotAdapter implements CreatedSlotResolver {
+public final class CreatedSlotAdapter {
 
     /** Singleton — the adapter is stateless (cache + encoding are static). */
     public static final CreatedSlotAdapter INSTANCE = new CreatedSlotAdapter();
@@ -62,14 +63,13 @@ public final class CreatedSlotAdapter implements CreatedSlotResolver {
     private static final Map<AbstractContainerMenu, Map<Address, Integer>> CACHE =
             Collections.synchronizedMap(new WeakHashMap<>());
 
-    @Override
     public @Nullable Slot resolve(AbstractContainerMenu menu, Address address) {
         Map<Address, Integer> bindings = CACHE.computeIfAbsent(menu, m -> new HashMap<>());
 
         // Fast path: a cached index, re-validated against the live slot's identity.
         Integer cachedIndex = bindings.get(address);
         if (cachedIndex != null) {
-            MKCSlot mk = mkcAt(menu, cachedIndex);
+            CreatedSlot mk = mkcAt(menu, cachedIndex);
             if (mk != null && addressOf(mk).equals(address)) {
                 return menu.slots.get(cachedIndex);
             }
@@ -82,7 +82,7 @@ public final class CreatedSlotAdapter implements CreatedSlotResolver {
         // routes a click through.
         Slot hit = null;
         for (int i = 0; i < menu.slots.size(); i++) {
-            MKCSlot mk = mkcAt(menu, i);
+            CreatedSlot mk = mkcAt(menu, i);
             if (mk == null) continue;
             Address a = addressOf(mk);
             bindings.put(a, i);
@@ -103,8 +103,8 @@ public final class CreatedSlotAdapter implements CreatedSlotResolver {
      * panel-level default cascades to the created slot exactly as to an element.
      * The slot's {@code groupId + localIndex} is its durable declaration token.
      */
-    public static Address addressOf(MKCSlot mk) {
-        return Address.createdSlot(SlotGroupId.created(mk.getPanelId(), mk.getGroupId()), mk.getLocalIndex());
+    public static Address addressOf(CreatedSlot mk) {
+        return Address.createdSlot(SlotGroupId.created(mk.panelId(), mk.groupId()), mk.getLocalIndex());
     }
 
     /**
@@ -116,30 +116,30 @@ public final class CreatedSlotAdapter implements CreatedSlotResolver {
      * the menu (and the slot) exist — to set its server behavior (GATING, BINDING,
      * MENDING) once at mod init, by identity, honoring THE ONE WINDOW
      * thesis that behavior is keyed by address and independent of creation. The
-     * {@link #addressOf(MKCSlot) live overload} delegates here, so a slot born later
+     * {@link #addressOf(CreatedSlot) live overload} delegates here, so a slot born later
      * resolves the init-declared behavior the moment it appears (identical address).
      *
      * <p><b>Internal — consumers use a path-specific minter, not this raw encoding.</b>
      * Each slot-creation path carries a different panel id encoding, so naming a slot
      * goes through the minter that matches how the slot was created:
      * <ul>
-     *   <li>container-parity {@code define()} slots → {@link MKCContainerPanel#address}
+     *   <li>container-parity {@code define()} slots → {@link ContainerPanel#address}
      *       (it derives the {@code "panelId:groupId"} sub-space);</li>
-     *   <li>custom-menu {@code MKCScreenHandler} slots →
-     *       {@link com.trevlar.menukit.containers.screen.MKCScreenHandler#address} (the bare
+     *   <li>custom-menu {@code CustomContainerMenu} slots →
+     *       {@link com.trevlar.menukit.containers.api.menu.CustomContainerMenu#address} (the bare
      *       declared panel id).</li>
      * </ul>
      * Calling this directly with the wrong id silently mints a non-resolving address —
      * the footgun the two minters exist to prevent.
      *
-     * @param panelId    the slot's panel id (as passed to {@code MKCSlots}/builder)
+     * @param panelId    the slot's panel id (as passed to {@code CreatedSlots}/builder)
      * @param groupId    the slot's group id within that panel
      * @param localIndex the slot's index within its group
      */
     @ApiStatus.Internal
 
-    private static @Nullable MKCSlot mkcAt(AbstractContainerMenu menu, int index) {
+    private static @Nullable CreatedSlot mkcAt(AbstractContainerMenu menu, int index) {
         if (index < 0 || index >= menu.slots.size()) return null;
-        return MKCSlotAccess.asMKCSlot(menu.slots.get(index));
+        return CreatedSlotAccess.asMKCSlot(menu.slots.get(index));
     }
 }

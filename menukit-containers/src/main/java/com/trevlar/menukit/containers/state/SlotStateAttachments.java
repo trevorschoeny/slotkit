@@ -34,7 +34,7 @@ public final class SlotStateAttachments {
             AttachmentRegistry.<SlotStateBag>builder()
                     .persistent(SlotStateBag.CODEC)
                     .initializer(SlotStateBag::new)
-                    // §0052 metadata parity: per-slot marks are slot configuration
+                    // §0055 metadata parity: per-slot marks are slot configuration
                     // (e.g. a lock), not item state — they survive death like the
                     // slot itself, independent of whether content drops.
                     .copyOnDeath()
@@ -46,7 +46,7 @@ public final class SlotStateAttachments {
                     .persistent(SlotStateBag.CODEC)
                     .initializer(SlotStateBag::new)
                     // Ender-chest content always survives death (vanilla); its
-                    // per-slot metadata travels with it (§0052 parity).
+                    // per-slot metadata travels with it (§0055 parity).
                     .copyOnDeath()
                     .buildAndRegister(Identifier.fromNamespaceAndPath(
                             MOD_ID, "slot_state_ender_chest"));
@@ -66,7 +66,7 @@ public final class SlotStateAttachments {
                             MOD_ID, "slot_state_entity"));
 
     /**
-     * On {@code Player}, for player-scoped {@code Modded} slot keys (§0045 —
+     * On {@code Player}, for player-scoped {@code Modded} slot keys (§0055 —
      * IP Pockets / Equipment Slots). Holds a resolver-id-namespaced map of
      * bags so distinct slots (and distinct mods) on the same player don't
      * collide on slot index. Distinct from {@link #PLAYER_INVENTORY} so
@@ -76,7 +76,7 @@ public final class SlotStateAttachments {
             AttachmentRegistry.<NamespacedSlotStateBag>builder()
                     .persistent(NamespacedSlotStateBag.CODEC)
                     .initializer(NamespacedSlotStateBag::new)
-                    // §0052 metadata parity: registered-slot marks (§0045 pockets /
+                    // §0055 metadata parity: registered-slot marks (§0055 pockets /
                     // equipment) are slot config and survive death, matching the
                     // slot content's own copyOnDeath parity.
                     .copyOnDeath()

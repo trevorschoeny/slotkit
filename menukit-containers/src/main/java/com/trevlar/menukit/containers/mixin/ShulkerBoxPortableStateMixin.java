@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * §0048 — the library-owned block-portable bridge for M1 per-slot metadata.
  *
  * <p>Owners: the shulker box by default, and any container block entity registered
- * with {@code MKSlotState.registerPortable}. A shulker's contents travel block↔item via vanilla's
+ * with {@code SlotState.registerPortable}. A shulker's contents travel block↔item via vanilla's
  * {@code minecraft:container} component, but MenuKit's M1 metadata lives in a
  * Fabric attachment, which does <em>not</em> travel (only declared components
  * do, post-1.20.5). This mixin rides vanilla's own component intermediary — the
@@ -30,7 +30,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <p><b>Target.</b> {@code ShulkerBoxBlockEntity} does not itself declare
  * {@code collectImplicitComponents}/{@code applyImplicitComponents} — it
  * inherits them from {@link RandomizableContainerBlockEntity}. So the mixin
- * targets that parent and gates each inject on {@code MKSlotState.isPortable}: it
+ * targets that parent and gates each inject on {@code SlotState.isPortable}: it
  * fires for every randomizable container but acts only for registered portable
  * types. The component is not network-synchronised (§0067): it holds every
  * player's private marks, and no client reads it.
@@ -48,7 +48,7 @@ public abstract class ShulkerBoxPortableStateMixin {
     @Inject(method = "collectImplicitComponents", at = @At("TAIL"))
     private void mk$emitPortableSlotState(DataComponentMap.Builder components, CallbackInfo ci) {
         BlockEntity be = (BlockEntity) (Object) this;
-        if (!com.trevlar.menukit.containers.core.MKSlotState.isPortable(be)) return; // registered portable only
+        if (!com.trevlar.menukit.containers.api.state.SlotState.isPortable(be)) return; // registered portable only
         if (!be.hasAttached(SlotStateAttachments.BLOCK_ENTITY)) return;
         PerPlayerSlotStateBag bag = be.getAttached(SlotStateAttachments.BLOCK_ENTITY);
         if (bag != null && !bag.isEmpty()) {
@@ -60,7 +60,7 @@ public abstract class ShulkerBoxPortableStateMixin {
     /** item → BE: restore the M1 bag from the travel component (fresh copy). */
     @Inject(method = "applyImplicitComponents", at = @At("TAIL"))
     private void mk$restorePortableSlotState(DataComponentGetter input, CallbackInfo ci) {
-        if (!com.trevlar.menukit.containers.core.MKSlotState.isPortable((BlockEntity) (Object) this)) return;
+        if (!com.trevlar.menukit.containers.api.state.SlotState.isPortable((BlockEntity) (Object) this)) return;
         PerPlayerSlotStateBag bag = input.get(SlotStateComponents.PORTABLE_SLOT_STATE);
         if (bag != null) {
             BlockEntity be = (BlockEntity) (Object) this;

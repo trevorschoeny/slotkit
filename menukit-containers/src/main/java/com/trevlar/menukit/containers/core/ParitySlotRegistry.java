@@ -1,6 +1,10 @@
 package com.trevlar.menukit.containers.core;
 
-import com.trevlar.menukit.core.Storage;
+import com.trevlar.menukit.containers.api.slot.ContainerPanel;
+import com.trevlar.menukit.containers.api.slot.CreatedSlot;
+import com.trevlar.menukit.containers.api.slot.CreatedSlots;
+import com.trevlar.menukit.containers.api.slot.SlotSpec;
+import com.trevlar.menukit.api.slot.Storage;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -17,7 +21,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * <h3>The two seams, one registry</h3>
  *
- * A registered {@link SlotSpec} must materialise as a real {@link MKCSlot} on
+ * A registered {@link SlotSpec} must materialise as a real {@link CreatedSlot} on
  * three kinds of menu, and this registry is what each path applies:
  * <ul>
  *   <li><b>The player's own {@code InventoryMenu}</b> — appended by the
@@ -28,26 +32,26 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *       reach it; rather than make every consumer write the same
  *       {@code InventoryMenu.<init>} mixin, the library owns it once and drives
  *       it from this registry. (Foreign menus keep no consumer-ownable per-menu
- *       seam, so they were already library-owned via {@link MKCSlotProjection}.)</li>
+ *       seam, so they were already library-owned via {@link CreatedSlotProjection}.)</li>
  *   <li><b>Every foreign menu</b> (chest/furnace/donkey/modded) — appended by a
- *       single {@link MKCSlotProjection} source (registered once by
- *       {@link MKCContainerPanel}) whose factory calls {@link #applyTo}; its
+ *       single {@link CreatedSlotProjection} source (registered once by
+ *       {@link ContainerPanel}) whose factory calls {@link #applyTo}; its
  *       {@code appliesTo} excludes {@code InventoryMenu} so the inventory menu
  *       isn't double-served.</li>
  *   <li><b>The creative item-picker</b> — gets the slots for free: the existing
- *       {@code MKCCreativeSlotItemPickerMixin} wraps whatever {@link MKCSlot}s
+ *       {@code MKCCreativeSlotItemPickerMixin} wraps whatever {@link CreatedSlot}s
  *       the {@code InventoryMenu} mixin already put on {@code player.inventoryMenu}.</li>
  * </ul>
  *
  * <h3>Sync safety</h3>
  *
- * Both real seams build through {@link MKCSlots} with the same recipe in the
+ * Both real seams build through {@link CreatedSlots} with the same recipe in the
  * same order (sorted by slot panel id, the same on both sides whatever order mods
  * initialised in), and the {@code storage} factory yields the same size per
  * player on both sides — so the appended slot blocks are byte-identical, the
- * invariant {@link MKCSlotProjection} spells out. {@link #applyTo} is called at
+ * invariant {@link CreatedSlotProjection} spells out. {@link #applyTo} is called at
  * most once per menu instance: the inventory mixin fires once per construction;
- * the projection source is guarded per-menu by {@code MKCSlotProjection}.
+ * the projection source is guarded per-menu by {@code CreatedSlotProjection}.
  */
 @ApiStatus.Internal
 public final class ParitySlotRegistry {
@@ -64,8 +68,8 @@ public final class ParitySlotRegistry {
 
     /**
      * Registers one parity slot recipe. The {@code slotPanelId} is the id the
-     * built {@link MKCSlot}s carry (and the {@link SlotElement}s resolve against)
-     * — {@link MKCContainerPanel} derives it from the container-panel id + group
+     * built {@link CreatedSlot}s carry (and the {@link SlotElement}s resolve against)
+     * — {@link ContainerPanel} derives it from the container-panel id + group
      * so it's stable and collision-free.
      */
     public static synchronized void register(String slotPanelId, SlotSpec spec) {
@@ -92,7 +96,7 @@ public final class ParitySlotRegistry {
 
     /**
      * Builds every registered recipe's slots onto {@code menu} for {@code player},
-     * via the proven {@link MKCSlots} path (so render / click→Storage / creative /
+     * via the proven {@link CreatedSlots} path (so render / click→Storage / creative /
      * sync all ride the same vanilla-slot machinery the inventory slot already
      * uses). Invoked by the inventory-menu mixin (every {@code InventoryMenu}) and
      * by the projection source (every foreign menu); each call site guarantees a
@@ -107,7 +111,7 @@ public final class ParitySlotRegistry {
             Storage storage = factory.apply(player);
             if (storage == null) continue;
 
-            MKCSlots.Builder b = MKCSlots.onto(menu, player)
+            CreatedSlots.Builder b = CreatedSlots.onto(menu, player)
                     .panel(e.slotPanelId())
                     .group(spec.groupId())
                     .category(spec.category())

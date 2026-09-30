@@ -5,13 +5,13 @@
 // harness. Universal (`environment: "*"`) — both client and server
 // participate in slot state and verification.
 //
-// The story per §0042: MenuKit is the UI library; MenuKit: Containers adds
+// The story per §0062: MenuKit is the UI library; MenuKit: Containers adds
 // slots to MenuKit. Consumer mods that build custom container menus depend
 // on this artifact; consumer mods that only need HUD/widgets/layouts depend
 // on `:menukit` alone.
 //
 // Produces menukit-containers-1.0.0.jar — depends on :menukit (one-way per
-// §0042).
+// §0062).
 // ═══════════════════════════════════════════════════════════════════════════
 
 plugins {
@@ -49,7 +49,7 @@ java {
 
 repositories {
     maven { url 'https://maven.fabricmc.net/' }
-    // §0052 Phase 2 — optional grave-mod adapters (modCompileOnly below):
+    // §0055 Phase 2 — optional grave-mod adapters (modCompileOnly below):
     maven { url 'https://api.modrinth.com/maven' }   // Universal Graves, Pneumono's Gravestones
     maven { url 'https://maven.nucleoid.xyz' }        // UG's transitive deps (xyz.nucleoid / Polymer)
 }
@@ -64,7 +64,7 @@ dependencies {
     implementation "net.fabricmc:fabric-loader:${property('loader_version')}"
     implementation "net.fabricmc.fabric-api:fabric-api:${property('fabric_version')}"
 
-    // §0042 one-way dependency: MenuKit: Containers depends on MenuKit.
+    // §0062 one-way dependency: MenuKit: Containers depends on MenuKit.
     // MenuKit does NOT depend on this artifact (enforced at gradle level).
     // Uses `api` (not `implementation`) so consumers depending on
     // :menukit-containers get :menukit transitively at compile time —
@@ -80,7 +80,7 @@ dependencies {
     // signal, never required at execution time.
     compileOnly 'org.jetbrains:annotations:24.1.0'
 
-    // §0052 Phase 2 — grave-mod compat adapters. OPTIONAL dependencies: compile
+    // §0055 Phase 2 — grave-mod compat adapters. OPTIONAL dependencies: compile
     // against the grave mods' capture APIs, but MKC hard-depends on NEITHER —
     // each adapter class is loaded only behind a FabricLoader isModLoaded(...)
     // guard, and falls back to the Phase-1 floor when the mod is absent.
@@ -133,7 +133,7 @@ jar {
 
 // ── Modrinth Publishing ────────────────────────────────────────────────
 // MKC Modrinth project created Phase 17 (2026-05-15); project ID xQUBXV8I.
-// Declares MenuKit as a required dependency per §0042 (MKC depends on MK).
+// Declares MenuKit as a required dependency per §0062 (MKC depends on MK).
 modrinth {
     token = System.getenv("MODRINTH_TOKEN")
     projectId = "xQUBXV8I"
@@ -173,8 +173,8 @@ tasks.register('verifyJarVersion') {
 build.dependsOn verifyJarVersion
 
 // ── Javadoc: the published API reference ────────────────────────────────
-// Consumer-facing reference only. Mixins, network payloads, and state
-// plumbing are implementation and stay out of the generated site.
+// Consumer-facing reference only: the api packages (§0068). Everything else is
+// internal and stays out of the generated site.
 // doclint keeps broken {@link}s as errors (a stale link is a doc bug);
 // `missing` and `html` are off because getter @return tags and heading
 // levels are noise, not defects.
@@ -183,9 +183,12 @@ javadoc {
     // so links from MenuKit types to Containers types resolve. Published to Pages.
     source += project(':menukit').sourceSets.main.allJava
     classpath += project(':menukit').sourceSets.main.compileClasspath
-    exclude 'com/trevlar/menukit/mixin/**'
-    exclude 'com/trevlar/menukit/network/**'
-    exclude 'com/trevlar/menukit/state/**'
+    // §0068: the reference is the public API, the api packages of both source sets.
+    source += sourceSets.client.allJava
+    classpath += sourceSets.client.compileClasspath + sourceSets.main.output + sourceSets.client.output
+    include 'com/trevlar/menukit/api/**', 'com/trevlar/menukit/containers/api/**'
+    source += project(':menukit').sourceSets.client.allJava
+    classpath += project(':menukit').sourceSets.client.compileClasspath + project(':menukit').sourceSets.main.output + project(':menukit').sourceSets.client.output
     options.addBooleanOption('Xdoclint:all,-missing,-html,-accessibility', true)
     options.tags = ['implNote:a:Implementation note:', 'implSpec:a:Implementation requirements:', 'apiNote:a:API note:']
     options.encoding = 'UTF-8'

@@ -21,7 +21,7 @@ import java.util.Objects;
  *       so {@code Tab} is <b>CLIENT-tier-only</b> — a server-tier address must
  *       never carry a tab scope.</li>
  *   <li>{@link Sub} — a composite/multi-backing menu (double chest, furnace
- *       segments). Source: the stable per-backing id from §0050 composite
+ *       segments). Source: the stable per-backing id from §0055 composite
  *       resolution ({@code ResolvedSlot.key()}), adapted to an MK-safe string at
  *       the (MKC) mint site.</li>
  * </ul>
@@ -42,7 +42,7 @@ public sealed interface OwnerScope permits OwnerScope.Primary, OwnerScope.Tab, O
         public Tab { Objects.requireNonNull(tabId, "tabId"); }
     }
 
-    /** Composite per-backing scope (server-derivable from §0050). */
+    /** Composite per-backing scope (server-derivable from §0055). */
     record Sub(String backingId) implements OwnerScope {
         public Sub {
             Objects.requireNonNull(backingId, "backingId");

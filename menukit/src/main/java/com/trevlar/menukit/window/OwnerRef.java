@@ -1,5 +1,7 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.Address;
+
 /**
  * The owner an {@link Address} is resolved relative to — the chain that lets a
  * handle re-bind to the live backing each call (and that makes the held-handle

@@ -1,6 +1,6 @@
 package com.trevlar.menukit.mixin;
 
-import com.trevlar.menukit.core.MKClickOutsideHelper;
+import com.trevlar.menukit.core.ClickOutsideHelper;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import org.jetbrains.annotations.ApiStatus;
 import org.spongepowered.asm.mixin.Mixin;
@@ -32,7 +32,7 @@ public abstract class MKHasClickedOutsideContainerMixin {
                                               int leftPos, int topPos,
                                               CallbackInfoReturnable<Boolean> cir) {
         var self = (AbstractContainerScreen<?>) (Object) this;
-        if (MKClickOutsideHelper.clickLandsOnActiveSlot(self, mouseX, mouseY, leftPos, topPos)) {
+        if (ClickOutsideHelper.clickLandsOnActiveSlot(self, mouseX, mouseY, leftPos, topPos)) {
             cir.setReturnValue(false);
         }
     }

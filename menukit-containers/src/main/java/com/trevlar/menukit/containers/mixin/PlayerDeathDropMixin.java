@@ -21,13 +21,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * {@code inventory.dropAll()} (JAR-confirmed). Running the registered-attachment
  * drop at TAIL means MKC content drops alongside the vanilla inventory — same
  * death, same frame, same gamerule timing — for vanilla-identical parity. This
- * is the §0051 lineage: absorb the vanilla mechanic at the faithful upstream
+ * is the §0055 lineage: absorb the vanilla mechanic at the faithful upstream
  * seam, not a per-feature workaround.
  *
  * <p>TAIL is observational (no cancel). {@code dropEquipment} runs inside
  * {@code die()} <em>after</em> the totem check, so this fires only on a committed
  * death (totem-safe). The {@code keepInventory} read and the per-stack
- * {@link com.trevlar.menukit.containers.core.DropRule} resolution live in
+ * {@link com.trevlar.menukit.containers.api.slot.DropRule} resolution live in
  * {@link PlayerDeathDropHandler}; server-side only (the method takes a
  * {@code ServerLevel}).
  */

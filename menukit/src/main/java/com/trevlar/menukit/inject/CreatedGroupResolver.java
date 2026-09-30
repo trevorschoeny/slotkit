@@ -1,6 +1,8 @@
 package com.trevlar.menukit.inject;
 
-import com.trevlar.menukit.core.SlotGroupCategory;
+import com.trevlar.menukit.api.slot.SlotGroupId;
+import com.trevlar.menukit.api.slot.SlotGroupResolver;
+import com.trevlar.menukit.api.slot.SlotGroupCategory;
 
 import net.minecraft.world.inventory.AbstractContainerMenu;
 

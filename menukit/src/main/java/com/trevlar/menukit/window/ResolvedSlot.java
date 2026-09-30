@@ -1,10 +1,11 @@
 package com.trevlar.menukit.window;
 
 
+import com.trevlar.menukit.api.window.PersistentContainerKey;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Result of slot-aware container resolution (§0050): the persistent owner a
+ * Result of slot-aware container resolution (§0055): the persistent owner a
  * slot's state attaches to, plus the slot index <em>local to that owner</em>.
  *
  * <p>For a single-owner container the local index equals the input (global)

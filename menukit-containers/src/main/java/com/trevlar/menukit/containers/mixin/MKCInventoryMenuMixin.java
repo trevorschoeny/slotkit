@@ -16,12 +16,12 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * The library-owned seam that makes container-parity slots appear on the
  * player's own {@code InventoryMenu} — the §0019 line container parity
  * deliberately crosses, and the reason a consumer using
- * {@link com.trevlar.menukit.containers.core.MKCContainerPanel} writes <b>no mixin</b>.
+ * {@link com.trevlar.menukit.containers.api.slot.ContainerPanel} writes <b>no mixin</b>.
  *
  * <h3>Why the library owns this one</h3>
  *
  * Foreign menus (chests/furnaces/modded) have no consumer-ownable per-menu seam,
- * so {@link com.trevlar.menukit.containers.core.MKCSlotProjection} already appended to
+ * so {@link com.trevlar.menukit.containers.core.CreatedSlotProjection} already appended to
  * them from a library-owned player-lifecycle seam. The player's <em>own</em>
  * inventory menu is different: it's built in the {@code Player} constructor
  * (never via {@code openMenu}), so the projection seam can't reach it — and its
@@ -30,7 +30,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * every consumer copy that boilerplate, the library owns the seam once and drives
  * it from {@link ParitySlotRegistry}. (A consumer who wants bespoke
  * {@code InventoryMenu} slots that are <em>not</em> container-parity can still
- * write their own mixin + {@code MKCSlots} call; this only services
+ * write their own mixin + {@code CreatedSlots} call; this only services
  * parity-registered recipes.)
  *
  * <h3>Sync safety</h3>

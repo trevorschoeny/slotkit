@@ -1,5 +1,9 @@
 package com.trevlar.menukit.window;
 
+import com.trevlar.menukit.api.window.TriBool;
+import com.trevlar.menukit.api.window.BehaviorKey;
+import com.trevlar.menukit.api.window.BehaviorKeys;
+import com.trevlar.menukit.api.window.SlotOperations;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.world.inventory.ContainerInput;
 
@@ -68,7 +72,7 @@ public final class ClickTags {
     }
 
     /** Runs {@code clicks} with {@code tag} on this thread, restoring whatever was there. */
-    static void run(Tag tag, Runnable clicks) {
+    public static void run(Tag tag, Runnable clicks) {
         Tag outer = CURRENT.get();
         CURRENT.set(tag);
         try {
@@ -104,7 +108,7 @@ public final class ClickTags {
      * {@code null} when {@code gesture} is not a vanilla gesture (then it is asked
      * about plainly, tag or no tag).
      */
-    static @Nullable List<BehaviorKey<TriBool>> carriedFor(Tag tag, BehaviorKey<TriBool> gesture) {
+    public static @Nullable List<BehaviorKey<TriBool>> carriedFor(Tag tag, BehaviorKey<TriBool> gesture) {
         if (!BehaviorKeys.VANILLA_OPERATIONS.contains(gesture)) return null;
         SlotOperations.Role role = SlotOperations.role(gesture); // one source for roles: the definition
         if (role == null) return null;
