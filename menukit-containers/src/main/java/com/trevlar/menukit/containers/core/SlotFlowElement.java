@@ -149,9 +149,9 @@ public final class SlotFlowElement implements PanelElement {
 
     /** Whether one of the flow's shown slots is under the point (see {@link SlotElement#presentsSlotAt}). */
     @Override
-    public boolean presentsSlotAt(double mouseX, double mouseY) {
+    public boolean presentsSlotAt(com.trevlar.menukit.core.InputContext in) {
         for (SlotElement slot : slots) {
-            if (slot.isVisible() && slot.presentsSlotAt(mouseX, mouseY)) return true;
+            if (slot.isVisible() && slot.presentsSlotAt(in)) return true;
         }
         return false;
     }

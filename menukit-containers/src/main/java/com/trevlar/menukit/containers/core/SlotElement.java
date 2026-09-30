@@ -168,13 +168,13 @@ public final class SlotElement implements PanelElement {
      * click and tooltip while everything else it covers is inert.
      */
     @Override
-    public boolean presentsSlotAt(double mouseX, double mouseY) {
+    public boolean presentsSlotAt(com.trevlar.menukit.core.InputContext in) {
         if (!(Minecraft.getInstance().gui.screen() instanceof AbstractContainerScreen<?> acs)) return false;
         Slot slot = presented(acs.getMenu());
         if (slot == null) return false;
         AbstractContainerScreenAccessor acc = (AbstractContainerScreenAccessor) acs;
-        double relX = mouseX - acc.mk$getLeftPos();
-        double relY = mouseY - acc.mk$getTopPos();
+        double relX = in.mouseX() - acc.mk$getLeftPos();
+        double relY = in.mouseY() - acc.mk$getTopPos();
         return relX >= slot.x - 1 && relX < slot.x + 17 && relY >= slot.y - 1 && relY < slot.y + 17;
     }
 
