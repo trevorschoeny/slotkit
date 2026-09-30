@@ -106,7 +106,7 @@ import java.util.function.BooleanSupplier;
  *
  * <pre>{@code
  * // Mod init, declare the persistent storage once:
- * public static final StorageAttachment<Player, NonNullList<ItemStack>> POCKETS =
+ * public static final PlayerStorageAttachment<NonNullList<ItemStack>> POCKETS =
  *     StorageAttachment.playerAttached("inventory-plus", "pockets", 3);
  *
  * // Consumer mixin, @Inject(method = "<init>", at = @At("TAIL")) on InventoryMenu:
@@ -114,6 +114,7 @@ import java.util.function.BooleanSupplier;
  * CreatedSlots.RegisteredSlots pockets = CreatedSlots.onto((AbstractContainerMenu)(Object) this, player)
  *     .panel("inventory-plus:pockets")
  *     .group("pockets")
+ *     .category(SlotGroupCategory.PLAYER_INVENTORY)       // required: what the group is to other mods
  *     .storage(storage)
  *     .layout(originX, originY, 3)                      // screen-relative origin + columns
  *     .revealWhen(() -> PocketHoverState.isRevealed())  // client-side predicate
