@@ -6,7 +6,6 @@ import com.trevlar.menukit.core.Panel;
 import com.trevlar.menukit.core.PanelElement;
 import com.trevlar.menukit.core.PanelPosition;
 import com.trevlar.menukit.core.PanelStyle;
-import com.trevlar.menukit.core.RegionAnchor;
 
 import com.trevlar.menukit.inject.ScreenMatcher;
 import com.trevlar.menukit.inject.ScreenOrigin;
@@ -45,7 +44,7 @@ import java.util.function.Supplier;
  * <pre>{@code
  * // Consumer COMMON initializer (runs both sides):
  * MKCContainerPanel.define("inventory-plus:pockets")
- *     .at(OutsideRegion.LEFT_ALIGN_TOP, 7)
+ *     .at(PanelPosition.region(OutsideRegion.LEFT_ALIGN_TOP).priority(20), 7)
  *     .style(PanelStyle.RAISED)
  *     .parity(ScreenMatcher.all())                       // default; opt out per screen
  *     .chrome(() -> List.of(new Button(...)))             // client-only, built lazily
@@ -98,12 +97,11 @@ public final class MKCContainerPanel {
     // its factory applies the whole ParitySlotRegistry.
     private static volatile boolean projectionSourceRegistered = false;
 
-    /** Immutable snapshot of one registered container panel. Exactly one of
-     *  {@code placement} (region anchor) / {@code pixelOrigin} (per-frame
-     *  pixel-precision supplier, §0057 Revision) is non-null. */
+    /** Immutable snapshot of one registered container panel. {@code position} is
+     *  the panel's one placement (§0065): a region around the menu frame, a screen
+     *  spot, an overlay, or a per-frame pixel supplier (§0057 Revision). */
     private record Definition(String panelId,
-                              @Nullable RegionAnchor<OutsideRegion> placement,
-                              @Nullable Supplier<ScreenOrigin> pixelOrigin,
+                              PanelPosition position,
                               int padding,
                               PanelStyle style,
                               boolean opaque,
@@ -122,8 +120,7 @@ public final class MKCContainerPanel {
     /** Fluent configuration; terminates in {@code register()}. */
     public static final class Builder {
         private final String panelId;
-        private @Nullable RegionAnchor<OutsideRegion> placement = null;   // one of placement/pixelOrigin required
-        private @Nullable Supplier<ScreenOrigin> pixelOrigin = null;   // §0057 Revision — the precision escape
+        private PanelPosition position = PanelPosition.UNPLACED;      // required: one .at(...)
         private int padding = ScreenPanelAdapter.DEFAULT_PADDING;
         private PanelStyle style = PanelStyle.NONE;
         private boolean opaque = true;
@@ -138,16 +135,21 @@ public final class MKCContainerPanel {
             this.panelId = panelId;
         }
 
-        /** Region placement + explicit content padding (default-priority stacking). */
+        /** Region placement around the menu frame + explicit content padding (default priority). */
         public Builder at(OutsideRegion region, int padding) {
-            this.placement = new RegionAnchor<>(region, RegionAnchor.DEFAULT_PRIORITY);
-            this.padding = padding;
-            return this;
+            return at(PanelPosition.region(region), padding);
         }
 
-        /** Region placement with an explicit stacking priority + padding. */
-        public Builder at(RegionAnchor<OutsideRegion> anchor, int padding) {
-            this.placement = anchor;
+        /**
+         * Any container-screen placement + explicit content padding: a
+         * {@code region(...)} with {@code .priority(n)} or {@code .offset(dx, dy)}, a
+         * {@code screenAnchor(...)}, a {@code center()} overlay, or a
+         * {@code pixel(...)}. (Replaces the {@code RegionAnchor} overload:
+         * {@code at(OutsideRegion.X.priority(20), 7)} is now
+         * {@code at(PanelPosition.region(OutsideRegion.X).priority(20), 7)}.)
+         */
+        public Builder at(PanelPosition position, int padding) {
+            this.position = position;
             this.padding = padding;
             return this;
         }
@@ -170,8 +172,8 @@ public final class MKCContainerPanel {
          * compose as usual. No reactive wrap/scroll budgets are fed — pixel
          * placement means the consumer owns the exact geometry, on-screen included.
          *
-         * <p>Mutually exclusive with the region {@code .at(...)} overloads —
-         * declare exactly one placement.
+         * <p>Sugar for {@code at(PanelPosition.pixel(origin), padding)}. Declare
+         * exactly one placement; a later {@code .at(...)} replaces an earlier one.
          *
          * @param origin  per-frame supplier of the panel's outer top-left in
          *                absolute screen pixels; {@code null} return = skip frame
@@ -179,9 +181,7 @@ public final class MKCContainerPanel {
          *                for slot-tight precision panels)
          */
         public Builder at(Supplier<ScreenOrigin> origin, int padding) {
-            this.pixelOrigin = origin;
-            this.padding = padding;
-            return this;
+            return at(PanelPosition.pixel(origin), padding);
         }
 
         /** Panel background style. Default {@link PanelStyle#NONE} (flush — the slots draw their own frames). */
@@ -296,19 +296,15 @@ public final class MKCContainerPanel {
          */
         public void register() {
     com.trevlar.menukit.window.Declarations.requireOpen("MKCContainerPanel " + panelId + " register()");
-            // Exactly ONE placement: a region anchor OR the pixel-precision
-            // supplier (§0057 Revision). Zero or both = a declaration bug — fail
-            // loudly at register() rather than resolving nothing at runtime.
-            if (placement == null && pixelOrigin == null) {
+            // A placement is required, and it must be one a container screen can
+            // place (checked here, on both sides, since the client adapter that
+            // would otherwise reject it only exists on the client).
+            PanelPosition.Mode mode = position.mode();
+            if (mode == PanelPosition.Mode.UNPLACED || mode == PanelPosition.Mode.MAIN) {
                 throw new IllegalStateException(
-                        "MKCContainerPanel '" + panelId + "': a placement is required "
-                        + "before register() — .at(region, padding) or "
-                        + ".at(pixelOriginSupplier, padding).");
-            }
-            if (placement != null && pixelOrigin != null) {
-                throw new IllegalStateException(
-                        "MKCContainerPanel '" + panelId + "': region and pixel "
-                        + "placement are mutually exclusive — declare exactly one .at(...).");
+                        "MKCContainerPanel '" + panelId + "': needs a placement before register(): "
+                        + ".at(OutsideRegion, padding), .at(PanelPosition, padding) or "
+                        + ".at(pixelOriginSupplier, padding). A container screen has no main() panel.");
             }
 
             // 1. Register each slot's recipe under a derived, collision-free panel
@@ -336,7 +332,7 @@ public final class MKCContainerPanel {
             ensureProjectionSource();
 
             // 3. Stash for client chrome wiring (read in MKCClient).
-            DEFINITIONS.add(new Definition(panelId, placement, pixelOrigin, padding,
+            DEFINITIONS.add(new Definition(panelId, position, padding,
                     style, opaque, parityScope, chrome, visibleWhen, pinnedHeight,
                     pinnedWidth, List.copyOf(slots)));
         }
@@ -456,19 +452,11 @@ public final class MKCContainerPanel {
                 elements.add(new SlotFlowElement(slotElements, 0, 0));
             }
 
-            // The panel's declared position: pixel-precision definitions carry
-            // their per-frame origin supplier as the position itself (§0057
-            // Revision — the adapter's origin resolution reads it each frame);
-            // region definitions keep the inert BODY default (the adapter's
-            // region drives placement on the injection path).
-            PanelPosition position = (def.pixelOrigin() != null)
-                    ? PanelPosition.pixel(def.pixelOrigin())
-                    : PanelPosition.BODY;
             Panel panel = Panel.builder(def.panelId())
                     .elements(elements)
                     .visible(true)
                     .style(def.style())
-                    .position(position)
+                    .position(def.position())
                     .build()
                     .opaque(def.opaque());
             // Whole-panel visibility gate (chrome + slots toggle as one).
@@ -483,12 +471,8 @@ public final class MKCContainerPanel {
                 panel.pinnedWidth(def.pinnedWidth());
             }
 
-            // One adapter either way — pixel panels take the PIXEL constructor
-            // (no region registration, no stacking, origin = the supplier);
-            // region panels take the region constructor exactly as before.
-            ScreenPanelAdapter adapter = (def.pixelOrigin() != null)
-                    ? new ScreenPanelAdapter(panel, def.padding())
-                    : new ScreenPanelAdapter(panel, def.placement(), def.padding());
+            // The panel carries its placement; the adapter scopes it to the parity screens.
+            ScreenPanelAdapter adapter = new ScreenPanelAdapter(panel, def.padding());
             adapter.onMatching(def.parityScope());
         }
     }

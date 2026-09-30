@@ -80,14 +80,18 @@ import java.util.function.Supplier;
  * under the overlay's chrome. Created slots belong in flow panels; nothing
  * places them in overlays today.
  *
- * <h3>Why a slot is a click-through HOLE in its panel</h3>
+ * <h3>Why a slot stays live under its own panel's claim</h3>
  *
  * A slot's item interaction is owned by vanilla: a click flows through
  * {@code AbstractContainerScreen.mouseClicked} → {@code slotClicked(getHoveredSlot())},
  * and MenuKit's library-owned {@code getHoveredSlot} interception
  * ({@link MKCSlotInput}) makes the registered slot win over a vanilla slot it
- * covers. So the panel must <em>not</em> eat the click; {@link #isElementOpaque()}
- * returns {@code false} (a hole) so the click reaches vanilla.
+ * covers. An opaque panel claims its whole rectangle (§0065: no holes), so the
+ * claim routes a point over this element's slot back to vanilla
+ * ({@link #presentsSlotAt}): the panel's own slot hovers and clicks, while
+ * anything else under the panel stays inert. On a transparent panel the slot is
+ * simply not solid ({@link #isElementOpaque()} is {@code false}), so it claims
+ * nothing itself.
  * {@link SlotElementRegistry} tells the library's screen hook which panels
  * currently host a {@code SlotElement}.
  */
@@ -151,12 +155,28 @@ public final class SlotElement implements PanelElement {
     @Override public int getHeight() { return SlotRendering.DEFAULT_SIZE; }
 
     /**
-     * A slot is a click-through hole (see class javadoc): vanilla's slot-click
-     * machinery owns the interaction, so the panel must let the click pass
-     * rather than eat it. The covered vanilla slot is made inert by the slot
-     * {@code getHoveredSlot} resolution, not by panel opacity.
+     * Not solid: on a transparent panel a slot claims nothing itself; vanilla's
+     * slot machinery owns its interaction. (On an opaque panel the panel claims its
+     * whole rectangle, and {@link #presentsSlotAt} keeps this slot live under it.)
      */
     @Override public boolean isElementOpaque() { return false; }
+
+    /**
+     * Whether this element's live slot is under the point: vanilla's hover cell (the
+     * 18x18 frame around the item box) at the slot's current position. The claiming
+     * panel routes such a point to the slot (§0065), so a panel's own slots hover,
+     * click and tooltip while everything else it covers is inert.
+     */
+    @Override
+    public boolean presentsSlotAt(double mouseX, double mouseY) {
+        if (!(Minecraft.getInstance().gui.screen() instanceof AbstractContainerScreen<?> acs)) return false;
+        Slot slot = presented(acs.getMenu());
+        if (slot == null) return false;
+        AbstractContainerScreenAccessor acc = (AbstractContainerScreenAccessor) acs;
+        double relX = mouseX - acc.mk$getLeftPos();
+        double relY = mouseY - acc.mk$getTopPos();
+        return relX >= slot.x - 1 && relX < slot.x + 17 && relY >= slot.y - 1 && relY < slot.y + 17;
+    }
 
     /** Hidden when the slot can't be resolved on this screen, or its panel is hidden. */
     @Override

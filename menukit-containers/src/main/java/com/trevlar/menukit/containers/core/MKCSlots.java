@@ -8,7 +8,6 @@ import com.trevlar.menukit.core.PanelElement;
 import com.trevlar.menukit.core.PanelOwner;
 import com.trevlar.menukit.core.PanelPosition;
 import com.trevlar.menukit.core.PanelStyle;
-import com.trevlar.menukit.core.RegionAnchor;
 import com.trevlar.menukit.core.SlotGroupCategory;
 import com.trevlar.menukit.core.Storage;
 import com.trevlar.menukit.core.Toggle;
@@ -202,13 +201,13 @@ public final class MKCSlots {
      * frame, so one registration works on every screen the slots appear on.
      */
     public static void renderGroup(String panelId, String groupId, int count, int columns,
-            RegionAnchor<OutsideRegion> anchor, int padding, ScreenMatcher screens) {
-        renderGroup(panelId, groupId, count, columns, anchor, padding, screens, /*tooltip*/ null);
+            PanelPosition position, int padding, ScreenMatcher screens) {
+        renderGroup(panelId, groupId, count, columns, position, padding, screens, /*tooltip*/ null);
     }
 
     /**
      * Tooltip-carrying overload of
-     * {@link #renderGroup(String, String, int, int, RegionAnchor, int, ScreenMatcher)} —
+     * {@link #renderGroup(String, String, int, int, PanelPosition, int, ScreenMatcher)} —
      * attaches the given hover tooltip to every {@link SlotElement} it builds (the
      * consumer never holds those instances on this path, so the tooltip flows through
      * here, mirroring {@code SlotSpec.tooltip} on the container-parity path). Fires only
@@ -216,7 +215,7 @@ public final class MKCSlots {
      * {@code null} for no tooltip.
      */
     public static void renderGroup(String panelId, String groupId, int count, int columns,
-            RegionAnchor<OutsideRegion> anchor, int padding, ScreenMatcher screens,
+            PanelPosition position, int padding, ScreenMatcher screens,
             @Nullable Component tooltip) {
         // One SlotElement per logical slot, laid out from the panel origin on the
         // standard 18px pitch — matching the seed layout register() handed each
@@ -239,14 +238,14 @@ public final class MKCSlots {
         // A presentation-only panel: its id is suffixed (":present") so it never
         // collides with the .onto panel that drives slot inertness — that panel is
         // a data/visibility carrier with no elements; this one carries the
-        // SlotElements. Style NONE + opaque(false): the slots are click-through
-        // holes (vanilla owns the slot click; see SlotElement), so the panel must
-        // not eat input over them.
+        // SlotElements. Style NONE + opaque(false): a transparent panel claims only
+        // its solid elements, and a slot is not solid (vanilla owns the slot click;
+        // see SlotElement), so the panel claims nothing and never eats input.
         Panel panel = Panel.builder(panelId + ":present")
                 .elements(elements)
                 .visible(true)
                 .style(PanelStyle.NONE)
-                .position(PanelPosition.BODY)
+                .position(position)
                 .build()
                 .opaque(false);
 
@@ -255,26 +254,23 @@ public final class MKCSlots {
         // matcher accepts. SlotElements resolve their live MKCSlot by identity
         // each frame, so this single registration covers every screen the slots
         // appear on (survival inventory, creative, etc.).
-        new ScreenPanelAdapter(panel, anchor, padding).onMatching(screens);
+        new ScreenPanelAdapter(panel, padding).onMatching(screens);
     }
 
     /**
      * Bare-{@link OutsideRegion} convenience overload of
-     * {@link #renderGroup(String, String, int, int, RegionAnchor, int, ScreenMatcher)} —
-     * wraps the region in a {@link RegionAnchor} at {@link RegionAnchor#DEFAULT_PRIORITY}
-     * for consumers who don't care about sibling stacking order within the region.
+     * {@link #renderGroup(String, String, int, int, PanelPosition, int, ScreenMatcher)}:
+     * {@code PanelPosition.region(region)} at the default priority.
      */
     public static void renderGroup(String panelId, String groupId, int count, int columns,
             OutsideRegion region, int padding, ScreenMatcher screens) {
-        renderGroup(panelId, groupId, count, columns,
-                new RegionAnchor<>(region, RegionAnchor.DEFAULT_PRIORITY), padding, screens);
+        renderGroup(panelId, groupId, count, columns, PanelPosition.region(region), padding, screens);
     }
 
     /** Bare-{@link OutsideRegion} convenience overload that also carries a per-slot tooltip. */
     public static void renderGroup(String panelId, String groupId, int count, int columns,
             OutsideRegion region, int padding, ScreenMatcher screens, @Nullable Component tooltip) {
-        renderGroup(panelId, groupId, count, columns,
-                new RegionAnchor<>(region, RegionAnchor.DEFAULT_PRIORITY), padding, screens, tooltip);
+        renderGroup(panelId, groupId, count, columns, PanelPosition.region(region), padding, screens, tooltip);
     }
 
     /** Fluent configuration for a single slot. Terminates in {@code register()}. */
@@ -394,8 +390,7 @@ public final class MKCSlots {
             Panel panel = Panel.builder(panelId)
                     .visible(true)
                     .style(PanelStyle.NONE)
-                    .position(PanelPosition.BODY)
-                    .build();
+                    .build();   // a data carrier: never placed, never hosted
 
             // Side-aware reveal: server always visible (so getItem returns real
             // content and broadcastChanges syncs it); client gates on the

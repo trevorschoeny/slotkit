@@ -45,8 +45,9 @@ import java.util.List;
  * The flow positions are pure presentation: each child {@link SlotElement}
  * resolves its live slot by identity and writes its {@code Slot.x/y} every frame,
  * so the real synced slots' identity/sync are untouched — only where vanilla
- * draws and hit-tests them reflows. A slot stays a
- * click-through hole; this element is too ({@link #isElementOpaque()} false).
+ * draws and hit-tests them reflows. Its slots stay live under the panel's own
+ * claim through {@link #presentsSlotAt}; the empty cells of a partial last row are
+ * the panel's, and inert.
  */
 public final class SlotFlowElement implements PanelElement {
 
@@ -141,11 +142,19 @@ public final class SlotFlowElement implements PanelElement {
     }
 
     /**
-     * A slot is a click-through hole owned by vanilla's slot machinery (see
-     * {@link SlotElement}); the flow that hosts them is too, so clicks reach the
-     * slots vanilla resolves under the cursor rather than being eaten here.
+     * Not solid, like the slots it hosts (see {@link SlotElement}): on a transparent
+     * panel the flow claims nothing, and vanilla resolves the slot under the cursor.
      */
     @Override public boolean isElementOpaque() { return false; }
+
+    /** Whether one of the flow's shown slots is under the point (see {@link SlotElement#presentsSlotAt}). */
+    @Override
+    public boolean presentsSlotAt(double mouseX, double mouseY) {
+        for (SlotElement slot : slots) {
+            if (slot.isVisible() && slot.presentsSlotAt(mouseX, mouseY)) return true;
+        }
+        return false;
+    }
 
     @Override
     public void render(RenderContext ctx) {

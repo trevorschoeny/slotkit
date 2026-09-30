@@ -457,7 +457,14 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
             List<Panel> panels = new ArrayList<>();
             Map<String, List<SlotGroup>> groupsByPanel = new LinkedHashMap<>();
 
-            for (PanelConfig pc : panelConfigs) {
+            // The standalone default for unplaced panels (§0065): the first becomes
+            // the screen's main() frame, later ones stack below it, keeping the old
+            // BODY column's look. Declared positions pass through untouched.
+            List<PanelPosition> positions = PanelPosition.standaloneDefaults(
+                    panelConfigs.stream().map(PanelConfig::position).toList());
+
+            for (int pi = 0; pi < panelConfigs.size(); pi++) {
+                PanelConfig pc = panelConfigs.get(pi);
                 // Build the slot groups for this panel and register them in
                 // the groupsByPanel map. Panel itself holds only elements.
                 List<SlotGroup> groups = new ArrayList<>();
@@ -476,7 +483,7 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
                         .elements(pc.elements)
                         .visible(pc.visible)
                         .style(pc.style)
-                        .position(pc.position)
+                        .position(positions.get(pi))
                         .toggleKey(pc.toggleKey)
                         .build());
             }
@@ -524,7 +531,7 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
         private final List<PanelElement> elements = new ArrayList<>();
         private boolean visible = true;
         private PanelStyle style = PanelStyle.RAISED;
-        private PanelPosition position = PanelPosition.BODY;
+        private PanelPosition position = PanelPosition.UNPLACED;   // standalone default at build
         private int toggleKey = -1;
 
         PanelBuilder(String id) {
@@ -564,6 +571,18 @@ public class MKCScreenHandler extends AbstractContainerMenu implements PanelOwne
          */
         public PanelBuilder region(OutsideRegion region) {
             this.position = PanelPosition.region(region);
+            return this;
+        }
+
+        /**
+         * Any placement, with its modifiers ({@code .offset}, {@code .priority}):
+         * {@code screenAnchor(...)} chrome, a {@code center()} overlay, a
+         * {@code pixel(...)} panel. Left unset, the panel takes the standalone
+         * default: the first unplaced panel is the main frame, later ones stack
+         * below it ({@link PanelPosition#standaloneDefaults}).
+         */
+        public PanelBuilder position(PanelPosition position) {
+            this.position = position;
             return this;
         }
 
