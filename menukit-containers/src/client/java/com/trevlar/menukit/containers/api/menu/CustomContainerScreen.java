@@ -6,6 +6,7 @@ import com.trevlar.menukit.containers.api.slot.CreatedSlot;
 import com.trevlar.menukit.api.element.PanelElement;
 import com.trevlar.menukit.core.PanelRendering;
 import com.trevlar.menukit.api.panel.PanelStyle;
+import com.trevlar.menukit.api.panel.ScreenKind;
 import com.trevlar.menukit.containers.api.slot.SlotGroup;
 import com.trevlar.menukit.core.*;
 import com.trevlar.menukit.containers.core.*;
@@ -166,7 +167,9 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     public CustomContainerScreen(CustomContainerMenu handler, Inventory inventory,
                                 Component title) {
         super(handler, inventory, title);
-        this.host = PanelHost.standalone(
+        // A container screen (it is an AbstractContainerScreen), so its panels draw
+        // in the container look, as every inventory's do (ScreenKind.of).
+        this.host = PanelHost.standalone(ScreenKind.CONTAINER,
                         () -> new PanelHost.Frame(this.width, this.height, null),
                         PanelHost.TitleBand.IN_FRAME)
                 .contentSize(this::contentSize)
