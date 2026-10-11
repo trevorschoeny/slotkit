@@ -212,7 +212,7 @@ def check_file(path, jar, report):
                 owner = declaring(jar, fqn, mname, desc)
                 verdicts.append(
                     f"inherited from {owner}, not declared on {fqn}: an injector's target must be declared "
-                    f"by the class @Mixin names, so this dies at mixin apply — @Mixin({owner.split('.')[-1]}.class) "
+                    f"by the class @Mixin names, so this dies at mixin apply, @Mixin({owner.split('.')[-1]}.class) "
                     f"or reach the seam another way" if owner else "missing")
         for v in verdicts:
             if v not in ("ok", "ambiguous"):

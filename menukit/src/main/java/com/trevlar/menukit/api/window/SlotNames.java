@@ -139,7 +139,7 @@ public final class SlotNames {
         Object was = SPECS.putIfAbsent(category, singletons.length == 0 ? ordinal(label) : singletons(singletons));
         if (was != null) {
             throw new IllegalStateException("SlotNames: " + category + " already has names; two mods naming one "
-                    + "category's slots would be settled by load order (§0063)");
+                    + "category's slots would be settled by load order");
         }
     }
 

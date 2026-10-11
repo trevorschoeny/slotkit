@@ -86,7 +86,7 @@ public class MenuKitContainers implements ModInitializer {
         // the fallback for now.
         if (net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("universal-graves")) {
             com.trevlar.menukit.containers.compat.UniversalGravesAdapter.register();
-            LOGGER.info("[MenuKit-Containers] Universal Graves detected — player-slot grave capture enabled");
+            LOGGER.info("[MenuKit-Containers] Universal Graves detected, player-slot grave capture enabled");
         }
     }
 
