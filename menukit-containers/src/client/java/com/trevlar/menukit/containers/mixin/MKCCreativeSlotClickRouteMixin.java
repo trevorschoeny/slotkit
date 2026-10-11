@@ -6,6 +6,7 @@ import com.trevlar.menukit.containers.api.slot.CreatedSlot;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.util.Prediction;
 import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.CreativeModeTab;
@@ -70,7 +71,7 @@ public abstract class MKCCreativeSlotClickRouteMixin {
             // Drop (Q), as vanilla's inventory-tab throw does it: the dropped entity is
             // its own creative-drop server message, and the slot's remainder syncs below.
             ItemStack dropped = mkcSlot.remove(button == 0 ? 1 : mkcSlot.getItem().getMaxStackSize());
-            player.drop(dropped, true);
+            player.drop(dropped, true, Prediction.PREDICTED);
             mc.gameMode.handleCreativeModeItemDrop(dropped);
         } else {
             // Place, pick up, clone, swap, shift-move: act on the real inventory menu by

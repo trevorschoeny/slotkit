@@ -33,7 +33,7 @@ import java.util.function.Consumer;
  *             .add(TextLabel.builder().text(title).at(64, 0).build()))
  *     .panel("mymod:menu:side", p -> p
  *             .position(PanelPosition.region(OutsideRegion.RIGHT_ALIGN_TOP))
- *             .toggleKey(GLFW.GLFW_KEY_T));                 // works when the side panel is toggleable()
+ *             .toggleKey(InputConstants.KEY_T));            // works when the side panel is toggleable()
  *
  * ClientMenu.of(MyMod.CUSTOM).requestOpen();                // later: ask the server to open it
  * }</pre>

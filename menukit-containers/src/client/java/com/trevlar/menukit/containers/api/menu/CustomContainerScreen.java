@@ -16,6 +16,7 @@ import com.trevlar.menukit.api.panel.Reference;
 import com.trevlar.menukit.inject.ScreenPanelRegistry;
 import com.trevlar.menukit.mixin.SlotPositionAccessor;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.input.KeyEvent;
@@ -465,9 +466,9 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
 
     private final Map<Integer, KeyAction> keyRegistry = new LinkedHashMap<>();
 
-    /** Registers an action for a GLFW key code. */
-    public void registerKey(int glfwKey, KeyAction action) {
-        keyRegistry.put(glfwKey, action);
+    /** Registers an action for a key code ({@code InputConstants.KEY_*}). */
+    public void registerKey(int keyCode, KeyAction action) {
+        keyRegistry.put(keyCode, action);
     }
 
     /**
@@ -498,7 +499,10 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
      * {@code groupId()} and {@code getLocalIndex()} for display.
      */
     public interface ScreenEventListener {
-        /** A CreatedSlot was clicked. Button: 0 left, 1 right, 2 middle. */
+        /**
+         * A CreatedSlot was clicked. {@code button} is vanilla's numbering: compare it
+         * with {@code Click.LEFT}, {@code Click.RIGHT} and {@code Click.MIDDLE}.
+         */
         default void onSlotClick(CreatedSlot slot, int button) {}
         /** An empty CreatedSlot was clicked with an empty cursor. */
         default void onEmptySlotClick(CreatedSlot slot, int button) {}
@@ -606,7 +610,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
      */
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (host.keyPressed(event.key(), event.scancode(), event.modifiers(), host.topmostModal() != null)) {
+        if (host.keyPressed(event.key(), event.keycode(), event.modifiers(), host.topmostModal() != null)) {
             return true;
         }
         KeyAction action = keyRegistry.get(event.key());
@@ -647,7 +651,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         // the cursor holds (vanilla would start a drag). The menu runs the handler on
         // both sides (CustomContainerMenu.clicked), and the server's run is the one that
         // counts.
-        if (event.button() == 1 && this.hoveredSlot instanceof CreatedSlot mkSlot
+        if (event.button() == InputConstants.MOUSE_BUTTON_RIGHT && this.hoveredSlot instanceof CreatedSlot mkSlot
                 && menu.rightClickHandler(mkSlot.index, 1, ContainerInput.PICKUP) != null) {
             slotClicked(mkSlot, mkSlot.index, 1, ContainerInput.PICKUP);
             fireSlotClick(mkSlot, event.button());

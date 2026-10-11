@@ -76,11 +76,11 @@ public final class PlayerDeathDropHandler {
                 DropRule effective = configured.resolve(stack, keepInventory);
                 switch (effective) {
                     case DROP -> {
-                        // The vanilla player-death drop: eye-level spawn, 40-tick
-                        // pickup delay, no thrower (any player can pick it up), the
-                        // same call vanilla's Inventory.dropAll uses. The slot is
-                        // left empty in `remaining`.
-                        ItemEntity dropped = player.drop(stack, true, false);
+                        // The vanilla player-death drop: eye-level spawn, random
+                        // scatter, 40-tick pickup delay, no thrower (any player can
+                        // pick it up), the same calls vanilla's Inventory.dropAll
+                        // makes. The slot is left empty in `remaining`.
+                        ItemEntity dropped = dropOnDeath(player, stack);
                         // With a grave-container mod installed, the player recovers
                         // their vanilla inventory from a grave that never expires. The
                         // slots that mod did not capture (ours) must not expire either,
@@ -119,6 +119,15 @@ public final class PlayerDeathDropHandler {
         }
     }
 
+    // Since 26.3, Player.drop has no random-scatter option and always swings the
+    // arm, so the death drop is built the way Inventory.dropAll builds it.
+    // Null when nothing was spawned.
+    private static ItemEntity dropOnDeath(Player player, ItemStack stack) {
+        ItemEntity dropped = player.createItemStackToDrop(stack, true, false);
+        if (dropped != null) player.level().addFreshEntity(dropped);
+        return dropped;
+    }
+
     // Same per-stack resolution as the AttachmentType path, read and written through
     // the spec. The one unchecked cast is safe because dropsOnDeath requires a
     // Player owner; a non-player spec enrolled here fails with ClassCastException,
@@ -144,7 +153,7 @@ public final class PlayerDeathDropHandler {
                 case DROP -> {
                     // Same vanilla player-death drop as the AttachmentType path;
                     // the slot is left empty in `remaining`.
-                    ItemEntity dropped = player.drop(stack, true, false);
+                    ItemEntity dropped = dropOnDeath(player, stack);
                     if (dropped != null && GraveModPresence.anyGraveModPresent()) {
                         dropped.setUnlimitedLifetime();
                     }
