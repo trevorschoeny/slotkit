@@ -12,58 +12,40 @@ import net.minecraft.world.inventory.Slot;
 import java.util.Optional;
 
 /**
- * Resolves a <b>player-inventory slot's on-screen position</b>, slot-agnostic
- * and screen-agnostic. The consumer declares "anchor to player-inventory slot
- * N" and gets back the rect on whatever screen is open; the library owns the
- * slot loop and the creative {@code SlotWrapper}, so the consumer writes zero
- * per-screen geometry.
+ * Finds where a <b>player-inventory slot</b> is on whatever screen is open. You
+ * name player-inventory slot N and get back its rectangle; MenuKit handles the slot
+ * loop and creative's {@code SlotWrapper}, so you write no per-screen geometry.
  *
- * <h3>The capability this adds</h3>
+ * <p>Panel anchoring ({@link SlotGroupCategories}, {@link SlotGroupPanelAdapter})
+ * places panels against a <em>category</em> of slots by slicing {@code menu.slots}.
+ * This answers a different question: where on this screen is the one slot whose
+ * player-inventory index is N? It matches by identity ({@code container} and
+ * {@code getContainerSlot}), which creative's {@code SlotWrapper} hides, so it
+ * goes through {@link Slots#target}: identity from the unwrapped slot, position
+ * from the in-menu slot (the wrapper, which has the creative coordinates).
  *
- * MenuKit's panel anchoring ({@link SlotGroupCategories} / {@link SlotGroupPanelAdapter})
- * already positions panels against a <em>category</em> of slots by index-slicing
- * {@code menu.slots}. This resolver answers the complementary question a slot
- * consumer asks: "where is the single vanilla slot whose player-inventory index
- * is N, <em>on this screen</em>?", by identity, not by slice. That identity test
- * (`container` + `getContainerSlot`) is exactly what creative's {@code SlotWrapper}
- * breaks, so this resolves through {@link Slots#target}: identity off the
- * unwrapped target, position off the in-menu slot (the wrapper, which carries the
- * creative coordinates).
+ * <p>{@code containerIndex} is the slot's index in the player {@link Inventory},
+ * the value {@code Slot.getContainerSlot()} reports for a raw player slot:
+ * {@code 0 to 8} for the hotbar, {@code 9 to 35} for the main inventory, and the
+ * player's equipment indices for armour and offhand. Any player-inventory slot
+ * works, not just the hotbar.
  *
- * <h3>Slot-agnostic</h3>
+ * <p>It works on any screen whose menu shows the player inventory: the survival
+ * inventory, the creative inventory tab (wrapped slots), and container screens
+ * such as chests and furnaces, which build their own player-inventory slots. No
+ * per-menu resolver is needed, because the slots themselves know they belong to
+ * the player {@link Inventory}.
  *
- * {@code containerIndex} is the slot's index within the player {@link Inventory}
- * (the value {@code Slot.getContainerSlot()} reports for a raw player slot):
- * {@code 0 to 8} hotbar, {@code 9 to 35} main inventory, and the player's equipment
- * indices for armor/offhand. Not a hotbar helper, any player-inventory slot.
- *
- * <h3>Screen-agnostic</h3>
- *
- * Works on any screen whose menu surfaces the player inventory, survival
- * inventory, the creative inventory tab (slots wrapped), and container screens
- * (chest/furnace, which build their own raw player-inventory slots). No
- * registered per-menu resolver required; the player {@link Inventory} identity
- * is intrinsic to the slots themselves.
- *
- * <p>Client-only: reads the screen frame + the creative wrapper, both client
- * types.
+ * <p>Client only: it reads the screen frame and the creative wrapper.
  */
 public final class VanillaSlotResolver {
 
     private VanillaSlotResolver() {}
 
-    /**
-     * The in-menu {@link Slot} for player-inventory {@code containerIndex} on
-     * {@code menu}, the raw slot on most screens, or the creative
-     * {@code SlotWrapper} around it (so its {@code x}/{@code y} carry the creative
-     * position). Empty when the menu doesn't surface that player slot.
-     *
-     * <p><b>Private, raw-{@code Slot} plumbing.</b> Returning a raw vanilla
-     * {@code Slot} is internal to this resolver; the public, address-only
-     * equivalent is {@link #resolve(AbstractContainerScreen, int)}, which returns a
-     * frame-relative {@link SlotScreenRect}. The {@code int} there is a vanilla
-     * player-inventory container index, the address-clean way to name the slot.
-     */
+    // The in-menu Slot for the player-inventory index: the raw slot on most screens,
+    // or creative's SlotWrapper around it, whose x/y are the creative position.
+    // Kept private so the public API never hands out raw Slots; resolve() returns a
+    // SlotScreenRect instead.
     private static Optional<Slot> resolveSlot(AbstractContainerMenu menu, int containerIndex) {
         for (Slot s : menu.slots) {
             Slot target = Slots.target(s);
@@ -75,13 +57,9 @@ public final class VanillaSlotResolver {
     }
 
     /**
-     * The absolute on-screen item box for player-inventory {@code containerIndex}
-     * on {@code screen}, or empty when the screen doesn't surface that player slot.
-     *
-     * <p>The screen-level entry: the turnkey "register once, anchor anywhere" call
-     * returns a {@link SlotScreenRect} in absolute screen pixels, so a slot
-     * consumer can place its slots/decoration against it with no per-screen
-     * branching at all.
+     * The on-screen item box, in absolute screen pixels, of the player-inventory slot
+     * {@code containerIndex} on {@code screen}, or empty when the screen doesn't show
+     * that slot. Place slots or decoration against it with no per-screen code.
      */
     public static Optional<SlotScreenRect> resolve(AbstractContainerScreen<?> screen, int containerIndex) {
         return resolveSlot(screen.getMenu(), containerIndex).map(s -> {

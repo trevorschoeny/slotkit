@@ -22,8 +22,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <p><b>Why the superclass.</b> {@code send} is declared by
  * {@code ClientCommonPacketListenerImpl}, and {@code ClientPacketListener} only
  * inherits it. Mixin resolves an injector's target on the class {@code @Mixin}
- * names, so targeting the subclass killed the client during mixin apply (5.1.0,
- * 2026-09-12). The config-phase listener shares this method and never carries a
+ * names, so targeting the subclass crashed the client during mixin apply (in 5.1.0). The config-phase listener shares this method and never carries a
  * play packet, so the type test below is also what keeps this to the play phase.
  *
  * <ul>

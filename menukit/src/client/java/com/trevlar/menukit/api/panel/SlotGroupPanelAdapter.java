@@ -17,7 +17,7 @@ import java.util.List;
 /**
  * Anchors a {@link Panel} to a slot group's box on container screens: a toolbar
  * above the player inventory, a readout beside the hotbar. Each targeted group on
- * the open screen gets its own slot-group host (§0065), whose reference rectangle is
+ * the open screen gets its own slot-group host, whose reference rectangle is
  * that group's box this frame.
  *
  * <pre>{@code
@@ -41,8 +41,8 @@ import java.util.List;
  * once per targeted group present on the screen.
  *
  * <h3>Claims</h3>
- * A slot-group panel claims by the one rule like every other: an opaque one over a
- * slot makes that slot inert (its hover, click and tooltip).
+ * A slot-group panel claims points by the same rule as every other panel: an opaque
+ * one over a slot makes that slot inert (its hover, click and tooltip).
  *
  * <h3>Frozen after init</h3>
  * Construction, targeting and {@link #unregister()} throw once MenuKit's
@@ -88,8 +88,6 @@ public final class SlotGroupPanelAdapter {
         ScreenPanelRegistry.declare(this);
     }
 
-    // ── Targeting ───────────────────────────────────────────────────────
-
     /** Anchors to each category's vanilla group. Call exactly once. */
     public SlotGroupPanelAdapter on(SlotGroupCategory... categories) {
         if (categories.length == 0) {
@@ -119,8 +117,6 @@ public final class SlotGroupPanelAdapter {
         return this;
     }
 
-    // ── Teardown ────────────────────────────────────────────────────────
-
     /**
      * Withdraws this adapter from screens opened from now on. Idempotent. Throws after
      * MenuKit's declarations froze; gate at runtime with {@link Panel#visibleWhen}.
@@ -129,8 +125,6 @@ public final class SlotGroupPanelAdapter {
         Declarations.requireOpen("SlotGroupPanelAdapter(" + panel.id() + ").unregister()");
         ScreenPanelRegistry.withdraw(this);
     }
-
-    // ── Accessors ──────────────────────────────────────────────────────
 
     /** The panel this adapter declares. */
     public Panel getPanel() { return panel; }

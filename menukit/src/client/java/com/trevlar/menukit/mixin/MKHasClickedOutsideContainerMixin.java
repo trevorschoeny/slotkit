@@ -10,16 +10,15 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
  * Fixes vanilla's click classification for slots outside the container frame
- * on {@link AbstractContainerScreen} — i.e., any screen that inherits the base
+ * on {@link AbstractContainerScreen}, meaning any screen that inherits the base
  * {@code hasClickedOutside} without overriding it (chests, hoppers, dispensers,
- * shulker boxes, etc.).
+ * shulker boxes and so on).
  *
- * <p>Without this fix, clicks on registered/decoration slots positioned outside
- * the container frame get classified as "outside" clicks (k=-999), which
- * changes PICKUP to THROW and causes items to physically drop as entities
- * instead of going to the cursor.
+ * <p>Without it, clicks on registered or decoration slots outside the container
+ * frame count as "outside" clicks (k=-999), which turns PICKUP into THROW and
+ * drops the item as an entity instead of putting it on the cursor.
  *
- * <p>Screens that override {@code hasClickedOutside} need their own mixins —
+ * <p>Screens that override {@code hasClickedOutside} need their own mixins:
  * see {@link MKHasClickedOutsideMixin} (recipe-book screens) and
  * {@link MKHasClickedOutsideCreativeMixin} (creative).
  */

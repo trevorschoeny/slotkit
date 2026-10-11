@@ -13,8 +13,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * Fixes vanilla's click classification for slots outside the container frame
  * on {@link AbstractRecipeBookScreen}. This override sits between
  * {@code AbstractContainerScreen} (the base) and {@code InventoryScreen}
- * (a leaf), so any screen extending AbstractRecipeBookScreen — including
- * InventoryScreen — inherits this fix.
+ * (a leaf), so every screen extending AbstractRecipeBookScreen, InventoryScreen
+ * included, inherits the fix.
  *
  * <p>See {@link MKHasClickedOutsideContainerMixin} (base) and
  * {@link MKHasClickedOutsideCreativeMixin} (creative) for the sibling targets.

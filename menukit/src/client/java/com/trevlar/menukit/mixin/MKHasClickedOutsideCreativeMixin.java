@@ -16,8 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * {@code hasClickedOutside} override that also considers tab clicks and
  * stores the result in a private field read later during
  * {@code slotClicked}'s carry-drop logic. The mixin writes {@code false}
- * back to the field as well as returning {@code false} so subsequent reads
- * stay coherent.
+ * to the field as well as returning it, so later reads agree.
  *
  * <p>See {@link MKHasClickedOutsideMixin} (recipe-book) and
  * {@link MKHasClickedOutsideContainerMixin} (base) for the sibling targets.
@@ -26,10 +25,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(CreativeModeInventoryScreen.class)
 public abstract class MKHasClickedOutsideCreativeMixin {
 
-    // The private field that creative's hasClickedOutside override caches.
-    // slotClicked reads it at the "slot == null" branch to decide whether
-    // to drop the carried stack. Forcing false here prevents stale-state
-    // reads if a prior outside click left the field at true.
+    // Cached by creative's hasClickedOutside override. slotClicked reads it in
+    // the "slot == null" branch to decide whether to drop the carried stack, so
+    // it is forced to false in case an earlier outside click left it true.
     @Shadow private boolean hasClickedOutside;
 
     @Inject(method = "hasClickedOutside(DDII)Z", at = @At("HEAD"), cancellable = true)
