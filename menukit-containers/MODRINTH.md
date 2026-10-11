@@ -14,15 +14,15 @@ Runs on client and server. A server that has it requires it on every player's ga
 
 ## Install
 
-Minecraft 26.2 is unobfuscated, so both artifacts go on the plain `implementation` configuration:
+Minecraft 26.3 is unobfuscated, so both artifacts go on the plain `implementation` configuration:
 
 ```gradle
 repositories {
     maven { url 'https://api.modrinth.com/maven' }
 }
 dependencies {
-    implementation 'maven.modrinth:menukit:6.1.0+26.2'
-    implementation 'maven.modrinth:menukit-containers:6.1.0+26.2'
+    implementation 'maven.modrinth:menukit:6.1.1+26.3'
+    implementation 'maven.modrinth:menukit-containers:6.1.1+26.3'
 }
 ```
 
