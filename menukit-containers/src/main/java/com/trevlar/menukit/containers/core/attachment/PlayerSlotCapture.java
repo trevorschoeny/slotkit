@@ -14,28 +14,27 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * §0055 Phase 2 — the grave-capture surface. Generic over every death-droppable
- * MKC player content slot (the {@code PLAYER_DEATH_DROP} registry). A grave-mod
- * adapter captures (reads + clears) the slots into the grave's data and restores
- * them on collect by calling <em>this surface</em> — never individual slots. So
- * an adapter is <b>write-once-per-grave-mod</b>; every consumer's slots (Pockets,
- * Equipment, future) ride the same adapter for free.
+ * What grave-mod adapters call. Covers every death-droppable player content slot
+ * (the {@code PLAYER_DEATH_DROP} registry). An adapter captures the slots (reads and
+ * clears them) into the grave's data and restores them on collect through this
+ * class, never slot by slot. So each grave mod needs one adapter, and every
+ * consumer's slots (pockets, equipment and so on) go through it.
  *
- * <p><b>Ordering:</b> grave mods capture <em>before</em> vanilla drops the
- * inventory (Universal Graves injects ahead of {@code dropEquipment}), so
- * {@link #captureAndClear} runs upstream of the Phase-1 {@code dropEquipment}
- * floor — the floor then finds the slots empty and drops nothing. No dupes, no
- * explicit suppression. The clear here is the same write-back-empty Phase 1 uses;
- * respawn's {@code copyOnDeath} then carries an empty bag.
+ * <p>Grave mods capture before vanilla drops the inventory (Universal Graves
+ * injects ahead of {@code dropEquipment}), so {@link #captureAndClear} runs before
+ * the {@code dropEquipment} fallback, which then finds the slots empty and drops
+ * nothing. That avoids duplicates without any explicit suppression. The clear here
+ * is the same empty write-back the fallback uses, so respawn's {@code copyOnDeath}
+ * carries an empty bag.
  */
 public final class PlayerSlotCapture {
 
     private PlayerSlotCapture() {}
 
     /**
-     * One captured slot: stable identity (the attachment's registered
-     * {@link Identifier} + the local slot index) plus the stack. The id makes it
-     * serializable for grave round-trips (NBT-backed grave mods).
+     * One captured slot: its stable identity (the attachment's registered
+     * {@link Identifier} and the local slot index) plus the stack. The id lets it be
+     * serialized for grave mods that store NBT.
      */
     public record CapturedSlot(Identifier attachmentId, int index, ItemStack stack) {
         public static final Codec<CapturedSlot> CODEC = RecordCodecBuilder.create(i -> i.group(
@@ -44,15 +43,15 @@ public final class PlayerSlotCapture {
                 ItemStack.CODEC.fieldOf("stack").forGetter(CapturedSlot::stack)
         ).apply(i, CapturedSlot::new));
 
-        /** Codec for a whole capture — what an NBT-backed grave stores. */
+        /** Codec for a whole capture, which is what a grave that stores NBT keeps. */
         public static final Codec<List<CapturedSlot>> LIST_CODEC = CODEC.listOf();
     }
 
     /**
-     * For every death-droppable player content slot on {@code player}, read the
-     * non-empty stack and CLEAR the slot. Returns the captured slots for the
-     * adapter to push into the grave. Clearing makes the Phase-1 floor stand down
-     * (it finds the slots empty). Server-side.
+     * For every death-droppable player content slot on {@code player}, reads the
+     * non-empty stack and clears the slot. Returns the captured slots for the
+     * adapter to put in the grave. Because the slots are cleared, the fallback drop
+     * finds them empty and does nothing. Server side.
      */
     public static List<CapturedSlot> captureAndClear(ServerPlayer player) {
         List<CapturedSlot> captured = new ArrayList<>();
@@ -82,10 +81,11 @@ public final class PlayerSlotCapture {
     }
 
     /**
-     * Writes a captured stack back to its slot on grave collect. No-ops (returns
-     * false) if the attachment id is unknown or the index is out of range — the
-     * slot layout changed since capture (consumer reconfigured / removed the
-     * attachment); the caller handles such overflow (e.g. drops it).
+     * Writes a captured stack back to its slot on grave collect. Does nothing and
+     * returns false if the attachment id is unknown or the index is out of range,
+     * meaning the slot layout changed since capture (the consumer reconfigured or
+     * removed the attachment). The caller handles that overflow, for example by
+     * dropping it.
      *
      * @return true if restored to the slot; false if it couldn't be placed
      */
@@ -105,8 +105,8 @@ public final class PlayerSlotCapture {
     }
 
     /**
-     * Restores a whole capture; returns the stacks that could NOT be placed
-     * (unknown attachment / out-of-range index) so the caller can drop them.
+     * Restores a whole capture. Returns the stacks that could not be placed (unknown
+     * attachment or out-of-range index) so the caller can drop them.
      */
     public static List<ItemStack> restoreAll(ServerPlayer player, List<CapturedSlot> slots) {
         List<ItemStack> overflow = new ArrayList<>();

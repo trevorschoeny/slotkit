@@ -8,28 +8,26 @@ import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import java.util.Set;
 
 /**
- * MenuKit-Containers' implementation of MenuKit's neutral {@link com.trevlar.menukit.inject.SlotScreenHook} —
- * the one place panel-hosted registered-slot <em>input resolution</em> plugs into
- * MenuKit's library-owned screen dispatch (§0062). Registered with
- * {@code SlotScreenDispatcher.setHook} at MKC client init.
+ * Containers' implementation of MenuKit's {@link com.trevlar.menukit.inject.SlotScreenHook}.
+ * This is where input for registered slots hosted in panels plugs into MenuKit's
+ * screen dispatch. Registered with {@code SlotScreenDispatcher.setHook} at client
+ * init.
  *
- * <p>Input, plus the per-frame park. Vanilla draws a registered slot in its own
- * slot pass at the {@code Slot.x/y} its presenting {@code SlotElement} wrote, so
- * this hook renders nothing and holds no presence list. {@link #isCreated} marks the
- * layer boundary in vanilla's slot pass; {@link #endFrame} parks the attached slots
- * no panel presented this frame; the rest is hover/click resolution: fed by the live
- * {@link SlotElementRegistry} (the set of panel ids that currently host a
- * {@code SlotElement}), it asks {@link CreatedSlotInput} which {@code CreatedSlot} a screen
- * point covers, so vanilla's {@code getHoveredSlot} routes hover/click to the
- * registered slot rather than the vanilla slot beneath it — and eats clicks that land
- * in a revealed panel's empty space (the gap-block backstop).
+ * <p>It handles input and the per-frame park. Vanilla draws a registered slot in its
+ * own slot pass at the {@code Slot.x/y} its {@code SlotElement} wrote, so this hook
+ * renders nothing. {@link #isCreated} marks the layer boundary in vanilla's slot
+ * pass, and {@link #endFrame} parks the attached slots no panel showed this frame.
+ * The rest is hover and click resolution. Using the panel ids from
+ * {@link SlotElementRegistry} (those that currently host a {@code SlotElement}), it
+ * asks {@link CreatedSlotInput} which {@code CreatedSlot} a screen point covers, so
+ * vanilla's {@code getHoveredSlot} sends hover and clicks to the registered slot
+ * rather than the vanilla slot beneath it. It also eats clicks that land in a
+ * revealed panel's empty space.
  *
- * <p>Client-only — every method runs on the render/input thread; the server never
- * constructs this.
+ * <p>Client only: every method runs on the render and input thread, and the server
+ * never constructs this.
  */
 public final class CreatedSlotScreenHook implements SlotScreenHook {
-
-    // ── SlotScreenHook ─────────────────────────────────────────────────────
 
     @Override
     public boolean isCreated(net.minecraft.world.inventory.Slot slot) {
@@ -51,19 +49,18 @@ public final class CreatedSlotScreenHook implements SlotScreenHook {
         CreatedSlotInput.Resolution r =
                 CreatedSlotInput.resolveHoveredSlot(screen, mouseX, mouseY, ids);
         if (!r.handled()) return SlotHoverResult.PASS;
-        // handled with a slot → slot wins; handled with null → in-panel gap (block).
+        // Handled with a slot: the slot wins. Handled with null: a gap in the panel, so block.
         return r.slot() == null ? SlotHoverResult.BLOCK : SlotHoverResult.of(r.slot());
     }
 
     @Override
     public boolean mouseClicked(AbstractContainerScreen<?> screen,
                                 double mouseX, double mouseY, int button) {
-        // Gap-block backstop: eat a click that lands in a revealed panel's empty space
-        // so a carried item can't fall through to the inert vanilla slot behind it. A
-        // click on the slot itself is NOT eaten — getHoveredSlot routed it. For a
-        // panel-hosted SlotElement in an opaque panel this is a backstop: panel opacity
-        // already eats gap clicks at the MouseHandler level before this fires; it still
-        // covers a non-opaque panel of bare slots.
+        // Eat a click that lands in a revealed panel's empty space, so a carried item
+        // can't fall through to the inert vanilla slot behind it. A click on the slot
+        // itself is not eaten, since getHoveredSlot already routed it. In an opaque
+        // panel, opacity already eats gap clicks at the MouseHandler level before this
+        // runs; this still covers a non-opaque panel of bare slots.
         Set<String> ids = SlotElementRegistry.activePanelIds();
         if (ids.isEmpty()) return false;
         CreatedSlotInput.Resolution r =

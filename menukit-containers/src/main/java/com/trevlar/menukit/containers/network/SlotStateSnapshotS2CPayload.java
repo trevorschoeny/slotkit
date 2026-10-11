@@ -13,7 +13,7 @@ import java.util.List;
  * Server to client: every stored slot-state value on a menu, sent when the menu opens
  * and, for the player's own inventory menu, on join and respawn. Each entry names the
  * slot by its index in that menu and carries the value as the channel's
- * {@code StreamCodec} bytes (§0067). A client drops an entry for a channel it does not
+ * {@code StreamCodec} bytes. A client drops an entry for a channel it does not
  * have, or a value it cannot decode.
  */
 @ApiStatus.Internal

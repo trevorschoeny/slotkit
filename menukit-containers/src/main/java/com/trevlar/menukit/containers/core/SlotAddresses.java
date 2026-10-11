@@ -14,11 +14,11 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * Containers' kind-aware slot addressing rule, installed into MenuKit at common
- * init: a created slot ({@link CreatedSlot}, or the creative wrapper around one)
- * resolves to its menu-independent created address; a vanilla slot to its
- * container identity, else its menu address. One rule for the client's observers,
- * the operation seams, the vetoes and the slot-level gate, so a behaviour set on
- * a slot's address is found whichever path reaches it.
+ * init. A created slot ({@link CreatedSlot}, or the creative wrapper around one)
+ * resolves to its menu-independent created address. A vanilla slot resolves to its
+ * container identity, or else its menu address. The client's observers, the
+ * operation seams, the vetoes and the slot-level gate all use this one rule, so a
+ * behaviour set on a slot's address is found whichever path reaches it.
  *
  * <p>Internal plumbing: consumers mint created-slot addresses by identity
  * ({@code Address.createdSlot(group, index)}), never from a live slot.
@@ -44,7 +44,7 @@ public final class SlotAddresses {
         }
     };
 
-    /** The address of {@code slot} as it sits in {@code menu}, kind-dispatched. */
+    /** The address of {@code slot} as it sits in {@code menu}, by slot kind. */
     public static Address of(AbstractContainerMenu menu, Slot slot) {
         CreatedSlot created = CreatedSlotAccess.asMKCSlot(slot);
         if (created != null) return CreatedSlotAdapter.addressOf(created);

@@ -24,83 +24,76 @@ import java.util.List;
 import java.util.function.BooleanSupplier;
 
 /**
- * Slots real, server-synced, persistent slots onto a vanilla menu, the
- * library half of the §0055 "consumer-composed slot" pattern (IP Pockets,
- * IP Equipment Slots).
+ * Adds real, server-synced, persistent slots to a vanilla menu. This is the library's
+ * half of slots a consumer composes itself, such as pockets or extra equipment slots.
  *
  * <h3>Who calls this</h3>
  *
- * The <b>consumer</b> calls {@code CreatedSlots} from inside <b>their own</b>
- * mixin, injected at {@code TAIL} on the vanilla menu's constructor, e.g.
- * {@code InventoryMenu.<init>}. The library ships no such mixin and no slot
- * registry (§0019 / §0055): owning a vanilla injection point, or providing a
- * hook consumers register into, is the platform-shaped move library-not-platform
- * forbids. This class is a <em>stateless helper</em> the consumer's mixin
- * invokes imperatively, it registers and applies nothing on its own.
+ * The consumer calls {@code CreatedSlots} from their own mixin, injected at
+ * {@code TAIL} on the vanilla menu's constructor ({@code InventoryMenu.<init>}, for
+ * example). This path ships no such mixin and no slot registry, because owning a
+ * vanilla injection point or a hook consumers register into would make the library a
+ * platform. This class is a stateless helper the consumer's mixin calls directly; it
+ * registers and applies nothing on its own.
  *
- * <p>Because the vanilla constructor re-runs on every menu reconstruction
- * (login, respawn, dimension change, on both sides), registering from there means
- * the slots re-appear automatically, no separate lifecycle hook.
+ * <p>The vanilla constructor runs again every time the menu is rebuilt (login,
+ * respawn, dimension change, on both sides), so registering from there brings the
+ * slots back each time, with no separate lifecycle hook.
  *
  * <h3>What you get</h3>
  *
- * The registered slots are {@link CreatedSlot}s over a standalone {@link MenuPanel} +
- * {@link SlotGroup} (neither needs a {@code CustomContainerMenu}). That buys
- * the canonical inertness contract (§0065): when the panel is hidden the slots
- * are invisible <em>and</em> inert, {@code getItem} returns EMPTY, they reject
- * placement/pickup, and vanilla skips them for render + hover. The reveal
- * predicate below shows and hides the whole group at runtime (§0022).
+ * The slots are {@link CreatedSlot}s over a standalone {@link MenuPanel} and
+ * {@link SlotGroup}, neither of which needs a {@code CustomContainerMenu}. That gives
+ * the usual inertness rules: when the panel is hidden the slots are invisible and
+ * inert, {@code getItem} returns EMPTY, they refuse placement and pickup, and vanilla
+ * skips them for rendering and hover. The reveal predicate below shows and hides the
+ * whole group at runtime.
  *
- * <h3>Hover-reveal &amp; the sided-visibility subtlety</h3>
+ * <h3>Reveal on hover, and which side sees what</h3>
  *
  * {@code revealWhen(BooleanSupplier)} drives the panel's visibility from a
- * <b>client-side</b> predicate (e.g. "is the associated hotbar slot hovered").
- * The helper wraps it side-aware: <b>on the server the panel is always
- * visible</b> so {@code getItem} returns real content and vanilla's
- * {@code broadcastChanges} keeps syncing it; <b>on the client</b> the panel
- * gates render + input on the predicate. This is why content survives even
- * while the panel is hidden: hiding is a client rendering decision, not a
- * server content state. The predicate MUST be client-safe, it is only ever
- * invoked client-side, but it should live in a client-only class so the JVM
- * never class-loads client types on a dedicated server.
+ * client-side predicate ("is the matching hotbar slot hovered", say). The helper
+ * applies it per side. On the server the panel is always visible, so {@code getItem}
+ * returns the real content and vanilla's {@code broadcastChanges} keeps syncing it. On
+ * the client the predicate controls rendering and input. That is why content
+ * survives while the panel is hidden: hiding is a client rendering choice, not server
+ * state. The predicate must be client-safe. It only ever runs on the client, but it
+ * should live in a client-only class so a dedicated server never loads client types.
  *
- * <h3>Persistence &amp; metadata</h3>
+ * <h3>Persistence and slot state</h3>
  *
- * Item <em>content</em> persists by giving the slot a player- (or block-)
- * attached {@link Storage} (see {@link StorageAttachment}); sync is free via
- * vanilla's slot protocol (§0034). For per-slot <em>metadata</em> (lock flags,
- * etc.), back the slot with a {@link KeyedStorage} that returns a stable
- * {@link PersistentContainerKey}, M1's {@code SlotStateChannel} API then works
- * against the registered slots (§0055).
+ * Item content persists when the slot is backed by a player- or block-attached
+ * {@link Storage} (see {@link StorageAttachment}), and vanilla's slot protocol syncs
+ * it at no extra cost. For per-slot state (lock flags and the like), back the slot
+ * with a {@link KeyedStorage} that returns a stable {@link PersistentContainerKey};
+ * the {@code SlotStateChannel} API then works on these slots.
  *
- * <h3>Creative/survival parity (§0055)</h3>
+ * <h3>Creative and survival</h3>
  *
- * RegisteredSlots slots round-trip in <b>both</b> game modes with no consumer code.
- * Survival edits reach the slot through vanilla's container-click path; a
- * creative edit that vanilla's {@code handleSetCreativeModeSlot} would silently
- * discard (the registered index is past vanilla's {@code [1,45]} slot range) is
- * routed to the registered slot's backing {@code Storage} by the library's
- * creative-set-slot bridge ({@code CreativeSetSlotMixin}). Direct
- * click-to-place works in both modes; per-slot metadata (M1) lands with it.
+ * The slots round-trip in both game modes with no consumer code. Survival edits reach
+ * the slot through vanilla's container-click path. A creative edit that vanilla's
+ * {@code handleSetCreativeModeSlot} would silently discard (the index is past
+ * vanilla's {@code [1,45]} range) is routed to the slot's backing {@code Storage} by
+ * the library's {@code CreativeSetSlotMixin}. Direct click-to-place works in both
+ * modes, and per-slot state comes along with it.
  *
- * <h3>Scope, this menu only (use {@link ContainerPanel} for parity)</h3>
+ * <h3>One menu only (use {@link ContainerPanel} for parity)</h3>
  *
- * {@code onto} adds slots to the <em>single</em> menu the consumer's mixin targets
- * (e.g. {@code InventoryMenu}). It does <b>not</b> project onto other menus, open a
- * chest and the slots are not there. That is by design: {@code onto} is the surgical,
- * consumer-owns-the-mixin primitive for one menu. For container <em>parity</em> (the
- * same slots on every container screen, plus the foreign-menu projection and creative
- * wiring, all from one zero-mixin call) reach for {@link ContainerPanel#define}
- * instead, it builds on this primitive and adds the projection + chrome. Pick
- * {@code onto} only when you specifically want slots on one menu you mixin into.
+ * {@code onto} adds slots to the one menu the consumer's mixin targets (such as
+ * {@code InventoryMenu}). It does not project onto other menus: open a chest and the
+ * slots are not there. That is on purpose, since {@code onto} is the narrow tool for
+ * one menu whose mixin the consumer owns. For container parity (the same slots on
+ * every container screen, with the foreign-menu projection and creative wiring, from
+ * one call and no mixin) use {@link ContainerPanel#define}. It builds on this and
+ * adds the projection and the panel around the slots. Use {@code onto} only when you
+ * want slots on one menu you mix into.
  *
  * <h3>Known limitation</h3>
  *
- * Shift-click (quick-move) <em>into</em> a registered slot is not free: vanilla's
- * {@code quickMoveStack} has no knowledge of registered slots. Direct click-to-place
- * works out of the box (in both modes, per above); full shift-click routing is
- * consumer-side work (the consumer may override {@code quickMoveStack} in their
- * own mixin) or deferred.
+ * Shift-click into these slots does not work by default, because vanilla's
+ * {@code quickMoveStack} knows nothing about them. Direct click-to-place works in both
+ * modes. Full shift-click routing is up to the consumer (who may override
+ * {@code quickMoveStack} in their own mixin), or left for later.
  *
  * <h3>Recipe</h3>
  *
@@ -133,65 +126,63 @@ public final class CreatedSlots {
     public static final int SLOT_PITCH = 18;
 
     /**
-     * Off-screen sentinel for a registered slot's vanilla {@code Slot.x/y} (§0055).
-     * A registered slot is born here, and returns here at the end of any frame in
-     * which no panel presented it ({@link SlotElementRegistry#parkUnpresented});
-     * the panel that presents it writes its real {@code x/y} each frame. Parked,
-     * vanilla's slot pass and hover resolution are harmless no-ops for it. Same coordinate the creative
-     * wrapper is parked at ({@code MKCCreativeSlotParkMixin}).
+     * Off-screen position for a registered slot's vanilla {@code Slot.x/y}. A new slot
+     * starts here and returns here at the end of any frame in which no panel showed it
+     * ({@link SlotElementRegistry#parkUnpresented}); the panel that shows it writes its
+     * real {@code x/y} each frame. Parked here, vanilla's slot pass and hover checks
+     * do nothing with it. The creative wrapper is parked at the same coordinate
+     * ({@code MKCCreativeSlotParkMixin}).
      */
     static final int OFFSCREEN = -10000;
 
     private CreatedSlots() {}
 
     /**
-     * The {@link SlotGroupId} naming a group registered through
-     * {@link #onto}, what a {@code SlotGroupPanelAdapter.onGroup(...)} anchors
-     * to. This path registers under the bare declared panel id, unlike the
-     * container-parity path ({@code ContainerPanel.groupId}), which derives one.
+     * The {@link SlotGroupId} of a group registered through {@link #onto}, which is
+     * what {@code SlotGroupPanelAdapter.onGroup(...)} anchors to. This path registers
+     * under the declared panel id as is, unlike the container-parity path
+     * ({@code ContainerPanel.groupId}), which derives one.
      */
     public static SlotGroupId.Created groupId(String panelId, String groupId) {
         return SlotGroupId.created(panelId, groupId);
     }
 
-    /** Capitalizes the first letter for a default display label from a group id. */
     private static String capitalize(String s) {
         if (s == null || s.isEmpty()) return "Slot";
         return Character.toUpperCase(s.charAt(0)) + s.substring(1);
     }
 
     /**
-     * The result of a slot: the {@link MenuPanel} and {@link SlotGroup} that
-     * were created, plus the flat slot-index range appended to the menu (for
-     * consumers that need to walk the registered slots directly). Empty (no slots,
-     * {@code flatStart == flatEnd}) on a client whose server does not run
-     * Containers (§0069).
+     * What {@code register()} created: the {@link MenuPanel} and {@link SlotGroup},
+     * plus the slot-index range appended to the menu, for consumers that walk the
+     * slots directly. Empty (no slots, {@code flatStart == flatEnd}) on a client
+     * whose server does not run Containers.
      *
-     * <p>{@code register()} adds only the synced slot DATA. To make the slots
-     * actually draw and take input, present them from the client: a panel of
-     * {@code SlotElement}s, or {@code ClientSlots.renderGroup(...)} once at client
-     * init with the same {@code panelId} / {@code groupId}.
+     * <p>{@code register()} adds only the synced slot data. To make the slots draw and
+     * take input, show them from the client: a panel of {@code SlotElement}s, or
+     * {@code ClientSlots.renderGroup(...)} once at client init with the same
+     * {@code panelId} and {@code groupId}.
      */
     public record RegisteredSlots(MenuPanel panel, SlotGroup group, int flatStart, int flatEnd,
                           List<CreatedSlot> slots) {}
 
     /**
-     * Begins a slot onto {@code menu} owned by {@code player}. Call from the
-     * consumer's {@code @Inject(at = TAIL)} on the vanilla menu's constructor,
-     * where both the menu ({@code this}) and the owning player are in scope.
+     * Starts adding slots to {@code menu}, owned by {@code player}. Call from the
+     * consumer's {@code @Inject(at = TAIL)} on the vanilla menu's constructor, where
+     * both the menu ({@code this}) and the owning player are in scope.
      */
     public static Builder onto(AbstractContainerMenu menu, Player player) {
         return new Builder(menu, player);
     }
 
-    /** Fluent configuration for a single slot. Terminates in {@code register()}. */
+    /** Configures one group of slots. Ends with {@code register()}. */
     public static final class Builder {
         private final AbstractContainerMenu menu;
         private final Player player;
 
         private String panelId = "menukit:slot";
         private String groupId = "slot";
-        private SlotGroupCategory category;                   // required, what the group IS
+        private SlotGroupCategory category;                   // required: what the group is
         private Storage storage;                              // required
         private int columns = 9;
         private int originX = 0;
@@ -204,32 +195,31 @@ public final class CreatedSlots {
             this.player = player;
         }
 
-        /** Panel id (unique per slot). Used for inertness + render anchoring. */
+        /** Panel id, unique per group. Used for inertness and render anchoring. */
         public Builder panel(String id) { this.panelId = id; return this; }
 
         /** Slot-group id within the panel. */
         public Builder group(String id) { this.groupId = id; return this; }
 
         /**
-         * What the group is, in MenuKit core's registry vocabulary. Required, see
-         * {@link SlotSpec#at(String, SlotGroupCategory)} for why there is no
-         * default. The group is published under it in
+         * What the group is, in MenuKit core's registry terms. Required; see
+         * {@link SlotSpec#at(String, SlotGroupCategory)} for why there is no default.
+         * The group is listed under it in
          * {@code SlotGroupCategories.of(menu)} on every menu it sits on.
          */
         public Builder category(SlotGroupCategory category) { this.category = category; return this; }
 
         /**
-         * Where items live. Required. Use a {@link StorageAttachment}-bound
-         * storage for content persistence, or a {@link KeyedStorage} (which
-         * declares its own {@link PersistentContainerKey}) for per-slot
-         * metadata persistence on top.
+         * Where items live. Required. Use storage bound from a {@link StorageAttachment}
+         * to persist content, or a {@link KeyedStorage} (which declares its own
+         * {@link PersistentContainerKey}) to persist per-slot state as well.
          */
         public Builder storage(Storage storage) { this.storage = storage; return this; }
 
         /**
-         * Slot layout: screen-relative origin (added to the screen's
-         * {@code leftPos}/{@code topPos} at render time) and column count.
-         * Slots fill left-to-right, top-to-bottom on an 18px grid.
+         * Slot layout: an origin relative to the screen (added to its {@code leftPos}
+         * and {@code topPos} at render time) and a column count. Slots fill left to
+         * right, top to bottom on an 18px grid.
          */
         public Builder layout(int originX, int originY, int columns) {
             this.originX = originX;
@@ -239,11 +229,10 @@ public final class CreatedSlots {
         }
 
         /**
-         * Client-side reveal predicate. The panel (and therefore the whole
-         * registered group) is visible + interactive on the client only while
-         * this returns true; the server keeps the slots syncing regardless
-         * (see class javadoc). MUST be client-safe. If unset, the group is
-         * always visible on the client.
+         * Client-side reveal predicate. The panel, and so the whole group, is visible and
+         * usable on the client only while this returns true; the server keeps the
+         * slots syncing either way (see the class doc). Must be client-safe. If unset,
+         * the group is always visible on the client.
          */
         public Builder revealWhen(BooleanSupplier clientReveal) {
             this.revealWhen = clientReveal;
@@ -251,12 +240,12 @@ public final class CreatedSlots {
         }
 
         /**
-         * Display label for these slots' names (a window-display concern, §0062 MK-side).
-         * Each slot is named {@code "<label> <ordinal>"} (or just {@code "<label>"} for a
-         * single slot), registered against the slot's address so {@code WindowSignals
-         * .hoveredName()} / a consumer's {@code SlotNames} lookup returns it. Defaults to
-         * the capitalized {@code groupId}. A consumer wanting a specific per-slot name can
-         * still call {@code SlotNames.override(address, name)} afterward.
+         * Display label for these slots' names. Each slot is named
+         * {@code "<label> <ordinal>"}, or just {@code "<label>"} for a single slot,
+         * registered against the slot's address so {@code WindowSignals.hoveredName()}
+         * and a consumer's {@code SlotNames} lookup return it. Defaults to the
+         * capitalized {@code groupId}. A consumer can still set a specific name for one
+         * slot with {@code SlotNames.override(address, name)} afterwards.
          */
         public Builder label(String displayLabel) {
             this.displayLabel = displayLabel;
@@ -264,10 +253,10 @@ public final class CreatedSlots {
         }
 
         /**
-         * Builds the standalone {@link MenuPanel}/{@link SlotGroup}, constructs the
-         * inertness-aware {@link CreatedSlot}s over a {@link StorageContainerAdapter},
-         * and appends them to the menu (via the vanilla {@code addSlot} invoker,
-         * which keeps the sync-tracking lists consistent). Returns the handle.
+         * Builds the standalone {@link MenuPanel} and {@link SlotGroup}, creates the
+         * {@link CreatedSlot}s over a {@link StorageContainerAdapter}, and appends them
+         * to the menu through vanilla's {@code addSlot}, which keeps the sync-tracking
+         * lists consistent. Returns the result.
          */
         public RegisteredSlots register() {
             if (storage == null) {
@@ -286,42 +275,40 @@ public final class CreatedSlots {
             // listed from the title screen declares it at init as well.
             com.trevlar.menukit.api.slot.SlotGroups.declareDerived(groupId(panelId, groupId), category);
 
-            // 1. Standalone SlotGroup, storage + layout only. Behavior
-            //    (gating/quick-move/binding/mending) is not carried here; it
-            //    resolves from the engine by each slot's address (default = vanilla),
-            //    armed by the consumer via Window.slot(address).set(...).
+            // 1. A standalone SlotGroup with storage and layout only. Behaviour
+            //    (gating, quick-move, binding, mending) resolves from the engine by
+            //    each slot's address (vanilla by default), set by the consumer with
+            //    Window.slot(address).set(...).
             SlotGroup group = new SlotGroup(
                     groupId, category, storage,
                     /*shiftClickPriority*/ 100, columns, /*rowGapAfter*/ -1, /*rowGapSize*/ 0);
 
             // 2. The panel as the menu knows it: its id, and whether its slots are
-            //    shown. Side-aware reveal: the server always shows it (so getItem
-            //    returns real content and broadcastChanges syncs it); the client gates
-            //    on the consumer's predicate. The predicate is only evaluated when
-            //    isClientSide() is true, so a client-only predicate never runs (nor
-            //    class-loads) on the server.
+            //    shown. The server always shows it, so getItem returns real content and
+            //    broadcastChanges syncs it; the client follows the consumer's predicate.
+            //    The predicate is only evaluated when isClientSide() is true, so a
+            //    client-only predicate never runs or loads on the server.
             final BooleanSupplier reveal = this.revealWhen;
             MenuPanel panel = new MenuPanel(panelId, () ->
                     !player.level().isClientSide()    // server side: always shown
                     || reveal == null                 // no predicate: always shown
-                    || reveal.getAsBoolean());         // client side: gate on the predicate
+                    || reveal.getAsBoolean());         // client side: follow the predicate
 
-            // §0069: a client whose server does not run Containers builds no created
+            // A client whose server does not run Containers builds no created
             // slots, so its menus keep the server's slot count instead of desyncing.
             if (!com.trevlar.menukit.containers.network.Presence.buildsCreatedSlots(player.level().isClientSide())) {
                 int at = menu.slots.size();
                 return new RegisteredSlots(panel, group, at, at, List.of());
             }
 
-            // 3. Build + append the registered slots.
+            // 3. Build and append the slots.
             //
-            // §0055: a registered slot's position is mutable presentation, not
-            // frozen structure. It is born PARKED off-screen (vanilla draws and
-            // hit-tests nothing there) and the panel that presents it, its
-            // SlotElement, on the panel pipeline, writes its real position into
-            // vanilla's Slot.x/y every frame, before vanilla's slot pass. The
-            // seed layout (originX/originY/columns) is the elements' layout
-            // (ClientSlots.renderGroup), not the slot's.
+            // A slot's position is presentation that changes, not fixed structure. It
+            // starts parked off-screen (vanilla draws and hit-tests nothing there),
+            // and the panel that shows it (its SlotElement) writes its real position
+            // into vanilla's Slot.x/y every frame, before vanilla's slot pass. The
+            // originX/originY/columns layout is the elements' layout
+            // (ClientSlots.renderGroup), not the slots'.
             StorageContainerAdapter adapter = new StorageContainerAdapter(storage);
             AbstractContainerMenuInvoker inv = (AbstractContainerMenuInvoker) menu;
 
@@ -336,11 +323,11 @@ public final class CreatedSlots {
             int flatEnd = menu.slots.size();
             group.setFlatIndexRange(flatStart, flatEnd);
 
-            // Display names, client-only (naming is a window-display concern; the
-            // server never reads them, and this keeps MK display types off the server
-            // path). Keyed by the SAME address minter the window uses to resolve a
-            // created slot, so WindowSignals.hoveredName() matches. §0062: MK never
-            // sees CreatedSlot, CreatedSlotAdapter maps (panel,group,index) → Address.
+            // Display names, client only: the server never reads them, and this keeps
+            // MenuKit's display types off the server path. Keyed by the same address
+            // the window uses to resolve a created slot, so WindowSignals.hoveredName()
+            // matches. MenuKit never sees CreatedSlot; CreatedSlotAdapter maps
+            // (panel, group, index) to an Address.
             if (player.level().isClientSide()) {
                 String label = displayLabel != null ? displayLabel : capitalize(groupId);
                 int size = storage.size();

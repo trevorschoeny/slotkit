@@ -6,7 +6,7 @@ import net.minecraft.client.Minecraft;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * The client's side of the presence check (§0069): forget what the last server said
+ * The client's side of the presence check: forget what the last server said
  * when a configuration starts, answer the server's hello with this game's protocol,
  * and record that the server runs Containers. A server without it never says hello,
  * so the flag stays off and the client builds no created slots on it.

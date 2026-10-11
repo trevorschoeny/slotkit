@@ -20,16 +20,15 @@ import java.util.function.Function;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Internal registry for M1 channels + container resolvers. Not public API —
- * consumers reach it indirectly via
- * {@link com.trevlar.menukit.containers.api.state.SlotState}.
+ * Internal registry for slot-state channels and container resolvers. Not public API;
+ * consumers reach it through {@link com.trevlar.menukit.containers.api.state.SlotState}.
  */
 @ApiStatus.Internal
 public final class SlotStateRegistry {
 
     private SlotStateRegistry() {}
 
-    // ── Channels ────────────────────────────────────────────────────────
+    // Channels
 
     private static final Map<Identifier, SlotStateChannel<?>> CHANNELS = new LinkedHashMap<>();
 
@@ -53,10 +52,9 @@ public final class SlotStateRegistry {
         return CHANNELS.values();
     }
 
-    // ── Container resolvers ─────────────────────────────────────────────
-    //
-    // Container identity lives in MenuKit since 6.0.0 (§0062, ContainerIdentity);
-    // these delegate so slot state and addressing agree on every key.
+    // Container resolvers. Container identity has lived in MenuKit
+    // (ContainerIdentity) since 6.0.0; these delegate so slot state and addressing
+    // agree on every key.
 
     public static <T extends BlockEntity> void registerBlockEntityResolver(
             Class<T> clazz, Function<T, PersistentContainerKey> resolver) {

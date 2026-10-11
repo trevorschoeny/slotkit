@@ -8,25 +8,24 @@ import org.jspecify.annotations.Nullable;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Resolver-namespaced slot-state bags for player-scoped registered slots
- * (§0055). Wraps a {@link CompoundTag} whose keys are slot resolver-id
- * strings and whose values are {@link SlotStateBag}s. Attached to a
- * {@code Player} via {@link SlotStateAttachments#MODDED_PLAYER}.
+ * Slot-state bags for player-scoped registered slots, one per resolver id. Wraps a
+ * {@link CompoundTag} whose keys are slot resolver-id strings and whose values are
+ * {@link SlotStateBag}s. Attached to a {@code Player} through
+ * {@link SlotStateAttachments#MODDED_PLAYER}.
  *
- * <p>The resolver-id namespace keeps multiple slots on the same player from
- * colliding: a mod registering both "pockets" and "equipment" onto the inventory
- * gets a distinct bag per resolver-id, so their independent slot-index spaces
- * (each {@code 0..N}) never overwrite each other — and the same holds across
- * mods (§0019 coexistence).
+ * <p>Keying by resolver id keeps several slots on the same player apart. A mod that
+ * registers both "pockets" and "equipment" on the inventory gets a separate bag for
+ * each, so their slot indices (each {@code 0..N}) never overwrite each other. The
+ * same holds across mods.
  *
- * <p>Same shape as {@link PerPlayerSlotStateBag}, but keyed by resolver-id
- * rather than viewer UUID: here the owner <em>is</em> the player, and the
- * namespace is the slot, not the viewer.
+ * <p>Same shape as {@link PerPlayerSlotStateBag}, but keyed by resolver id rather
+ * than viewer UUID: here the owner is the player, and the key is the slot, not the
+ * viewer.
  */
 @ApiStatus.Internal
 public final class NamespacedSlotStateBag {
 
-    /** Codec that round-trips the bag to/from a CompoundTag (attachment persistence). */
+    /** Round-trips the bag through a CompoundTag, for attachment persistence. */
     public static final Codec<NamespacedSlotStateBag> CODEC =
             CompoundTag.CODEC.xmap(NamespacedSlotStateBag::new, NamespacedSlotStateBag::backing);
 
@@ -45,14 +44,13 @@ public final class NamespacedSlotStateBag {
     }
 
     /**
-     * Returns the bag for {@code resolverId}, creating an empty one if absent.
-     * The returned bag is backed by this storage — mutating it mutates the
-     * underlying CompoundTag.
+     * Returns the bag for {@code resolverId}, creating an empty one if absent. The
+     * returned bag writes through to the underlying CompoundTag.
      */
     public SlotStateBag getOrCreate(Identifier resolverId) {
         String key = resolverId.toString();
         CompoundTag sub = backing.getCompoundOrEmpty(key);
-        backing.put(key, sub); // back-write so a fresh empty sub-tag sticks
+        backing.put(key, sub); // write back so a fresh empty sub-tag sticks
         return new SlotStateBag(sub);
     }
 

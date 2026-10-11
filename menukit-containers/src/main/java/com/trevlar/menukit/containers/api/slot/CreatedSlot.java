@@ -15,64 +15,56 @@ import net.minecraft.world.item.ItemStack;
 import org.jspecify.annotations.Nullable;
 
 /**
- * A vanilla {@link Slot} to the outside world. Carries its coordinates
- * in the hierarchy as final fields and delegates behavior to its owning
+ * A slot that is a vanilla {@link Slot} to everything outside it. It keeps its place
+ * in the hierarchy (panel, group, index) in final fields and belongs to a
  * {@link SlotGroup}.
  *
- * <p>This is the substitutability contract in code. It holds for BEHAVIOR.
- * every override either calls {@code super} or delegates in a way that
- * preserves vanilla's behavioral contract, and for PRESENTATION: the slot's
- * position is vanilla's own {@code Slot.x/y}, vanilla's slot pass draws it, and
- * vanilla's {@code getHoveredSlot} finds it (see {@code ContainerScreenLayers}
- * in MenuKit). A third party's {@code extractSlot} mixin, or any code walking
- * {@code menu.slots} and reading {@code x/y}, sees a created slot and a vanilla
- * slot as the same thing because they go through the same calls. The
- * behavioral overrides:
+ * <p>It behaves like a vanilla slot. Every override calls {@code super}, so
+ * vanilla's behaviour and other mods' mixins still apply. It is also presented like
+ * one: its position is vanilla's own {@code Slot.x/y}, vanilla's slot pass draws it,
+ * and vanilla's {@code getHoveredSlot} finds it (see {@code ContainerScreenLayers} in
+ * MenuKit). A third party's {@code extractSlot} mixin, or any code that walks
+ * {@code menu.slots} and reads {@code x/y}, treats a created slot and a vanilla slot
+ * the same because they go through the same calls. The overrides:
  * <ul>
- *   <li>{@code mayPlace}, group policy AND super (mixin chain composes)</li>
- *   <li>{@code mayPickup}, group policy AND super</li>
- *   <li>{@code getMaxStackSize}, min of group limit and super</li>
- *   <li>{@code getItem}, returns EMPTY when inert, otherwise super</li>
- *   <li>{@code isActive}, returns false when panel is hidden</li>
+ *   <li>{@code mayPlace}: false when inert, otherwise super</li>
+ *   <li>{@code mayPickup}: false when inert, otherwise super</li>
+ *   <li>{@code getItem}: EMPTY when inert, otherwise super</li>
+ *   <li>{@code isActive}: false when the panel is hidden, otherwise super</li>
  * </ul>
  *
- * <p>A mod that mixins into {@code Slot.mayPlace} to add a global filter
- * sees its filter run on MenuKit slots via the {@code super.mayPlace} call.
- * The most restrictive answer wins. A mod iterating slots sees inert
- * MenuKit slots as empty, which is a valid state for any slot.
+ * <p>A mod that mixes into {@code Slot.mayPlace} to add a global filter sees its
+ * filter run on MenuKit slots through the {@code super.mayPlace} call, and the most
+ * restrictive answer wins. A mod iterating slots sees inert MenuKit slots as empty,
+ * which is a valid state for any slot.
  *
- * <p>Part of the canonical MenuKit hierarchy:
- * Screen → Panel → SlotGroup → CreatedSlot
+ * <p>Hierarchy: Screen, then Panel, then SlotGroup, then CreatedSlot.
  */
 public class CreatedSlot extends Slot {
 
-    // ── Coordinates in the hierarchy (final, never desync) ─────────────
     private final String panelId;
     private final String groupId;
     private final int localIndex;
 
-    // ── Owning group (final, behavior delegation target) ───────────────
     private final SlotGroup group;
 
-    // ── Owning panel (final, visibility query target for inertness) ────
+    // Its visibility decides whether the slot is inert.
     private final MenuPanel panel;
 
-    // Presentation position: vanilla's own Slot.x/y, nothing else. The panel
-    // that presents this slot (its SlotElement) writes the panel-resolved
-    // position there each frame, before vanilla's slot pass, so vanilla draws
-    // and hit-tests a created slot exactly as it does a vanilla slot, and so
-    // does every other mod's slot hook. §0055 (position is mutable
-    // presentation, identity frozen) holds: x/y are client-only and never
-    // synced. Built parked off-screen (CreatedSlots.OFFSCREEN) until a panel
-    // presents it.
+    // Position is vanilla's own Slot.x/y and nothing else. The panel that shows
+    // this slot (its SlotElement) writes the resolved position there every frame,
+    // before vanilla's slot pass, so vanilla and every other mod's slot hook draw
+    // and hit-test a created slot exactly as they do a vanilla slot. Position can
+    // change but identity cannot: x/y are client-only and never synced. A new slot
+    // sits off-screen (CreatedSlots.OFFSCREEN) until a panel shows it.
 
     /**
      * @param container      vanilla Container adapter (from handler construction)
      * @param containerIndex index within the container
      * @param x              screen x position
      * @param y              screen y position
-     * @param group          owning SlotGroup (behavior delegation target)
-     * @param panel          owning panel as the menu knows it (visibility query target for inertness)
+     * @param group          owning SlotGroup
+     * @param panel          owning panel as the menu knows it (its visibility decides inertness)
      * @param groupId        group identifier within the panel
      * @param localIndex     slot index within the group (0-based)
      */
@@ -87,18 +79,16 @@ public class CreatedSlot extends Slot {
         this.localIndex = localIndex;
     }
 
-    // ── Coordinate Accessors ────────────────────────────────────────────
-
-    /** Panel this slot belongs to. */
     /**
      * The created slot {@code slot} is, or {@code null} for any other slot. Sees
-     * through creative's slot wrapper, so it answers for a slot taken from any
-     * screen's menu (§0068).
+     * through creative's slot wrapper, so it works for a slot taken from any
+     * screen's menu.
      */
     public static @Nullable CreatedSlot of(Slot slot) {
         return CreatedSlotAccess.asMKCSlot(slot);
     }
 
+    /** Panel this slot belongs to. */
     public String panelId() { return panelId; }
 
     /** Group this slot belongs to within its panel. */
@@ -107,16 +97,15 @@ public class CreatedSlot extends Slot {
     /** Index within the group (0-based). */
     public int getLocalIndex() { return localIndex; }
 
-    /** The SlotGroup that owns this slot's behavior. */
+    /** The SlotGroup this slot belongs to. */
     public SlotGroup getGroup() { return group; }
 
-    // ── Address (the side-table key for ALL this slot's behavior) ────────
-    // THE ONE WINDOW: behavior lives in the engine keyed by this address, never
-    // on the slot. Identity fields are final, so the address is immutable, cache
-    // it lazily (a benign double-compute is harmless; the value is equal either way).
+    // All of this slot's behaviour lives in the engine, keyed by this address, never
+    // on the slot. The identity fields are final, so the address never changes and is
+    // cached lazily. Computing it twice is harmless; the value is equal either way.
     private Address cachedAddress;
 
-    /** This slot's menu-independent created {@link Address}, the key behavior is resolved by. */
+    /** This slot's created {@link Address}, the same in every menu. Behaviour is resolved by it. */
     public Address address() {
         Address a = cachedAddress;
         if (a == null) {
@@ -126,31 +115,26 @@ public class CreatedSlot extends Slot {
         return a;
     }
 
-    // ── Inertness ───────────────────────────────────────────────────────
-
     /**
-     * Returns true when this slot's panel is hidden. An inert slot is
-     * indistinguishable from a non-existent one to the outside world:
-     * getItem returns EMPTY, canInsert returns false, shift-click skips it.
+     * True when this slot's panel is hidden. To the outside world an inert slot looks
+     * like no slot at all: getItem returns EMPTY, mayPlace returns false, and
+     * shift-click skips it.
      *
-     * <p>Exposed for well-behaved third parties that want to check
-     * explicitly rather than relying on the behavioral methods.
+     * <p>Public for third parties that want to check directly rather than rely on
+     * those methods.
      */
     public boolean isInert() {
         return !panel.isShown();
     }
 
-    // ── Behavioral Overrides (the substitutability contract) ────────────
-    //
-    // Each override composes with super so that other mods' mixins into
-    // Slot run in the chain. MenuKit's additions layer ON TOP of vanilla
-    // behavior, never replace it.
+    // Each override calls super so other mods' mixins into Slot still run. MenuKit
+    // adds to vanilla behaviour and never replaces it.
 
     /**
-     * Can this stack be placed in this slot? An inert slot refuses; otherwise
-     * vanilla's own answer, which MenuKit's slot-level seam has already gated by
-     * this slot's created address ({@code MKSlotGateMixin}). Composes with super so
-     * a mixin on {@code Slot.mayPlace} still runs.
+     * Whether this stack can be placed here. An inert slot refuses. Otherwise this is
+     * vanilla's own answer, which MenuKit's slot gate ({@code MKSlotGateMixin}) has
+     * already checked against this slot's address. Calls super, so a mixin on
+     * {@code Slot.mayPlace} still runs.
      */
     @Override
     public boolean mayPlace(ItemStack stack) {
@@ -158,46 +142,38 @@ public class CreatedSlot extends Slot {
         return super.mayPlace(stack);
     }
 
-    /** Can items be taken from this slot? Inert refuses; the gate and Curse of Binding answer in the seam. */
+    /** Whether items can be taken. Inert refuses; the slot gate and Curse of Binding are checked in MenuKit's mixin. */
     @Override
     public boolean mayPickup(Player player) {
         if (isInert()) return false;
         return super.mayPickup(player);
     }
 
-    // No override for getMaxStackSize() (no-arg). The policy's maxStackSize
-    // function is item-specific, calling it with ItemStack.EMPTY returns 1,
-    // which would break everything. Vanilla's Slot.getMaxStackSize() returns
-    // container.getMaxStackSize() (99), which is correct as the slot-level
-    // capacity limit. Item-specific limits are handled by the ItemStack overload above.
+    // No override for the no-argument getMaxStackSize(). A stack-size policy is
+    // per item, and calling it with ItemStack.EMPTY returns 1, which would break
+    // everything. Vanilla's Slot.getMaxStackSize() returns
+    // container.getMaxStackSize() (99), which is the right slot-level limit.
 
     /**
-     * Returns the item in this slot, or {@link ItemStack#EMPTY} when the
-     * panel is inert. This is the data-level inertness, hidden panels'
-     * backing storage is never exposed to the world.
+     * Returns the item in this slot, or {@link ItemStack#EMPTY} when the panel is
+     * inert, so a hidden panel's storage is never exposed.
      *
-     * <p><b>Why this override is load-bearing.</b> Behavioral inertness
-     * ({@link #isActive} false, {@link #mayPlace} false, {@link #mayPickup}
-     * false) blocks interaction but not observation. Without this override,
-     * any caller that reads {@code slot.getItem()} on a hidden slot, vanilla
-     * {@code broadcastChanges} syncing to the client, foreign mixins on
-     * {@code Slot.getItem}, consumer code iterating {@code menu.slots}.
-     * sees the real backing content. That leaks per-player state held in
-     * hidden-panel storage (e.g. lock metadata, private inventories, sort
-     * state) across the client-server boundary and through arbitrary mod
-     * hooks.
+     * <p>{@link #isActive}, {@link #mayPlace} and {@link #mayPickup} returning false
+     * block interaction but not reading. Without this override, anything that reads
+     * {@code slot.getItem()} on a hidden slot (vanilla's {@code broadcastChanges}
+     * syncing to the client, other mods' mixins on {@code Slot.getItem}, consumer code
+     * walking {@code menu.slots}) would see the real contents. That would leak
+     * per-player state kept in hidden-panel storage (lock state, private
+     * inventories, sort state) to the client and to any mod hook.
      *
-     * <p>Falsifying to EMPTY while inert closes that seam. When the panel
-     * becomes visible, {@code broadcastChanges} detects the change and
-     * pushes real content to the client. This is a deliberate, localized
-     * falsification, the backing {@link com.trevlar.menukit.api.slot.Storage}
-     * still holds the truth, accessible via the storage directly for
-     * consumer code that owns the panel.
+     * <p>Returning EMPTY while inert prevents that. When the panel becomes visible,
+     * {@code broadcastChanges} sees the change and sends the real contents to the
+     * client. The backing {@link com.trevlar.menukit.api.slot.Storage} still holds
+     * the real items, and consumer code that owns the panel can read it directly.
      *
-     * <p>Contract: inertness is "hidden == invisible to the world".
-     * interaction <em>and</em> observation. Both layers are load-bearing
-     * for the library's canonical inertness guarantee (see
-     * {@code /mkverify all}'s Inertness + SyncSafety probes).
+     * <p>Inert means hidden from the world for both interaction and reading. Both
+     * are needed for the library's inertness guarantee (see the Inertness and
+     * SyncSafety probes in {@code /mkverify all}).
      */
     @Override
     public ItemStack getItem() {
@@ -206,11 +182,11 @@ public class CreatedSlot extends Slot {
     }
 
     /**
-     * Returns whether this slot is active (visible and interactable).
+     * Whether this slot is active (visible and usable).
      *
-     * <p>When false, vanilla skips this slot for rendering and hover
-     * detection. Combined with {@link #getItem} returning EMPTY while
-     * inert, this makes hidden slots truly invisible to the world.
+     * <p>When false, vanilla skips the slot for rendering and hover detection.
+     * Together with {@link #getItem} returning EMPTY while inert, this hides the slot
+     * from the world entirely.
      */
     @Override
     public boolean isActive() {

@@ -13,34 +13,26 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Observes block-entity removal to drop M7 {@code blockScoped} attachment
- * contents as item entities before the BlockEntity is destroyed.
+ * Drops the contents of {@code blockScoped} storage attachments as item entities
+ * when a block entity is removed, before it is destroyed. Consumers using
+ * {@code StorageAttachment.blockScoped(...)} get the same drop-on-break behaviour as
+ * a vanilla container with no extra work.
  *
- * <p>Fulfills M7's vanilla-container drop-on-break contract — consumers
- * who use {@code StorageAttachment.blockScoped(...)} get
- * vanilla-parity drop behavior automatically. Matches THESIS Principle 2
- * vanilla-substitutability: M7's block-scoped contract aligns with
- * vanilla container block semantics including drop-on-break.
+ * <p>Targets {@link BlockEntity#preRemoveSideEffects(BlockPos, BlockState)} at
+ * HEAD. In 26.2 this is the pre-removal hook where vanilla drops container contents
+ * ({@code BaseContainerBlockEntity.preRemoveSideEffects} calls
+ * {@code Containers.dropContents}). Dropping at HEAD means attachment contents drop
+ * alongside the vanilla block entity's inventory, in the same frame and with the
+ * same physics.
  *
- * <p>Targets {@link BlockEntity#preRemoveSideEffects(BlockPos, BlockState)}
- * at HEAD. This is 26.2's canonical pre-removal side-effects hook —
- * vanilla's own container-content drop logic runs here (via
- * {@code BaseContainerBlockEntity.preRemoveSideEffects} which calls
- * {@code Containers.dropContents}). Running our drop at HEAD means M7
- * contents drop alongside the vanilla BE inventory, in the same frame,
- * with the same physics.
+ * <p>The injection only reads the attachment. It doesn't cancel or change vanilla's
+ * removal, so other mods can inject at the same point. Drops happen on the server
+ * only, because {@link BlockScopedDropHandler#dropAllAt(Level, BlockPos, BlockEntity)}
+ * checks {@code level.isClientSide()}.
  *
- * <p>HEAD injection is observational — this mixin reads the attachment
- * before destruction but does not cancel or alter vanilla's removal
- * flow. Multiple mods can inject at the same point without conflict.
- * Server-side only drops via
- * {@link BlockScopedDropHandler#dropAllAt(Level, BlockPos, BlockEntity)}
- * which gates on {@code level.isClientSide()}.
- *
- * <p>Consumers who want silent-loss behavior for their attachments
- * bypass this mixin by declaring via {@code StorageAttachment.custom(spec)}
- * rather than {@code blockScoped(...)} — only blockScoped attachments
- * enroll in the registry this mixin dispatches against.
+ * <p>Consumers who want their attachment's contents lost instead declare it with
+ * {@code StorageAttachment.custom(spec)} rather than {@code blockScoped(...)}. Only
+ * blockScoped attachments are in the registry this mixin reads.
  */
 @ApiStatus.Internal
 @Mixin(BlockEntity.class)

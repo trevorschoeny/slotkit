@@ -21,7 +21,7 @@ import java.util.function.Consumer;
 
 /**
  * The slot layout of a {@link CustomContainerMenu}: which panels it has, which slot
- * groups each holds, and how shift-click pairs them (§0067). Structure only; runs on
+ * groups each holds, and how shift-click pairs them. Structure only; runs on
  * both sides with the same declaration, so both build the same slots.
  *
  * <pre>{@code
@@ -38,7 +38,7 @@ import java.util.function.Consumer;
  * <h3>Namespace your panel ids</h3>
  * A created slot's address is keyed by (panel id, group id, index) and is global, not
  * scoped by the menu, so two mods naming a panel {@code "main"} would share addresses
- * and arm each other's slots. Name panels per mod: {@code "mymod:menu:main"}.
+ * and set behaviour on each other's slots. Name panels per mod: {@code "mymod:menu:main"}.
  */
 public final class SlotLayout {
 

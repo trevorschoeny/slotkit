@@ -16,76 +16,70 @@ import org.jspecify.annotations.Nullable;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Fabric attachment-type registry for M7. Each consumer-declared
- * {@code StorageAttachment} registers exactly one attachment per owner
- * type with a unique identifier — the library maintains this registry so
- * registrations are idempotent and inspectable.
+ * Fabric attachment-type registry for storage attachments. Each consumer-declared
+ * {@code StorageAttachment} registers exactly one attachment per owner type with a
+ * unique identifier. The library keeps this registry so registrations are idempotent
+ * and can be inspected.
  *
- * <p>Attachments store {@link ItemContainerContents} (vanilla's codec-backed
- * item-list type) and the Storage surface converts to/from mutable
- * {@link NonNullList} on each read/write. Using ItemContainerContents lets
- * M7 reuse vanilla's codec directly instead of composing a NonNullList codec.
+ * <p>Attachments store {@link ItemContainerContents} (vanilla's codec-backed item
+ * list), and the storage converts to and from a mutable {@link NonNullList} on each
+ * read and write. That way vanilla's codec is reused directly instead of building a
+ * NonNullList codec.
  *
- * <p>Not public API — consumers go through {@code StorageAttachment}'s
- * factories, which call into this registry internally.
+ * <p>Not public API. Consumers go through {@code StorageAttachment}'s factories,
+ * which call into this registry.
  */
 public final class StorageAttachments {
 
     private StorageAttachments() {}
 
-    // Cache attachment types by identifier. Fabric's registry throws on
-    // duplicate registration; this cache lets the library return the same
-    // type for repeated StorageAttachment declarations with the same id
-    // (which is an error elsewhere in a typical mod, but not here — consumers
-    // may reload static fields during hot-reload in dev).
+    // Attachment types by identifier. Fabric's registry throws on a duplicate
+    // registration, so this cache returns the same type for repeated
+    // StorageAttachment declarations with the same id. That is allowed here because
+    // consumers may reload static fields during hot reload in dev.
     private static final ConcurrentHashMap<Identifier, AttachmentType<ItemContainerContents>> CACHE =
             new ConcurrentHashMap<>();
 
-    // Tracks the per-attachment slot count — needed at drop-on-break time
-    // so the library can iterate the attachment's content array correctly.
+    // Slot count per attachment, needed at drop-on-break time to walk the contents.
     private static final ConcurrentHashMap<AttachmentType<ItemContainerContents>, Integer>
             ATTACHMENT_SIZES = new ConcurrentHashMap<>();
 
-    // Block-scoped attachments register here in addition to CACHE. The
-    // drop-on-break mixin iterates this list, not CACHE, to skip
-    // player-attached / item-attached variants whose lifecycle doesn't
-    // involve block destruction. Populated by
-    // {@link #registerBlockScopedAttachment(Identifier, int)}.
+    // Block-scoped attachments register here as well as in CACHE. The
+    // drop-on-break mixin walks this list, not CACHE, to skip player- and
+    // item-attached ones, which are never affected by a block breaking. Filled by
+    // registerBlockScopedAttachment(Identifier, int).
     private static final java.util.List<AttachmentType<ItemContainerContents>>
             BLOCK_SCOPED_ATTACHMENTS =
                     new java.util.concurrent.CopyOnWriteArrayList<>();
 
-    // Player content attachments enrolled for death handling. Mirrors
-    // BLOCK_SCOPED_ATTACHMENTS, but maps each type to its DropRule — mutable, so
-    // the consumer can override the policy via StorageAttachment.dropsOnDeath()
-    // after registration. (copyOnDeath is already set at registration time, so an
-    // override is a plain map update, not a re-registration.) PlayerDeathDropHandler
-    // iterates this; Phase 2 grave adapters can reuse the same "death-droppable
-    // player slots" surface. Populated by registerPlayerContentAttachment.
+    // Player content attachments enrolled for death handling. Like
+    // BLOCK_SCOPED_ATTACHMENTS, but maps each type to its DropRule. Mutable, so the
+    // consumer can change the rule through StorageAttachment.dropsOnDeath() after
+    // registration. copyOnDeath is already set at registration, so a change is a
+    // plain map update, not a new registration. PlayerDeathDropHandler and the grave
+    // adapters both read it. Filled by registerPlayerContentAttachment.
     private static final ConcurrentHashMap<AttachmentType<ItemContainerContents>, DropRule>
             PLAYER_DEATH_DROP = new ConcurrentHashMap<>();
 
-    // §0055 completion — custom (consumer-defined) player-anchored content
-    // specs enrolled for death handling. A custom spec has no library-owned
-    // AttachmentType to set copyOnDeath on (the consumer owns the storage), so
-    // it can't sit in PLAYER_DEATH_DROP. The library owns only the
-    // gamerule-gated DROP/DESTROY at the death site, reading/writing through the
-    // spec; KEEP-across-respawn is the consumer storage's own job (it sets
-    // copyOnDeath on its Fabric attachment, or uses a persistent store — the
-    // library cannot set copyOnDeath on storage it doesn't own). Keyed by spec
-    // so dropsOnDeath() can override the rule post-registration.
+    // Custom (consumer-defined) player-anchored content specs enrolled for death
+    // handling. A custom spec has no library-owned AttachmentType to set copyOnDeath
+    // on, since the consumer owns the storage, so it can't sit in PLAYER_DEATH_DROP.
+    // The library only does the gamerule-gated DROP/DESTROY at the death site,
+    // reading and writing through the spec. Keeping items across respawn is the
+    // consumer storage's job: it sets copyOnDeath on its own Fabric attachment or
+    // uses a persistent store, because the library can't set copyOnDeath on storage
+    // it doesn't own. Keyed by spec so dropsOnDeath() can change the rule later.
     private static final ConcurrentHashMap<CustomAttachmentSpec<?, ?>, DropRule>
             CUSTOM_PLAYER_DEATH_DROP = new ConcurrentHashMap<>();
 
     /**
-     * Register (or retrieve) an attachment storing {@link ItemContainerContents}.
-     * Persistence is automatic via Fabric's {@code .persistent(Codec)}.
+     * Registers (or returns) an attachment storing {@link ItemContainerContents}.
+     * Fabric's {@code .persistent(Codec)} handles persistence.
      *
-     * <p>Use this variant for non-block-scoped attachments (player-attached,
-     * item-attached, ephemeral, custom). For block-scoped attachments, use
-     * {@link #registerBlockScopedAttachment(Identifier, int)} instead —
-     * same underlying registration, plus the block-scoped registry entry
-     * for drop-on-break dispatch.
+     * <p>For attachments that are not block-scoped (player-attached, item-attached,
+     * ephemeral, custom). Block-scoped attachments use
+     * {@link #registerBlockScopedAttachment(Identifier, int)}, which does the same
+     * registration and also adds the entry for drop-on-break.
      *
      * @param id           the attachment's unique identifier (shows up in NBT paths)
      * @param defaultSlots number of slots in the default empty content
@@ -103,14 +97,13 @@ public final class StorageAttachments {
     }
 
     /**
-     * Register (or retrieve) a PLAYER content attachment — like
-     * {@link #registerContainerAttachment(Identifier, int)} but with Fabric's
-     * {@code copyOnDeath()} flag (so a KEPT bag carries across respawn) plus
-     * enrollment in the player death-drop registry at {@link DropRule#DEFAULT}
-     * (zero-config vanilla parity). The death handler
-     * ({@link PlayerDeathDropHandler}) iterates the registry and owns the
-     * {@code keepInventory} check; the consumer overrides the per-attachment rule
-     * via {@code StorageAttachment.dropsOnDeath(...)}. Called by
+     * Registers (or returns) a player content attachment. Like
+     * {@link #registerContainerAttachment(Identifier, int)}, but with Fabric's
+     * {@code copyOnDeath()} flag, so a kept bag carries across respawn, and enrolled
+     * in the player death-drop registry at {@link DropRule#DEFAULT}, which matches
+     * vanilla with no setup. {@link PlayerDeathDropHandler} walks the registry and
+     * does the {@code keepInventory} check. The consumer changes the rule per
+     * attachment with {@code StorageAttachment.dropsOnDeath(...)}. Called by
      * {@link com.trevlar.menukit.containers.api.storage.StorageAttachment#playerAttached(String, String, int)}.
      */
     public static AttachmentType<ItemContainerContents> registerPlayerContentAttachment(
@@ -128,10 +121,9 @@ public final class StorageAttachments {
     }
 
     /**
-     * Register a block-scoped attachment. Same as
-     * {@link #registerContainerAttachment(Identifier, int)} plus enrollment
-     * in the block-scoped registry that the drop-on-break mixin dispatches
-     * against. Called by
+     * Registers a block-scoped attachment. Same as
+     * {@link #registerContainerAttachment(Identifier, int)}, plus an entry in the
+     * block-scoped registry the drop-on-break mixin reads. Called by
      * {@link com.trevlar.menukit.containers.api.storage.StorageAttachment#blockScoped(String, String, int)}.
      */
     public static AttachmentType<ItemContainerContents> registerBlockScopedAttachment(
@@ -151,10 +143,10 @@ public final class StorageAttachments {
     }
 
     /**
-     * Override the death-drop rule for a player content attachment. Called by
-     * {@code StorageAttachment.dropsOnDeath(...)} — a plain map update, valid
-     * post-registration because {@code copyOnDeath} was already set when the
-     * attachment registered.
+     * Changes the death-drop rule for a player content attachment. Called by
+     * {@code StorageAttachment.dropsOnDeath(...)}. A plain map update, valid after
+     * registration because {@code copyOnDeath} was already set when the attachment
+     * registered.
      */
     public static void setDeathDropRule(AttachmentType<ItemContainerContents> type, DropRule rule) {
         PLAYER_DEATH_DROP.put(type, rule);
@@ -171,33 +163,33 @@ public final class StorageAttachments {
     }
 
     /**
-     * Enroll a player-anchored custom spec for death handling at {@code rule}
-     * (or override the rule for an already-enrolled spec). Called by
+     * Enrolls a player-anchored custom spec for death handling at {@code rule}, or
+     * changes the rule for a spec already enrolled. Called by
      * {@code StorageAttachment.customPlayerAttached(spec).dropsOnDeath(rule)}. The
-     * owner type is statically {@code Player} (the typed factory enforces it), so a
-     * non-player spec can never reach this. The library owns the gamerule-gated
-     * DROP/DESTROY; the consumer's storage owns KEEP-across-respawn survival.
+     * typed factory makes the owner type {@code Player}, so a non-player spec can
+     * never reach this. The library does the gamerule-gated DROP/DESTROY, and the
+     * consumer's storage is responsible for keeping items across respawn.
      */
     public static void registerCustomPlayerDeathSpec(CustomAttachmentSpec<?, ?> spec, DropRule rule) {
         com.trevlar.menukit.api.window.Declarations.requireOpen("a death drop spec");
         CUSTOM_PLAYER_DEATH_DROP.put(spec, rule);
     }
 
-    /** Snapshot of the death-enrolled custom player specs + their rules, for the death handler. */
+    /** Snapshot of the death-enrolled custom player specs and their rules, for the death handler. */
     public static java.util.Map<CustomAttachmentSpec<?, ?>, DropRule> customPlayerDeathSpecs() {
         return java.util.Map.copyOf(CUSTOM_PLAYER_DEATH_DROP);
     }
 
-    /** Slot count for a registered attachment — used at drop-on-break to size the list. */
+    /** Slot count for a registered attachment, used at drop-on-break to size the list. */
     public static int slotCountOf(AttachmentType<ItemContainerContents> type) {
         Integer size = ATTACHMENT_SIZES.get(type);
         return size == null ? 0 : size;
     }
 
     /**
-     * The Identifier a content attachment was registered under, or null if it
-     * isn't in the cache. Used by the §0055 Phase 2 capture surface to tag a
-     * captured slot with a stable, serializable id (for grave round-trips).
+     * The Identifier a content attachment was registered under, or null if it isn't
+     * in the cache. {@link PlayerSlotCapture} uses it to tag a captured slot with a
+     * stable id that a grave can serialize.
      */
     public static @Nullable Identifier identifierOf(AttachmentType<ItemContainerContents> type) {
         for (var e : CACHE.entrySet()) {
@@ -206,21 +198,20 @@ public final class StorageAttachments {
         return null;
     }
 
-    /** The content attachment registered under {@code id}, or null. The capture-surface restore path. */
+    /** The content attachment registered under {@code id}, or null. Used when restoring a grave capture. */
     public static @Nullable AttachmentType<ItemContainerContents> typeById(Identifier id) {
         return CACHE.get(id);
     }
 
-    /** Produces an empty {@link ItemContainerContents} of the given size. */
     public static ItemContainerContents defaultEmpty(int slotCount) {
         NonNullList<ItemStack> empty = NonNullList.withSize(slotCount, ItemStack.EMPTY);
         return ItemContainerContents.fromItems(empty);
     }
 
     /**
-     * Converts {@link ItemContainerContents} to a mutable {@link NonNullList}.
-     * Every call allocates a fresh list — callers mutate their copy and write
-     * back via {@link #listToContents}.
+     * Converts {@link ItemContainerContents} to a mutable {@link NonNullList}. Every
+     * call allocates a new list; callers change their copy and write it back with
+     * {@link #listToContents}.
      */
     public static NonNullList<ItemStack> contentsToList(ItemContainerContents contents,
                                                          int slotCount) {
@@ -229,7 +220,6 @@ public final class StorageAttachments {
         return list;
     }
 
-    /** Converts a {@link NonNullList} to an {@link ItemContainerContents}. */
     public static ItemContainerContents listToContents(NonNullList<ItemStack> list) {
         return ItemContainerContents.fromItems(list);
     }

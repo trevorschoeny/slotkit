@@ -23,11 +23,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 
 /**
- * The turnkey custom-menu primitive, one {@code define(...).register()} chain
- * replaces the ~4 plumbing pieces a consumer used to hand-write for every custom
- * {@link CustomContainerMenu} menu (its own {@code MenuType} registration, its own
- * open C2S payload + receiver, its own {@code MenuScreens.register}, its own open
- * call). Modeled on {@code ContainerPanel.define(...).register()}.
+ * A complete custom menu from one {@code define(...).register()} chain. It replaces
+ * the four or so pieces a consumer used to write by hand for every custom
+ * {@link CustomContainerMenu}: its own {@code MenuType} registration, its own
+ * client-to-server open payload and receiver, its own {@code MenuScreens.register},
+ * and its own open call. Modelled on {@code ContainerPanel.define(...).register()}.
  *
  * <h3>Recipe</h3>
  *
@@ -64,23 +64,23 @@ import java.util.function.Predicate;
  * <h3>Why the factory takes the MenuType</h3>
  *
  * A handler must call {@link CustomContainerMenu#builder(MenuType)} with this menu's
- * {@code MenuType}, but that type is built <em>inside</em> {@code register()}. If
- * the factory had to reach back to the static handle the {@code define(...).register()}
- * chain is still mid-assigning (e.g. {@code CUSTOM.type()}), it would work only
- * because the factory runs lazily, a consumer who evaluates the type eagerly or
- * inlines the define call hits a forward-reference / null trap. So the factory is a
- * {@link HandlerFactory} that is <em>handed</em> the freshly-built type: both the
- * {@link MenuType}'s own client-side factory lambda and the server-side
- * {@link SimpleMenuProvider} in {@link #open(ServerPlayer)} pass {@code type} in. The
- * consumer never names the handle.
+ * {@code MenuType}, but that type is built inside {@code register()}. If the factory
+ * had to reach back to the static handle the {@code define(...).register()} chain is
+ * still assigning ({@code CUSTOM.type()}, say), it would only work because the
+ * factory runs late. A consumer who reads the type early, or inlines the define
+ * call, would hit a forward reference or a null. So the factory is a
+ * {@link HandlerFactory} that is handed the new type: both the {@link MenuType}'s
+ * client-side factory lambda and the server-side {@link SimpleMenuProvider} in
+ * {@link #open(ServerPlayer)} pass {@code type} in. The consumer never names the
+ * handle.
  *
  * <h3>The client/server split</h3>
  *
- * {@code register()} is side-neutral (common init): it builds and registers the
+ * {@code register()} runs in common init on either side. It builds and registers the
  * {@link MenuType}, and records the handle by id so the server can resolve an open
  * request. Everything the client adds (the screen class, how each panel looks, the
- * open request) is {@code ClientMenu}'s, in Containers' client source set, so this
- * class names no client type (§0067).
+ * open request) belongs to {@code ClientMenu}, in Containers' client source set, so
+ * this class names no client type.
  *
  * <h3>Who may open it, and for how long</h3>
  *
@@ -92,34 +92,32 @@ import java.util.function.Predicate;
  *
  * <h3>Namespace your panel ids</h3>
  *
- * This menu's {@link #id()} {@code Identifier} is globally unique, but it does NOT
- * scope the {@link com.trevlar.menukit.api.window.Address}es of the slots the menu's
- * handler creates, those are keyed globally by {@code (panelId, groupId, localIndex)}
- * (see {@code CreatedSlotAdapter.addressOf}). So the panel ids the handler declares
- * (via {@link CustomContainerMenu#builder}) must be namespaced per-mod, e.g.
- * {@code "mymod:menu:main"}, exactly as container-parity panel ids already are, or two
- * mods that both name a panel {@code "main"} will collide and arm each other's slots.
- * That id is the same one used for layout references and for addressing in
+ * This menu's {@link #id()} is globally unique, but it does not scope the
+ * {@link com.trevlar.menukit.api.window.Address}es of the slots its handler creates.
+ * Those are keyed globally by {@code (panelId, groupId, localIndex)} (see
+ * {@code CreatedSlotAdapter.addressOf}). So the panel ids the handler declares
+ * (through {@link CustomContainerMenu#builder}) must be namespaced per mod, such as
+ * {@code "mymod:menu:main"}, just as container-parity panel ids are. Otherwise two
+ * mods that both name a panel {@code "main"} collide and set behaviour on each
+ * other's slots. The same id is used for layout references and for addresses in
  * {@link Builder#arm}.
  */
 public final class CustomMenu {
 
-    // ── Handler factory ─────────────────────────────────────────────────
-
     /**
-     * Builds the menu's {@link CustomContainerMenu}, handed the menu's own
-     * {@link MenuType} so the consumer never reaches back to the static handle
-     * the {@code define(...).register()} chain is still mid-assigning. Runs
-     * identically on both sides, server via the {@link SimpleMenuProvider} in
-     * {@link #open(ServerPlayer)}, client via the {@link MenuType} factory, so
-     * its storages must be same-size for sync. The {@code type} passed in is the
-     * exact type to feed {@link CustomContainerMenu#builder(MenuType)}.
+     * Builds the menu's {@link CustomContainerMenu}. It is handed the menu's own
+     * {@link MenuType}, so the consumer never reaches back to the static handle the
+     * {@code define(...).register()} chain is still assigning. Runs the same way on
+     * both sides (the server through the {@link SimpleMenuProvider} in
+     * {@link #open(ServerPlayer)}, the client through the {@link MenuType} factory),
+     * so its storages must be the same size on both for sync. Pass the {@code type}
+     * straight to {@link CustomContainerMenu#builder(MenuType)}.
      */
     @FunctionalInterface
     public interface HandlerFactory {
         /**
-         * @param type    this menu's freshly-built {@link MenuType}, pass it
-         *                straight to {@link CustomContainerMenu#builder(MenuType)}
+         * @param type    this menu's {@link MenuType}; pass it straight to
+         *                {@link CustomContainerMenu#builder(MenuType)}
          * @param syncId  the menu's sync id (server-assigned)
          * @param inv     the opening player's inventory
          */
@@ -128,13 +126,11 @@ public final class CustomMenu {
 
     private static final Logger LOGGER = LoggerFactory.getLogger("MenuKit");
 
-    // ── Registered definitions ──────────────────────────────────────────
     // DEFINITIONS: every menu, in registration order (the client registers their
-    // screens). BY_ID: resolved server-side by the generic open receiver.
+    // screens). BY_ID: looked up on the server by the generic open receiver.
     private static final List<CustomMenu> DEFINITIONS = new CopyOnWriteArrayList<>();
     private static final Map<Identifier, CustomMenu> BY_ID = new ConcurrentHashMap<>();
 
-    // ── Handle state (frozen after register()) ──────────────────────────
     private final Identifier id;
     private final HandlerFactory handlerFactory;
     private final Component title;
@@ -153,30 +149,29 @@ public final class CustomMenu {
         this.validWhen = validWhen;
     }
 
-    // ── Definition entry point ──────────────────────────────────────────
-
     /**
-     * Begins a custom-menu definition.
+     * Starts a custom-menu definition.
      *
-     * @param id             the registry id for the menu's {@link MenuType} (also
-     *                       the key the generic open payload carries)
+     * @param id             the registry id for the menu's {@link MenuType}, also the
+     *                       key the generic open payload carries
      * @param handlerFactory builds the {@link CustomContainerMenu} from
-     *                       {@code (type, syncId, playerInventory)}, handed the
-     *                       menu's own {@link MenuType} so it never reaches back to
-     *                       the handle being assigned; runs identically on both
-     *                       sides (server via the menu provider, client via the
-     *                       MenuType factory), so storages must be same-size for sync
+     *                       {@code (type, syncId, playerInventory)}. It is handed the
+     *                       menu's own {@link MenuType}, so it never reaches back to
+     *                       the handle being assigned. Runs the same way on both
+     *                       sides (server through the menu provider, client through
+     *                       the MenuType factory), so storages must be the same size
+     *                       on both for sync
      */
     public static Builder define(Identifier id, HandlerFactory handlerFactory) {
         return new Builder(id, handlerFactory);
     }
 
-    /** Fluent configuration; terminates in {@code register()}. */
+    /** Configures the menu. Ends with {@code register()}. */
     public static final class Builder {
         private final Identifier id;
         private final HandlerFactory handlerFactory;
         private Component title;                                        // null => default translation key
-        private @Nullable Runnable arm = null;                          // behavior-arming; run by register()
+        private @Nullable Runnable arm = null;                          // sets slot behaviour; run by register()
         private @Nullable Predicate<Player> validWhen = null;           // null => server opens only
 
         Builder(Identifier id, HandlerFactory handlerFactory) {
@@ -184,7 +179,7 @@ public final class CustomMenu {
             this.handlerFactory = handlerFactory;
         }
 
-        /** The menu's display title. Optional, defaults to {@code "menu.<namespace>.<path>"}. */
+        /** The menu's display title. Optional; defaults to {@code "menu.<namespace>.<path>"}. */
         public Builder title(Component title) {
             this.title = title;
             return this;
@@ -192,7 +187,7 @@ public final class CustomMenu {
 
 
         /**
-         * Who may open this menu, and for how long (§0067). A client's open request
+         * Who may open this menu, and for how long. A client's open request
          * ({@code ClientMenu.of(menu).requestOpen()}) is honoured only when this is
          * declared and holds for the requesting player, checked on the server; the
          * open menu closes when it stops holding (vanilla's {@code stillValid}, every
@@ -206,17 +201,16 @@ public final class CustomMenu {
         }
 
         /**
-         * A behavior-arming hook, invoked by {@code register()} <b>after</b> the
-         * {@link MenuType} + id are live, so a custom menu's slot behavior is armed in
-         * the same define chain as the menu it belongs to and cannot be forgotten in a
-         * separate pass.
+         * Sets slot behaviour for this menu. {@code register()} runs it after the
+         * {@link MenuType} and id exist, so a custom menu's slot behaviour is declared in
+         * the same chain as the menu and can't be forgotten in a separate step.
          *
-         * <p>Arm slot behavior by {@link com.trevlar.menukit.api.window.Address} here
-         * the menu's created slots are addressable as soon as it is registered
+         * <p>Set slot behaviour by {@link com.trevlar.menukit.api.window.Address} here;
+         * the menu's created slots have addresses as soon as it is registered
          * ({@code Window.slot(Address.createdSlot(SlotGroupId.created(panelId, groupId), i)).set(...)}).
-         * Side-neutral: it runs at register() time on whichever side called it (the
-         * engine declarations are pure data), exactly like arming behavior by hand in
-         * common init.
+         * It runs at register() time on whichever side called it, since engine
+         * declarations are plain data, just like setting behaviour by hand in common
+         * init.
          *
          * <pre>{@code
          * CustomMenu.define(id, MyMenu::buildHandler)
@@ -235,19 +229,18 @@ public final class CustomMenu {
         }
 
         /**
-         * Finalises the registration. Side-neutral (common init): builds + registers
-         * the {@link MenuType}, resolves the default title if none was given, stores
-         * the handle in {@link #DEFINITIONS} + {@link #BY_ID}, and returns it. Call
-         * once at mod init.
+         * Completes the registration, in common init on either side: builds and
+         * registers the {@link MenuType}, fills in the default title if none was given,
+         * stores the handle by id, and returns it. Call once at mod init.
          */
         public CustomMenu register() {
     com.trevlar.menukit.api.window.Declarations.requireOpen("CustomMenu " + id + " register()");
-            // The MenuType factory: (syncId, inv) -> handler. Used by the client to
-            // reconstruct the menu from the server's open packet. The consumer's
-            // factory is handed the menu's own MenuType, but the type isn't built
-            // until the line below, and the factory lambda needs it. A one-element
-            // holder breaks the self-reference: the lambda captures the (effectively
-            // final) holder and reads holder[0] at invocation time, after assignment.
+            // The MenuType factory, (syncId, inv) -> handler, which the client uses to
+            // rebuild the menu from the server's open packet. The consumer's factory is
+            // handed the menu's own MenuType, but the type isn't built until the line
+            // below and the lambda needs it. A one-element holder breaks the
+            // self-reference: the lambda captures the holder and reads holder[0] when
+            // called, after it is assigned.
             @SuppressWarnings("unchecked")
             final MenuType<CustomContainerMenu>[] holder = new MenuType[1];
             final Predicate<Player> validity = validWhen;
@@ -265,17 +258,14 @@ public final class CustomMenu {
             DEFINITIONS.add(handle);
             BY_ID.put(id, handle);
 
-            // Behavior-arming runs last, now that the MenuType + id are live and the
-            // menu's created slots are addressable (see Builder.arm). Keeping it on
-            // the define chain means it can't be forgotten in a separate pass.
+            // Slot behaviour is set last, once the MenuType and id exist and the menu's
+            // created slots have addresses (see Builder.arm).
             if (arm != null) {
                 arm.run();
             }
             return handle;
         }
     }
-
-    // ── Handle accessors ────────────────────────────────────────────────
 
     /** This menu's registered {@link MenuType}. */
     public MenuType<CustomContainerMenu> type() { return type; }
@@ -287,29 +277,25 @@ public final class CustomMenu {
     @ApiStatus.Internal
     public static List<CustomMenu> all() { return List.copyOf(DEFINITIONS); }
 
-    /** A handler built by this menu's factory carries the menu's validity. */
     private static CustomContainerMenu withValidity(CustomContainerMenu handler, @Nullable Predicate<Player> validity) {
         if (validity != null) handler.validWhen(validity);
         return handler;
     }
 
-    // ── Open ────────────────────────────────────────────────────────────
-
     /**
-     * Opens this menu for the given server player, server-side direct, no
-     * networking. Vanilla syncs the open to the client, which rebuilds the menu
-     * through this menu's {@link MenuType} and shows the registered screen.
+     * Opens this menu for the player, directly on the server with no extra networking.
+     * Vanilla syncs the open to the client, which rebuilds the menu through this menu's
+     * {@link MenuType} and shows the registered screen.
      */
     public void open(ServerPlayer player) {
-        // The handle's `type` is fully assigned by register() before open() can run,
-        // so the server-side provider hands the consumer's factory the same MenuType
-        // the client-side factory gets, no reach-back to the static handle.
+        // register() assigns `type` before open() can run, so the server-side provider
+        // hands the consumer's factory the same MenuType the client-side factory gets.
         player.openMenu(new SimpleMenuProvider(
                 (syncId, inv, p) -> withValidity(handlerFactory.build(type, syncId, inv), validWhen),
                 title));
     }
 
-    // ── Generic server receiver (called from MenuKitContainers.init()) ────────────────
+    // The generic server receiver, registered in MenuKitContainers.init()
 
     /**
      * Resolves a menu by the id carried in an open payload, or {@code null} if no
@@ -321,8 +307,8 @@ public final class CustomMenu {
     }
 
     /**
-     * A client's request to open menu {@code id} (the generic open payload), judged on
-     * the server (§0067): an unknown menu, a menu without {@link Builder#validWhen}, or
+     * A client's request to open menu {@code id} (the generic open payload), checked on
+     * the server: an unknown menu, a menu without {@link Builder#validWhen}, or
      * one whose predicate does not hold for {@code player} is refused and logged.
      * Returns whether it opened. Main thread.
      */

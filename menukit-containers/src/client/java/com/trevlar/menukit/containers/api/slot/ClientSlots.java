@@ -15,7 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * The client half of {@link CreatedSlots#onto} (§0067): presenting a registered slot group
+ * The client half of {@link CreatedSlots#onto}: showing a registered slot group
  * on screen. {@code onto(...).register()} adds the synced slot data to a menu; this draws
  * the slots and lets them take input. Call once from the client initializer, not per
  * menu construction.

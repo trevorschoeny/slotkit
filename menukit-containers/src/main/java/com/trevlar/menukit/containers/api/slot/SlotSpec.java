@@ -25,55 +25,54 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 
 /**
- * A side-neutral, declarative description of one registered-slot group that a
- * {@link ContainerPanel} projects onto every container the player opens.
- * the "recipe" half of container parity.
+ * A side-neutral description of one group of registered slots that a
+ * {@link ContainerPanel} adds to every container the player opens. It is the recipe
+ * half of container parity.
  *
- * <h3>Why a recipe, not a built slot</h3>
+ * <h3>Why a recipe and not a built slot</h3>
  *
- * A real {@link CreatedSlot} is a per-menu object: the player's own
- * {@code InventoryMenu}, every chest/furnace they open, and the creative
- * item-picker each carry their <em>own</em> slot instance for the same logical
- * slot. To make a slot appear on all of them from one registration, the panel
- * can't hold a slot, it holds the <em>instructions to build one</em>, applied
- * fresh to each menu (and bound to that menu's player). That is this class: pure
- * data plus a {@code Player -> Storage} factory, evaluated identically on the
- * logical server and the client so the appended slots are byte-identical (the
- * sync-safety contract {@link CreatedSlotProjection} documents).
+ * A real {@link CreatedSlot} belongs to one menu. The player's own
+ * {@code InventoryMenu}, every chest or furnace they open, and the creative item
+ * picker each carry their own slot instance for the same logical slot. To put a slot
+ * on all of them from one registration, the panel can't hold a slot. It holds the
+ * instructions to build one, applied to each menu and bound to that menu's player.
+ * That is this class: plain data plus a {@code Player -> Storage} factory, evaluated
+ * the same way on the logical server and the client so the appended slots are
+ * byte-identical (see {@link CreatedSlotProjection} on sync safety).
  *
- * <p>It is the parity analogue of the per-call parameters on
- * {@link CreatedSlots.Builder}: storage, layout, and the client reveal predicate,
- * expressed once as reusable data rather than imperatively against a single menu.
- * {@link ContainerPanel} turns each {@code SlotSpec} into both the real slots
- * (every menu, both sides) and the {@link SlotElement}s that present them (client).
+ * <p>It holds the same settings as the per-call parameters on
+ * {@link CreatedSlots.Builder} (storage, layout, the client reveal predicate), but as
+ * reusable data instead of calls against one menu. {@link ContainerPanel} turns each
+ * {@code SlotSpec} into the real slots (every menu, both sides) and the
+ * {@link SlotElement}s that show them (client).
  *
- * <h3>Inline behavior verbs are sugar over the by-address engine path</h3>
+ * <h3>Behaviour methods are shorthand for setting it by address</h3>
  *
- * Gating, shift-click, collect, drag-fill, binding, and mending are armed in THE ONE WINDOW engine by
- * the slot's {@link com.trevlar.menukit.api.window.Address}, that is where slot
- * behavior <em>lives</em>, identically for a vanilla slot and a created slot. The
- * inline verbs here ({@link #gate}, {@link #accepts}, {@link #binding},
- * {@link #mending}, {@link #shiftClickOut}, {@link #shiftClickIn}, {@link #collect}, {@link #dragFill}) do not introduce a second behavior store:
- * they record the consumer's intent on the spec, and
- * {@link ContainerPanel.Builder#register()} arms the engine by address for every
- * local index in the group, exactly {@code Window.slot(ContainerPanel.address(
- * panelId, groupId, i)).set(KEY, value)}, the same call a consumer could make by
- * hand. The win is purely ergonomic: behavior is declared where the slot group is
- * declared (no separate forgettable arming pass), and the consumer never computes
- * an address or hand-rolls a per-slot loop. The by-address path stays fully usable;
- * inline is sugar, not a replacement.
+ * Gating, shift-click, collect, drag-fill, binding and mending are set in the window
+ * engine by the slot's {@link com.trevlar.menukit.api.window.Address}. That is where
+ * slot behaviour lives, the same for a vanilla slot and a created slot. The methods
+ * here ({@link #gate}, {@link #accepts}, {@link #binding}, {@link #mending},
+ * {@link #shiftClickOut}, {@link #shiftClickIn}, {@link #collect}, {@link #dragFill})
+ * don't add a second place to store behaviour. They record what the consumer asked
+ * for, and {@link ContainerPanel.Builder#register()} sets it in the engine by address
+ * for every index in the group, exactly
+ * {@code Window.slot(ContainerPanel.address(panelId, groupId, i)).set(KEY, value)},
+ * the call a consumer could make by hand. The gain is convenience: behaviour is
+ * declared next to the slot group, with no separate step to forget, and the consumer
+ * never computes an address or writes a per-slot loop. Setting behaviour by address
+ * still works as before.
  *
- * <h3>Storage is a factory, not a bound storage</h3>
+ * <h3>Storage is a factory, not bound storage</h3>
  *
- * {@link CreatedSlots.Builder#storage} takes an already-{@code player}-bound
- * {@code Storage} because it runs inside a mixin where the player is in scope.
- * A recipe is registered once at init with no player in scope and is applied to
- * many players' menus, so it takes a {@code Function<Player, Storage>}, almost
- * always {@code player -> SOME_ATTACHMENT.bind(player)}. The factory MUST be
- * deterministic and yield the same storage <em>size</em> for a given player on
- * both sides, or the appended slot block desyncs.
+ * {@link CreatedSlots.Builder#storage} takes a {@code Storage} already bound to a
+ * player, because it runs inside a mixin where the player is in scope. A recipe is
+ * registered once at init with no player in scope and applied to many players'
+ * menus, so it takes a {@code Function<Player, Storage>}, almost always
+ * {@code player -> SOME_ATTACHMENT.bind(player)}. The factory must be deterministic
+ * and give the same storage size for a given player on both sides, or the appended
+ * slots desync.
  *
- * <p>Mutable fluent builder, consumed once by {@link ContainerPanel.Builder#addSlot}.
+ * <p>A mutable builder, used once by {@link ContainerPanel.Builder#addSlot}.
  */
 public final class SlotSpec {
 
@@ -83,14 +82,12 @@ public final class SlotSpec {
     private int count = 1;                                // logical slots in this group
     private @Nullable Function<Player, Storage> storageFactory;   // required
     private @Nullable BooleanSupplier revealWhen = null;  // client-side reveal; null => always
-    private @Nullable String label = null;               // MK display name; null => capitalized groupId
+    private @Nullable String label = null;               // display name; null => capitalized groupId
     private @Nullable Supplier<Component> tooltip = null; // hover tooltip on each slot in the group; null => none
 
-    // ── Inline behavior intent (armed by Address in register(); null => default) ──
-    // These hold the consumer's declared behavior so register() can arm the engine
-    // by each slot's Address. null means "leave the engine default" (gating OPEN,
-    // shift-click BOTH, binding/mending FALSE), so an un-declared slot is exactly
-    // vanilla, same as never arming it.
+    // The behaviour the consumer declared, which register() sets in the engine by
+    // each slot's Address. null leaves the engine default (gating OPEN, shift-click
+    // both ways, binding and mending FALSE), so an undeclared slot is plain vanilla.
     private @Nullable SlotGate gate = null;
     private @Nullable TriBool binding = null;
     private @Nullable TriBool mending = null;
@@ -106,23 +103,22 @@ public final class SlotSpec {
     }
 
     /**
-     * Begins a slot-group spec. Position is reactive (Movement ④), the group's
-     * slots flow + wrap into the owning panel's width via {@link SlotFlowElement},
-     * so a spec declares only WHAT a group is (storage, count, reveal, behavior),
-     * never where it sits.
+     * Starts a slot-group spec. Position is not declared: the group's slots flow and
+     * wrap to the owning panel's width through {@link SlotFlowElement}, so a spec only
+     * says what a group is (storage, count, reveal, behaviour), never where it sits.
      *
-     * <p><b>The category is required, and it is identity.</b> It is how any other
-     * mod finds these slots ({@code SlotGroupCategories.of(menu)} lists created
-     * groups next to the vanilla ones) and decides what they are: a pocket group
-     * declared {@link SlotGroupCategory#PLAYER_INVENTORY} is player inventory to a
-     * search; an elytra slot declared under the mod's own category is not. There
-     * is no default on purpose, a group that forgot to say what it is would
-     * silently become "just storage" to every consumer, which is the dangerous
-     * outcome. A category name is a public contract once another mod depends on
-     * it; renaming one is a breaking change.
+     * <p>The category is required, and it is the group's identity. It is how other
+     * mods find these slots ({@code SlotGroupCategories.of(menu)} lists created
+     * groups next to vanilla ones) and tell what they are. A pocket group declared
+     * {@link SlotGroupCategory#PLAYER_INVENTORY} counts as player inventory to a
+     * search; an elytra slot under the mod's own category does not. There is no
+     * default on purpose: a group that forgot to say what it is would silently look
+     * like plain storage to every consumer, which is the dangerous outcome. Once
+     * another mod depends on a category name it is a public contract, and renaming it
+     * is a breaking change.
      *
      * @param groupId  slot-group id, unique within the owning {@link ContainerPanel}
-     * @param category what the group is, a vanilla category, or one the mod
+     * @param category what the group is: a vanilla category, or one the mod
      *                 declares ({@code new SlotGroupCategory("mymod", "pockets")})
      */
     public static SlotSpec at(String groupId, SlotGroupCategory category) {
@@ -130,8 +126,8 @@ public final class SlotSpec {
     }
 
     /**
-     * Where items live, as a per-player factory. Required. Use a
-     * {@link StorageAttachment}-bound factory for content persistence:
+     * Where items live, as a per-player factory. Required. To persist content, bind
+     * from a {@link StorageAttachment}:
      * {@code .storage(player -> POCKETS.bind(player))}.
      */
     public SlotSpec storage(Function<Player, Storage> storageFactory) {
@@ -140,9 +136,9 @@ public final class SlotSpec {
     }
 
     /**
-     * Number of logical slots in this group (default {@code 1}). The
-     * {@code storage} factory MUST produce a storage of exactly this size for
-     * every player, or the appended slot block desyncs across sides.
+     * Number of slots in this group (default {@code 1}). The {@code storage} factory
+     * must give storage of exactly this size for every player, or the appended slots
+     * desync between the sides.
      */
     public SlotSpec count(int count) {
         this.count = Math.max(1, count);
@@ -150,10 +146,10 @@ public final class SlotSpec {
     }
 
     /**
-     * Client-side reveal predicate. The group is visible + interactive on the
-     * client only while this returns true; the server keeps it syncing
-     * regardless (see {@link CreatedSlots.Builder#revealWhen}). MUST be client-safe.
-     * If unset, the group is always visible.
+     * Client-side reveal predicate. The group is visible and usable on the client only
+     * while this returns true; the server keeps it syncing either way (see
+     * {@link CreatedSlots.Builder#revealWhen}). Must be client-safe. If unset, the
+     * group is always visible.
      */
     public SlotSpec revealWhen(BooleanSupplier clientReveal) {
         this.revealWhen = clientReveal;
@@ -161,11 +157,11 @@ public final class SlotSpec {
     }
 
     /**
-     * MK display name for the group's slots, applied through the naming layer like
+     * Display name for the group's slots, applied like
      * {@link CreatedSlots.Builder#label}: each slot is named {@code "{label} {n}"}
-     * (1-based) for a multi-slot group, or just {@code "{label}"} for a single
-     * slot. If unset, the slots fall back to the capitalized group id. Naming is a
-     * client-side display concern (the build seam applies it client-guarded).
+     * (from 1) in a multi-slot group, or just {@code "{label}"} for a single slot. If
+     * unset, the slots use the capitalized group id. Names are client-side only; the
+     * build step applies them only on the client.
      */
     public SlotSpec label(String label) {
         this.label = label;
@@ -173,32 +169,29 @@ public final class SlotSpec {
     }
 
     /**
-     * Attaches a hover tooltip to every slot in this group. The library applies
-     * it to each {@link SlotElement} it builds (the consumer never touches those
-     * instances). Fires only over an EMPTY slot, a slot holding an item shows
-     * vanilla's item tooltip instead. Chainable.
+     * Adds a hover tooltip to every slot in this group. The library applies it to each
+     * {@link SlotElement} it builds, so the consumer never touches those. Shows only
+     * over an empty slot; a slot holding an item shows vanilla's item tooltip instead.
+     * Chainable.
      */
     public SlotSpec tooltip(Component text) {
         return tooltip(() -> text);
     }
 
-    /** Supplier-driven variant of {@link #tooltip(Component)}. */
+    /** {@link #tooltip(Component)} with the text from a supplier. */
     public SlotSpec tooltip(@Nullable Supplier<Component> supplier) {
         this.tooltip = supplier;
         return this;
     }
 
-    // ── Inline behavior verbs (sugar; armed by Address in register()) ───
-    // See the class doc: each verb records intent that
-    // ContainerPanel.Builder.register() arms onto the engine by the slot's
-    // Address for every local index in this group. Behavior still lives in the
-    // engine, this is exactly Window.slot(addr).set(KEY, value), just declared
-    // where the group is declared.
+    // Behaviour methods. Each records a value that ContainerPanel.Builder.register()
+    // sets in the engine by the slot's Address for every index in this group; see the
+    // class doc.
 
     /**
-     * Arms a {@link SlotGate} (what every slot in this group accepts / releases /
-     * caps), sugar for {@code Window.slot(addr).set(BehaviorKeys.GATING, gate)}
-     * on each local index. Default (unset) is {@link SlotGate#OPEN}, pure vanilla.
+     * Sets a {@link SlotGate}: what every slot in this group accepts, releases and caps
+     * at. Shorthand for {@code Window.slot(addr).set(BehaviorKeys.GATING, gate)} on
+     * each index. Unset, it is {@link SlotGate#OPEN}, plain vanilla.
      */
     public SlotSpec gate(SlotGate gate) {
         this.gate = gate;
@@ -206,10 +199,10 @@ public final class SlotSpec {
     }
 
     /**
-     * Convenience over {@link #gate}: a place-only filter. Builds a {@link SlotGate}
-     * that admits a stack iff {@code accept} passes (pickup stays open, stack cap
-     * stays vanilla). For a richer policy (pickup rule, stack cap) declare a full
-     * {@link SlotGate} via {@link #gate}.
+     * A placement-only filter, shorthand for {@link #gate}. Builds a {@link SlotGate}
+     * that accepts a stack only if {@code accept} passes; pickup stays open and the
+     * stack cap stays vanilla. For a pickup rule or stack cap, pass a full
+     * {@link SlotGate} to {@link #gate}.
      */
     public SlotSpec accepts(Predicate<ItemStack> accept) {
         this.gate = new SlotGate() {
@@ -224,9 +217,9 @@ public final class SlotSpec {
     }
 
     /**
-     * Enrolls every slot in this group in Curse-of-Binding enforcement (a bound
-     * item can't be taken out while alive, survival only; creative bypasses, §0055)
-     * sugar for {@code set(BehaviorKeys.BINDING, ...)}. Default off.
+     * Applies Curse of Binding to every slot in this group: a bound item can't be taken
+     * out while alive, in survival only (creative ignores it). Shorthand for
+     * {@code set(BehaviorKeys.BINDING, ...)}. Default off.
      */
     public SlotSpec binding(boolean enabled) {
         this.binding = enabled ? TriBool.TRUE : TriBool.FALSE;
@@ -239,8 +232,8 @@ public final class SlotSpec {
     }
 
     /**
-     * Opts every slot in this group into the XP-orb Mending repair pool (§0055).
-     * sugar for {@code set(ContainerKeys.MENDING, ...)}. Default off.
+     * Puts every slot in this group in the XP-orb Mending repair pool. Shorthand for
+     * {@code set(ContainerKeys.MENDING, ...)}. Default off.
      */
     public SlotSpec mending(boolean enabled) {
         this.mending = enabled ? TriBool.TRUE : TriBool.FALSE;
@@ -253,8 +246,8 @@ public final class SlotSpec {
     }
 
     /**
-     * Whether shift-clicking a slot in this group may send its stack elsewhere,
-     * at the group rung ({@code BehaviorKeys.SHIFT_CLICK_OUT}). Default on.
+     * Whether shift-clicking a slot in this group may send its stack elsewhere, set for
+     * the group ({@code BehaviorKeys.SHIFT_CLICK_OUT}). Default on.
      */
     public SlotSpec shiftClickOut(boolean enabled) {
         this.shiftClickOut = enabled ? TriBool.TRUE : TriBool.FALSE;
@@ -262,8 +255,8 @@ public final class SlotSpec {
     }
 
     /**
-     * Whether a shift-click elsewhere may land items in this group, at the group
-     * rung ({@code BehaviorKeys.SHIFT_CLICK_IN}). Default on.
+     * Whether a shift-click elsewhere may put items in this group, set for the group
+     * ({@code BehaviorKeys.SHIFT_CLICK_IN}). Default on.
      */
     public SlotSpec shiftClickIn(boolean enabled) {
         this.shiftClickIn = enabled ? TriBool.TRUE : TriBool.FALSE;
@@ -271,9 +264,9 @@ public final class SlotSpec {
     }
 
     /**
-     * Whether vanilla's double-click collect may sweep items out of this group.
-     * sugar for {@code set(BehaviorKeys.COLLECT, ...)}. Default on (vanilla). A
-     * group that is storage but must not be raided by the bulk shortcuts declares
+     * Whether vanilla's double-click collect may pull items out of this group.
+     * Shorthand for {@code set(BehaviorKeys.COLLECT, ...)}. Default on, as in
+     * vanilla. A storage group the bulk shortcuts must not touch declares
      * {@code .shiftClickOut(false).shiftClickIn(false).collect(false).dragFill(false)}.
      */
     public SlotSpec collect(boolean enabled) {
@@ -283,25 +276,24 @@ public final class SlotSpec {
 
     /**
      * Whether vanilla's drag-fill (spreading a carried stack across dragged-over
-     * slots) may place into this group, sugar for {@code set(BehaviorKeys.DRAG_FILL, ...)}.
-     * Default on (vanilla).
+     * slots) may place into this group. Shorthand for
+     * {@code set(BehaviorKeys.DRAG_FILL, ...)}. Default on, as in vanilla.
      */
     public SlotSpec dragFill(boolean enabled) {
         this.dragFill = enabled ? TriBool.TRUE : TriBool.FALSE;
         return this;
     }
 
-    // ── Accessors (read by ContainerPanel / ParitySlotRegistry) ──────
+    // Read by ContainerPanel and ParitySlotRegistry
 
     @ApiStatus.Internal
     public String groupId()       { return groupId; }
     @ApiStatus.Internal
     public SlotGroupCategory category() { return category; }
     int count()            { return count; }
-    // Movement ④, slots flow reactively (SlotFlowElement owns positions). These
-    // remain only as the off-panel SEED ParitySlotRegistry hands CreatedSlots; the
-    // SlotElement overrides them per frame, so the seed never shows. Origin (0,0),
-    // one-row seed (columns = count).
+    // SlotFlowElement owns slot positions. These are only the starting layout
+    // ParitySlotRegistry hands to CreatedSlots, which the SlotElement replaces every
+    // frame, so it never shows: origin (0,0), one row (columns = count).
     @ApiStatus.Internal
     public int childX()           { return 0; }
     @ApiStatus.Internal
@@ -317,7 +309,7 @@ public final class SlotSpec {
     @ApiStatus.Internal
     public @Nullable Function<Player, Storage> storageFactory() { return storageFactory; }
 
-    // Inline behavior intent (null => leave the engine default for that key).
+    // Declared behaviour (null leaves the engine default for that key).
     @Nullable SlotGate gateValue()                 { return gate; }
     @Nullable TriBool bindingValue()               { return binding; }
     @Nullable TriBool mendingValue()               { return mending; }

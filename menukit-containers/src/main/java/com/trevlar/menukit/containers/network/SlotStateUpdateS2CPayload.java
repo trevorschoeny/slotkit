@@ -9,7 +9,7 @@ import org.jetbrains.annotations.ApiStatus;
 
 /**
  * Server to client: one slot's value changed. The server has already matched the slot
- * by its resolved container key in this viewer's own open menu (§0067), so the payload
+ * by its resolved container key in this viewer's own open menu, so the payload
  * names that menu ({@code containerId}) and the slot's index in it; the client applies
  * it only to that menu, never to another container's slot with the same index. The
  * value is the channel's {@code StreamCodec} bytes; a value equal to the channel's

@@ -13,14 +13,13 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import java.util.OptionalInt;
 
 /**
- * Server-side post-openMenu hook: after {@link ServerPlayer#openMenu} returns
- * successfully, fire M1's menu-open snapshot so the client receives the
- * per-slot state for the newly-opened menu.
+ * After {@link ServerPlayer#openMenu} succeeds, sends the menu-open slot-state
+ * snapshot so the client gets the per-slot state for the menu it just opened.
  *
- * <p>Skipped when {@code openMenu} returns empty (menu open rejected).
- * Player-inventory / ender-chest channels are delivered by the parallel
- * player-join handler (see {@code SlotStateHooks.registerServer}) — this
- * mixin covers every other container (chests, furnaces, donkeys, etc.).
+ * <p>Skipped when {@code openMenu} returns empty (the open was rejected). Player
+ * inventory and ender chest channels come from the player-join handler (see
+ * {@code SlotStateHooks.registerServer}); this mixin covers every other container
+ * (chests, furnaces, donkeys and so on).
  */
 @ApiStatus.Internal
 @Mixin(ServerPlayer.class)

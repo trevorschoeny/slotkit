@@ -29,88 +29,80 @@ import org.jspecify.annotations.Nullable;
 import java.util.Objects;
 
 /**
- * A registered MKC slot presented as a {@link PanelElement}, the keystone of
- * the everything-is-a-panel model. A slot is just another element you drop into a
- * panel, alongside buttons and labels.
+ * A registered slot shown as a {@link PanelElement}. A slot is just another element
+ * you put in a panel, next to buttons and labels.
  *
- * <h3>What this element does, and what it deliberately does not</h3>
+ * <h3>What this element does, and what it doesn't</h3>
  *
- * A slot has two separable layers:
+ * A slot has two separate parts:
  * <ul>
- *   <li><b>Registration</b>, a real, server-synced {@link CreatedSlot} in
- *       {@code menu.slots}. Built at menu-construction time via {@link CreatedSlots};
- *       <em>untouched by this class</em>.</li>
- *   <li><b>Placement</b>, where it sits on screen. <em>This is what
- *       {@code SlotElement} owns.</em> Each frame, in layer 2 of
- *       {@code ContainerScreenLayers}, it resolves
+ *   <li>Registration: a real, server-synced {@link CreatedSlot} in
+ *       {@code menu.slots}, built when the menu is constructed through
+ *       {@link CreatedSlots}. This class doesn't touch it.</li>
+ *   <li>Placement: where it sits on screen, which is what {@code SlotElement} owns.
+ *       Each frame, in layer 2 of {@code ContainerScreenLayers} (after vanilla has
+ *       drawn the vanilla slots and before it draws the created ones), it converts
  *       its panel-relative position to screen space and writes it into the live
- *       slot's own {@code Slot.x/y}. (Layer 2: after vanilla has drawn the
- *       vanilla slots, before it draws the created ones.) It also draws the recessed 18×18 frame,
- *       which is panel chrome.</li>
+ *       slot's own {@code Slot.x/y}. It also draws the recessed 18x18 frame, which
+ *       is panel chrome.</li>
  * </ul>
  *
- * It does <b>not</b> draw the item, the count, the durability bar, the hover
- * highlight, or a ghost icon. <b>Vanilla does</b>, its {@code extractSlots} walks
- * {@code menu.slots} and draws this slot at the {@code x/y} written here, through
- * the same {@code extractSlot} call it uses for a vanilla slot; its
- * {@code getHoveredSlot} finds it the same way. That is the presentation half of
- * {@link CreatedSlot}'s substitutability contract: a third party's slot hook, or any
- * mod reading {@code slot.x/y}, sees a created slot and a vanilla slot as the same
- * thing because there is no MenuKit slot pass for them to differ in. (This is the
- * model {@code CustomContainerScreen} has always used on MenuKit's own screens.)
+ * It does not draw the item, count, durability bar, hover highlight or ghost icon.
+ * Vanilla does: its {@code extractSlots} walks {@code menu.slots} and draws this slot
+ * at the {@code x/y} written here, through the same {@code extractSlot} call it uses
+ * for a vanilla slot, and its {@code getHoveredSlot} finds it the same way. So a
+ * third party's slot hook, or any mod reading {@code slot.x/y}, treats a created slot
+ * and a vanilla slot the same, because there is no separate MenuKit slot pass for
+ * them to differ in. {@code CustomContainerScreen} has always worked this way on
+ * MenuKit's own screens.
  *
- * <h3>Located, not held, the menu-attach lifecycle</h3>
+ * <h3>Looked up each frame, not held</h3>
  *
- * A {@code SlotElement} does <em>not</em> hold a slot reference; it holds the
- * slot's stable {@link Address} and resolves the live in-menu slot from the
- * current screen's menu each frame (through {@link CreatedSlotAdapter}'s
- * session-cached binding). This is what lets one statically-registered panel work
- * on every screen: the survival inventory and the creative screen carry
- * <em>different</em> slot instances for the same logical slot (creative wraps it in
- * a {@code SlotWrapper} and projects it onto a throwaway menu), and a held
- * reference would bind to one and be wrong on the other. The position is written
- * to whichever instance is in {@code menu.slots}, the wrapper on creative.
- * because that is the one vanilla draws.
+ * A {@code SlotElement} holds no slot reference. It holds the slot's stable
+ * {@link Address} and looks up the live in-menu slot from the current screen's menu
+ * each frame, through {@link CreatedSlotAdapter}'s cache. That is what lets one
+ * panel registered once work on every screen. The survival inventory and the
+ * creative screen carry different slot instances for the same logical slot (creative
+ * wraps it in a {@code SlotWrapper} on a throwaway menu), and a held reference would
+ * be wrong on one of them. The position is written to whichever instance is in
+ * {@code menu.slots}, the wrapper on creative, because that is the one vanilla draws.
  *
- * <h3>Parked when not presented</h3>
+ * <h3>Parked when not shown</h3>
  *
- * At the end of each frame ({@link SlotElementRegistry#parkUnpresented}) every
- * attached element whose panel did not render it this frame moves its slot
- * off-screen. So a slot whose panel is hidden, out of region, or hidden by the
- * window is at a position vanilla neither draws nor hit-tests next frame, rather
- * than wherever it was last drawn; one that was presented keeps its position, so
- * hover between frames agrees with the picture. ({@link CreatedSlot#isActive}
- * covers the panel-hidden case on its own; parking covers the rest.)
+ * At the end of each frame ({@link SlotElementRegistry#parkUnpresented}), every
+ * attached element whose panel did not render it that frame moves its slot
+ * off-screen. So a slot whose panel is hidden, out of its region, or hidden by the
+ * window sits where vanilla neither draws nor hit-tests it next frame, instead of
+ * where it was last drawn. A slot that was shown keeps its position, so hover between
+ * frames matches what is on screen. ({@link CreatedSlot#isActive} handles a hidden
+ * panel by itself; parking handles the other cases.)
  *
- * <p>An element in an <b>overlay</b>-positioned panel (layer 4) writes its
- * position after vanilla's slot pass, so vanilla draws it one frame late and
- * under the overlay's chrome. Created slots belong in flow panels; nothing
- * places them in overlays today.
+ * <p>An element in an overlay panel (layer 4) writes its position after vanilla's
+ * slot pass, so vanilla draws it a frame late and under the overlay's chrome.
+ * Created slots belong in flow panels; nothing puts them in overlays today.
  *
- * <h3>Why a slot stays live under its own panel's claim</h3>
+ * <h3>Why a slot stays live under its own panel</h3>
  *
- * A slot's item interaction is owned by vanilla: a click flows through
- * {@code AbstractContainerScreen.mouseClicked} → {@code slotClicked(getHoveredSlot())},
- * and MenuKit's library-owned {@code getHoveredSlot} interception
- * ({@link CreatedSlotInput}) makes the registered slot win over a vanilla slot it
- * covers. An opaque panel claims its whole rectangle (§0065: no holes), so the
- * claim routes a point over this element's slot back to vanilla
- * ({@link #presentsSlotAt}): the panel's own slot hovers and clicks, while
- * anything else under the panel stays inert. On a transparent panel the slot is
- * simply not solid ({@link #isElementOpaque()} is {@code false}), so it claims
- * nothing itself.
- * {@link SlotElementRegistry} tells the library's screen hook which panels
- * currently host a {@code SlotElement}.
+ * Vanilla owns a slot's item interaction: {@code AbstractContainerScreen.mouseClicked}
+ * calls {@code slotClicked(getHoveredSlot())}, and MenuKit's {@code getHoveredSlot}
+ * interception ({@link CreatedSlotInput}) makes the registered slot win over a vanilla
+ * slot it covers. An opaque panel claims its whole rectangle with no holes, so the
+ * claim sends a point over this element's slot back to vanilla
+ * ({@link #presentsSlotAt}). The panel's own slot hovers and takes clicks, while
+ * anything else under the panel stays inert. On a transparent panel the slot is not
+ * solid ({@link #isElementOpaque()} is {@code false}), so it claims nothing itself.
+ * {@link SlotElementRegistry} tells the library's screen hook which panels currently
+ * host a {@code SlotElement}.
  */
 public final class SlotElement extends AbstractPanelElement {
 
-    /** Off-screen: where a slot sits when no panel is presenting it this frame. */
+    /** Off-screen: where a slot sits when no panel is showing it this frame. */
     private static final int PARKED = CreatedSlots.OFFSCREEN;
 
     private final String panelId;
     private final Address address;
 
-    /** Whether a panel presented (placed) this element's slot this frame. Render thread only. */
+    /** Whether a panel placed this element's slot this frame. Render thread only. */
     private boolean presented = false;
 
     private SlotElement(Builder b) {
@@ -124,15 +116,15 @@ public final class SlotElement extends AbstractPanelElement {
 
     /**
      * A slot element: {@code SlotElement.builder().slot(CreatedSlots.groupId(panel, group), i).at(x, y).build()}.
-     * The shared vocabulary applies: {@code at}, {@code visibleWhen} (on top of the
-     * slot's own reveal), {@code tooltip} (shown over an empty slot; a slot with an item
-     * shows the item's). A slot is never solid, so {@code opaque} has no effect.
+     * The usual element methods apply: {@code at}, {@code visibleWhen} (on top of the
+     * slot's own reveal), and {@code tooltip} (shown over an empty slot; a slot with an
+     * item shows the item's). A slot is never solid, so {@code opaque} has no effect.
      */
     public static Builder builder() {
         return new Builder();
     }
 
-    /** The registered slot's panel id this element presents (its registry key). */
+    /** The panel id of the registered slot this element shows (its registry key). */
     public String panelId() { return panelId; }
 
     /** The element's size is the slot's frame and never shrinks. */
@@ -150,9 +142,9 @@ public final class SlotElement extends AbstractPanelElement {
 
     /**
      * Whether this element's live slot is under the point: vanilla's hover cell (the
-     * 18x18 frame around the item box) at the slot's current position. The claiming
-     * panel routes such a point to the slot (§0065), so a panel's own slots hover,
-     * click and tooltip while everything else it covers is inert.
+     * 18x18 frame around the item box) at the slot's current position. The panel
+     * claiming the point sends it to the slot, so a panel's own slots hover, take
+     * clicks and show tooltips while everything else it covers is inert.
      */
     @Override
     public boolean presentsSlotAt(com.trevlar.menukit.api.element.InputContext in) {
@@ -181,33 +173,32 @@ public final class SlotElement extends AbstractPanelElement {
         int screenX = ctx.originX() + getChildX();
         int screenY = ctx.originY() + getChildY();
 
-        // Place the live slot where the panel put this element, in vanilla's
-        // slot coordinate space (frame-relative; x/y name the 16×16 item box,
-        // which sits ITEM_INSET inside the 18×18 frame). Vanilla's hover
-        // resolution and slot pass, which follow layer 1 in the same
-        // extractContents call, then find and draw it here.
+        // Place the live slot where the panel put this element, in vanilla's slot
+        // coordinates (relative to the frame; x/y are the 16x16 item box, which sits
+        // ITEM_INSET inside the 18x18 frame). Vanilla's hover resolution and slot
+        // pass, which follow layer 1 in the same extractContents call, then find and
+        // draw it here.
         AbstractContainerScreenAccessor acc = (AbstractContainerScreenAccessor) acs;
         place(slot,
                 screenX + SlotRendering.ITEM_INSET - acc.mk$getLeftPos(),
                 screenY + SlotRendering.ITEM_INSET - acc.mk$getTopPos());
         presented = true;
 
-        // The frame is panel chrome, the only thing drawn here.
+        // The frame is panel chrome, and the only thing drawn here.
         SlotRendering.drawSlotBackground(ctx.graphics(), screenX, screenY,
                 SlotRendering.DEFAULT_SIZE, false);
 
-        // Plain-English hover tooltip (tester-aid / consumer disclosure), routed
-        // through the shared queueTooltip so it inherits the library max-width.
-        // Only queued when the slot is EMPTY, when it holds an item, vanilla's
-        // own item-stack tooltip is the useful one and should win the frame.
+        // The hover tooltip goes through the shared queueTooltip, so it gets the
+        // library's max width. Only queued when the slot is empty: when it holds an
+        // item, vanilla's own item tooltip is the useful one.
         if (slot.getItem().isEmpty()) {
             queueTooltip(ctx);
         }
     }
 
     /**
-     * End of frame: parks this element's slot off-screen unless {@link #render}
-     * placed it this frame; clears the mark either way. No-op when the slot isn't
+     * End of frame: parks this element's slot off-screen unless {@link #render} placed
+     * it this frame, and clears the mark either way. Does nothing when the slot isn't
      * on {@code menu}.
      */
     @ApiStatus.Internal
@@ -220,9 +211,9 @@ public final class SlotElement extends AbstractPanelElement {
     }
 
     /**
-     * The live in-menu slot this element presents on {@code menu} (the creative
-     * wrapper on creative), or {@code null} when it isn't on this menu or its
-     * panel is hidden (inert, indistinguishable from absent, §0065).
+     * The live in-menu slot this element shows on {@code menu} (the creative wrapper
+     * on creative), or {@code null} when it isn't on this menu or its panel is hidden
+     * (inert, which looks the same as absent).
      */
     private @Nullable Slot presented(@Nullable AbstractContainerMenu menu) {
         if (menu == null) return null;
@@ -237,15 +228,15 @@ public final class SlotElement extends AbstractPanelElement {
                 ? acs.getMenu() : null;
     }
 
-    /** Writes a slot's presentation position, vanilla's own {@code x/y}. */
+    // Writes a slot's on-screen position into vanilla's own x/y.
     private static void place(Slot slot, int x, int y) {
         SlotPositionAccessor pos = (SlotPositionAccessor) slot;
         pos.mk$setX(x);
         pos.mk$setY(y);
     }
 
-    // ── Lifecycle: join/leave the active-slot registry so the screen hook can
-    //    park and resolve hover/click for this panel-hosted slot ─────────────
+    // Join and leave the registry, so the screen hook can park this slot and resolve
+    // hover and click for it.
 
     @Override
     public void onAttach(Screen screen) {

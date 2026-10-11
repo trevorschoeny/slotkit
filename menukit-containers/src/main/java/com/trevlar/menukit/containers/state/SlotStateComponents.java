@@ -9,60 +9,53 @@ import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Library-owned data component(s) for M1 per-slot state — the §0048
- * block-portable bridge.
+ * The data component that carries per-slot state between a block and its item.
  *
- * <h3>{@link #PORTABLE_SLOT_STATE} — the generic block↔item travel vehicle</h3>
+ * <p>Since 1.20.5 only declared data components travel between block and item. A
+ * Fabric attachment, where slot state lives, does not, so per-slot state on a
+ * shulker box would be lost the moment the box is broken. {@link #PORTABLE_SLOT_STATE}
+ * carries the whole per-block-entity bag ({@link PerPlayerSlotStateBag}), meaning
+ * every registered channel's per-slot, per-player state. A mixin on the shulker block
+ * entity writes it in {@code collectImplicitComponents} (block entity to item) and
+ * restores it in {@code applyImplicitComponents} (item to block entity), on the same
+ * vanilla path the container contents take.
  *
- * Post-1.20.5, only <em>declared data components</em> travel block↔item; a
- * Fabric attachment (where M1 metadata lives) does not. So per-slot metadata on
- * a shulker would fall off the moment the box is broken. This component is the
- * bridge: it carries the <em>whole</em> per-BlockEntity M1 bag
- * ({@link PerPlayerSlotStateBag}) — every registered channel's per-slot, per-
- * player state — and a mixin on the shulker block entity emits it at
- * {@code collectImplicitComponents} (BE → item) and restores it at
- * {@code applyImplicitComponents} (item → BE), riding vanilla's own
- * component-travel path (the same one the container contents use).
+ * <p>The component is generic. The bag round-trips through one
+ * {@link PerPlayerSlotStateBag#CODEC}, so it carries whatever channels are present
+ * with no schema of its own. A lock flag is a consumer-registered channel that lands
+ * in this bag like any other: the library provides the transport, and consumers
+ * decide what travels. There is deliberately no {@code menukit:slot_locks} here.
  *
- * <p><b>Generic, never per-feature (§0048 / §0019).</b> The bag round-trips
- * through one {@link PerPlayerSlotStateBag#CODEC}, so the component carries
- * whatever channels are present with no schema of its own. A lock flag is a
- * consumer-registered M1 channel that lands in this bag like any other — the
- * library ships the <em>travel mechanism</em>; consumers own <em>what travels</em>.
- * There is deliberately no {@code menukit:slot_locks} here.
+ * <p>Persistent only: it travels on disk and with the item. Network sync is left
+ * out, because a client-facing viewer would sync only the viewing player's slice,
+ * not the whole per-player bag.
  *
- * <p><b>Persistent only.</b> It travels on disk and with the item. Network sync
- * is deferred: a client-facing block-portable viewer would sync only the
- * viewing player's slice, not the whole per-player bag — a viewer-time concern,
- * not a travel concern.
- *
- * <p>The M1 Fabric attachment stays source-of-truth (live enforcement + world
- * save, {@link SlotStateAttachments#BLOCK_ENTITY}); the component is travel-only.
+ * <p>The Fabric attachment ({@link SlotStateAttachments#BLOCK_ENTITY}) stays the
+ * source of truth for live enforcement and world save. The component is only for
+ * travel.
  */
 @ApiStatus.Internal
 public final class SlotStateComponents {
 
     private SlotStateComponents() {}
 
-    /** Generic block-portable M1 metadata bridge component (§0048). */
     public static final DataComponentType<PerPlayerSlotStateBag> PORTABLE_SLOT_STATE =
             Registry.register(
                     BuiltInRegistries.DATA_COMPONENT_TYPE,
                     Identifier.fromNamespaceAndPath("menukit", "portable_slot_state"),
                     DataComponentType.<PerPlayerSlotStateBag>builder()
                             .persistent(PerPlayerSlotStateBag.CODEC)
-                            // Not synchronised (§0067): the bag holds every player's
+                            // Not synchronised: the bag holds every player's
                             // private marks, and no client reads it (slot state reaches a
                             // client through its snapshots). On the wire it is an empty bag.
                             .networkSynchronized(StreamCodec.of((buf, bag) -> {}, buf -> new PerPlayerSlotStateBag()))
                             .build());
 
     /**
-     * Triggers class loading so the static field above registers. Called from
-     * common init (both sides) — data-component types must be registered
-     * consistently on client and server.
+     * Loads the class so the static field above registers. Called from common init
+     * on both sides, since data-component types must match on client and server.
      */
     public static void register() {
-        // No-op body — registration is driven by the static field.
+        // Empty: the static field does the registering.
     }
 }

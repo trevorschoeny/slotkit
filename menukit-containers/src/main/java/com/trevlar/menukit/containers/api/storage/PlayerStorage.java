@@ -3,25 +3,23 @@ package com.trevlar.menukit.containers.api.storage;
 import com.trevlar.menukit.api.slot.Storage;
 
 /**
- * Marker interface for {@link Storage} implementations that represent the
- * <b>player inventory side</b> of a menu, as opposed to the container side.
+ * Marks a {@link Storage} as the player inventory side of a menu, as opposed to the
+ * container side.
  *
- * <p>Used by
- * {@link com.trevlar.menukit.containers.api.menu.CustomContainerMenu}'s shift-click
- * routing ("Layer 2: source-aware baseline") to route items in the
- * player-prefers-container / container-prefers-player direction.
+ * <p>{@link com.trevlar.menukit.containers.api.menu.CustomContainerMenu}'s shift-click
+ * routing uses it to send items from the player side to the container, and from the
+ * container side to the player.
  *
- * <p>M7's {@link StorageAttachment#playerAttached} factory returns Storage
- * instances that implement this marker. Consumers declaring their own
- * player-backed Storage (via {@code StorageAttachment.custom(...)} or
- * direct Storage implementation) should also implement this marker if the
- * Storage represents the player's inventory for shift-click purposes.
+ * <p>Storage from {@link StorageAttachment#playerAttached} implements this marker.
+ * Consumers with their own player-backed Storage (through
+ * {@code StorageAttachment.custom(...)} or a direct Storage implementation) should
+ * implement it too if that Storage stands for the player's inventory when
+ * shift-clicking.
  *
- * <p>Pre-Phase-14b this was a concrete class with its own item-list +
- * save/load methods; M7's shipping made the impl obsolete. Surviving as
- * a marker because the shift-click routing genuinely needs to distinguish
- * player-side vs container-side Storage instances, and Storage's narrow
- * interface doesn't expose that semantic.
+ * <p>This was once a concrete class with its own item list and save and load
+ * methods. It remains as a marker because shift-click routing needs to tell player
+ * storage from container storage, and the narrow {@link Storage} interface doesn't
+ * say which is which.
  */
 public interface PlayerStorage extends Storage {
 }

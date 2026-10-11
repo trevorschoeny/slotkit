@@ -14,27 +14,24 @@ import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.gamerules.GameRules;
 
 /**
- * Drops (or keeps / destroys) all death-droppable player-scoped attachment
- * contents when a player dies — the player-death twin of
+ * Drops, keeps or destroys the contents of every death-droppable player-scoped
+ * attachment when a player dies. The player-death counterpart of
  * {@link BlockScopedDropHandler}. Called from
  * {@code com.trevlar.menukit.containers.mixin.PlayerDeathDropMixin} at the TAIL of
- * {@code Player.dropEquipment}, co-located with vanilla's own
- * {@code keepInventory}-gated {@code destroyVanishingCursedItems()} +
- * {@code inventory.dropAll()}.
+ * {@code Player.dropEquipment}, next to vanilla's own {@code keepInventory}-gated
+ * {@code destroyVanishingCursedItems()} and {@code inventory.dropAll()}.
  *
- * <p>Closes the death-lifecycle gap: a {@code playerAttached} content attachment
- * is registered {@code copyOnDeath} (so a KEPT bag carries across respawn), but
- * Fabric's copy is not gamerule-aware — the library owns the {@code keepInventory}
- * check and the per-stack drop here. Each stack resolves a {@link DropRule}:
- * {@code KEEP} stays (copyOnDeath carries it), {@code DROP} spawns a vanilla
- * player drop, {@code DESTROY} vanishes.
+ * <p>A {@code playerAttached} content attachment is registered {@code copyOnDeath},
+ * so a kept bag carries across respawn. Fabric's copy ignores gamerules, though, so
+ * the library does the {@code keepInventory} check and the per-stack drop here. Each
+ * stack resolves a {@link DropRule}: {@code KEEP} stays (copyOnDeath carries it),
+ * {@code DROP} spawns a vanilla player drop, {@code DESTROY} vanishes.
  *
- * <p><b>Clear-after-drop is load-bearing.</b> Dropped/destroyed slots are
- * written back EMPTY before respawn's {@code copyOnDeath} runs — this prevents a
- * dupe (copyOnDeath would otherwise carry the same items that were just dropped)
- * and, in Phase 2, lets a grave mod's capture-and-clear naturally suppress this
- * drop fallback. Ordering is clean: drop-and-clear runs now (at death),
- * copyOnDeath copies later (at respawn) → a DROP death copies an empty bag, a
+ * <p>Clearing after the drop matters. Dropped and destroyed slots are written back
+ * empty before respawn's {@code copyOnDeath} runs. Otherwise copyOnDeath would carry
+ * the items that were just dropped, duplicating them. It also means a grave mod's
+ * capture-and-clear suppresses this fallback drop on its own. Drop-and-clear runs at
+ * death and copyOnDeath copies at respawn, so a DROP death copies an empty bag and a
  * KEEP death copies the full bag.
  */
 public final class PlayerDeathDropHandler {
@@ -43,16 +40,16 @@ public final class PlayerDeathDropHandler {
 
     /**
      * For every death-droppable player content attachment the player carries,
-     * resolve each stack's {@link DropRule} and act: drop (vanilla player drop)
-     * + clear, destroy + clear, or keep. Server-side only.
+     * resolves each stack's {@link DropRule} and acts on it: drop (a vanilla player
+     * drop) and clear, destroy and clear, or keep. Server side only.
      *
      * @param player the dying player (server-side)
-     * @param level  the player's server level — source of the {@code keepInventory}
+     * @param level  the player's server level, read for the {@code keepInventory}
      *               gamerule (the same instance vanilla's {@code dropEquipment} reads)
      */
     public static void dropAllOnDeath(Player player, ServerLevel level) {
         if (player == null || level == null) return;
-        // dropEquipment(ServerLevel) is already server-side; guard defensively.
+        // dropEquipment(ServerLevel) is already server-side; this is only a guard.
         if (level.isClientSide()) return;
 
         boolean keepInventory = level.getGameRules().get(GameRules.KEEP_INVENTORY);
@@ -79,17 +76,16 @@ public final class PlayerDeathDropHandler {
                 DropRule effective = configured.resolve(stack, keepInventory);
                 switch (effective) {
                     case DROP -> {
-                        // The vanilla player-death drop leaf: eye-level spawn,
-                        // 40-tick pickup delay, no thrower (any player can grab) —
-                        // the same call vanilla's Inventory.dropAll uses. The slot
-                        // is left EMPTY in `remaining` (cleared).
+                        // The vanilla player-death drop: eye-level spawn, 40-tick
+                        // pickup delay, no thrower (any player can pick it up), the
+                        // same call vanilla's Inventory.dropAll uses. The slot is
+                        // left empty in `remaining`.
                         ItemEntity dropped = player.drop(stack, true, false);
-                        // Grave-parity (§0055): when a grave-container mod is
-                        // installed, the player recovers their vanilla inventory
-                        // from a NON-expiring grave — so the slots that mod did not
-                        // capture (ours) must not expire either, or they'd vanish
-                        // after 5 min while the grave persists. Flag them
-                        // never-despawn. With no grave mod present, keep vanilla
+                        // With a grave-container mod installed, the player recovers
+                        // their vanilla inventory from a grave that never expires. The
+                        // slots that mod did not capture (ours) must not expire either,
+                        // or they would vanish after 5 minutes while the grave stays.
+                        // So they never despawn. With no grave mod, keep vanilla
                         // despawn so a registered slot matches a normal death drop.
                         if (dropped != null && GraveModPresence.anyGraveModPresent()) {
                             dropped.setUnlimitedLifetime();
@@ -97,41 +93,36 @@ public final class PlayerDeathDropHandler {
                         changed = true;
                     }
                     case DESTROY ->
-                        // Vanish: leave the slot EMPTY in `remaining` (cleared), no drop.
+                        // Leave the slot empty in `remaining`, with no drop.
                         changed = true;
                     default ->
-                        // KEEP (and the unreachable DEFAULT): the stack stays;
+                        // KEEP (and the unreachable DEFAULT): the stack stays, and
                         // copyOnDeath carries it across respawn.
                         remaining.set(i, stack);
                 }
             }
 
-            // Write back the kept-only list so respawn's copyOnDeath carries
-            // exactly the KEPT stacks — never the dropped/destroyed ones (no dupe).
+            // Write back only the kept stacks, so respawn's copyOnDeath never
+            // carries dropped or destroyed ones.
             if (changed) {
                 player.setAttached(type, StorageAttachments.listToContents(remaining));
             }
         }
 
-        // §0055 completion — custom (consumer-defined) player-anchored specs.
-        // These have no library-owned AttachmentType (the consumer owns the
-        // storage), so they live in a parallel registry. Same per-stack
-        // DROP/DESTROY/KEEP resolution, sourced through the spec. KEEP relies on
-        // the consumer's storage surviving death (their own copyOnDeath); the
-        // library owns only the gamerule-gated drop at this death site.
+        // Custom (consumer-defined) player-anchored specs. These have no
+        // library-owned AttachmentType, since the consumer owns the storage, so they
+        // live in a parallel registry. Same per-stack DROP/DESTROY/KEEP resolution,
+        // read through the spec. KEEP relies on the consumer's storage surviving
+        // death (its own copyOnDeath); the library only does the gamerule-gated drop.
         for (var entry : StorageAttachments.customPlayerDeathSpecs().entrySet()) {
             dropCustomSpecOnDeath(player, keepInventory, entry.getKey(), entry.getValue());
         }
     }
 
-    /**
-     * Death-drops one custom player-anchored spec. Generic helper isolating the
-     * single unchecked cast — the spec's owner is {@code Player} by the
-     * {@code dropsOnDeath} precondition (a non-player spec enrolled here would
-     * surface as a {@link ClassCastException}, the documented usage error).
-     * Mirrors the AttachmentType path's per-stack DROP/DESTROY/KEEP resolution,
-     * read/written through the spec instead of a Fabric attachment.
-     */
+    // Same per-stack resolution as the AttachmentType path, read and written through
+    // the spec. The one unchecked cast is safe because dropsOnDeath requires a
+    // Player owner; a non-player spec enrolled here fails with ClassCastException,
+    // the documented usage error.
     @SuppressWarnings("unchecked")
     private static void dropCustomSpecOnDeath(Player player, boolean keepInventory,
             CustomAttachmentSpec<?, ?> rawSpec, DropRule configured) {
@@ -151,8 +142,8 @@ public final class PlayerDeathDropHandler {
             DropRule effective = configured.resolve(stack, keepInventory);
             switch (effective) {
                 case DROP -> {
-                    // Same vanilla player-death drop leaf the AttachmentType
-                    // path uses; the slot is left EMPTY in `remaining`.
+                    // Same vanilla player-death drop as the AttachmentType path;
+                    // the slot is left empty in `remaining`.
                     ItemEntity dropped = player.drop(stack, true, false);
                     if (dropped != null && GraveModPresence.anyGraveModPresent()) {
                         dropped.setUnlimitedLifetime();
@@ -160,13 +151,12 @@ public final class PlayerDeathDropHandler {
                     changed = true;
                 }
                 case DESTROY -> changed = true;       // vanish; slot left empty
-                default -> remaining.set(i, stack);   // KEEP — consumer storage must survive death
+                default -> remaining.set(i, stack);   // KEEP: consumer storage must survive death
             }
         }
 
-        // Write the kept-only list back through the spec so the consumer's
-        // storage holds exactly the KEPT stacks at death time (no dupe). For
-        // KEEP to carry across respawn, that storage must itself survive death.
+        // Write only the kept stacks back through the spec, so nothing is duplicated.
+        // For KEEP to carry across respawn, that storage must itself survive death.
         if (changed) {
             spec.write(player, spec.fromItemList(remaining));
             spec.markDirty(player);

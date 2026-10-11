@@ -32,63 +32,62 @@ import java.util.Optional;
 import java.util.function.Predicate;
 
 /**
- * The mending primitive's <b>intercept</b> — widens vanilla's XP-orb repair pool
- * so a damaged Mending item in a registered slot opted in by Address via the engine
- * {@code ContainerKeys.MENDING} key, or a consumer-contributed source
- * ({@link MendingCandidates}), repairs from XP exactly like worn armor does.
- * Library-owned registered-slot vanilla mechanic, the same line as death-drop (§0055)
- * and binding (§0055).
+ * Widens vanilla's XP-orb repair pool, so a damaged Mending item repairs from XP just
+ * like worn armour does when it sits in a registered slot opted in by address through
+ * the {@code ContainerKeys.MENDING} key, or comes from a consumer source
+ * ({@link MendingCandidates}). Like death drops and binding, this is a vanilla
+ * mechanic the library extends to registered slots.
  *
- * <h3>One unified pool, once</h3>
- * Vanilla's {@code repairPlayerItems} picks a single damaged Mending item via
- * {@code EnchantmentHelper.getRandomItemWith(REPAIR_WITH_XP, …)}, repairs it,
- * consumes proportional XP, and recurses with the leftover. We {@link Redirect}
- * that one pick so the pool is unified in a single place:
- * <pre>  vanilla equipped (preserved) ∪ opted-in registered slots ∪ consumer candidates</pre>
- * then repair runs with vanilla's own math. Unifying at the pick site means one
- * orb repairs one item across all sources — no double-dipping, and no second
- * {@code ExperienceOrb} mixin needed consumer-side.
+ * <h3>One pool</h3>
+ * Vanilla's {@code repairPlayerItems} picks a single damaged Mending item with
+ * {@code EnchantmentHelper.getRandomItemWith(REPAIR_WITH_XP, ...)}, repairs it,
+ * consumes the matching XP and recurses with the leftover. This {@link Redirect}s that
+ * one pick so the pool is built in a single place:
+ * <pre>  vanilla equipped (kept) + opted-in registered slots + consumer candidates</pre>
+ * and the repair then runs with vanilla's own math. Because the pool is built at the
+ * pick, one orb repairs one item across all sources, nothing is repaired twice, and
+ * consumers need no {@code ExperienceOrb} mixin of their own.
  *
  * <h3>Vanilla is untouched when nobody opts in</h3>
  * If the entity isn't a server player, or no registered slot opts in and no consumer
- * registers a candidate, the redirect returns vanilla's result verbatim — identical
- * behavior. Vanilla equipped items keep their exact selection + break semantics
- * (via the original {@code getRandomItemWith} call).
+ * registers a candidate, the redirect returns vanilla's result unchanged. Vanilla
+ * equipped items keep their exact selection and break behaviour through the original
+ * {@code getRandomItemWith} call.
  *
- * <h3>Fair selection (§0055)</h3>
- * Uniform random pick across the unified pool — matching vanilla's per-orb
- * randomness. Each equipped mendable item is expanded into its own pool entry
- * (rather than vanilla's single pre-collapsed {@code getRandomItemWith} pick), so a
- * uniform draw weights every mendable item equally and the opted-in registered /
- * consumer candidates are no longer over-represented versus equipped-as-a-group.
+ * <h3>Fair selection</h3>
+ * A uniform random pick across the pool, like vanilla's per-orb randomness. Each
+ * equipped mendable item becomes its own pool entry, instead of vanilla's single
+ * collapsed {@code getRandomItemWith} pick. So every mendable item is weighted
+ * equally, and registered and consumer candidates are not favoured over equipped
+ * items as a group.
  *
- * <h3>Sync (the load-bearing subtlety)</h3>
- * Vanilla repairs the chosen stack <em>in place</em> AFTER this redirect returns,
- * and {@code repairPlayerItems} recurses — so we can't persist at pick time. For a
- * non-vanilla candidate we queue a commit (registered: {@code slot.set} → storage
- * {@code markDirty}; consumer: its {@code onRepaired}) on the orb instance and
- * drain it at {@code playerTouch} TAIL, once the whole repair has finished. An
- * in-place durability change alone may not round-trip an attachment-backed slot to
- * disk; the commit marks it dirty (and vanilla's {@code broadcastChanges} handles
- * the client sync from the in-place change).
+ * <h3>Sync</h3>
+ * Vanilla repairs the chosen stack in place after this redirect returns, and
+ * {@code repairPlayerItems} recurses, so nothing can be persisted at pick time. For a
+ * non-vanilla candidate a commit is queued on the orb instance (a registered slot:
+ * {@code slot.set}, which marks the storage dirty; a consumer candidate: its
+ * {@code onRepaired}). It runs before the next pick, or at {@code playerTouch} TAIL
+ * for the last one, once vanilla has repaired the stack. An in-place durability change alone may not
+ * reach disk for an attachment-backed slot, so the commit marks it dirty. Vanilla's
+ * {@code broadcastChanges} syncs the in-place change to the client.
  */
 @Mixin(ExperienceOrb.class)
 public class ExperienceOrbMendMixin {
 
-    // The persist actions (write-back + mark-dirty) for the non-vanilla candidate
-    // picked on the PREVIOUS recursion level, not yet flushed to live storage. Lives
-    // on the orb instance (stable across playerTouch → repairPlayerItems recursion);
-    // lazy-init at playerTouch HEAD so it cannot leak across orbs.
+    // The persist actions (write back and mark dirty) for the non-vanilla candidate
+    // picked on the previous recursion level, not yet flushed to live storage. Kept on
+    // the orb instance, which is stable across the playerTouch to repairPlayerItems
+    // recursion, and created at playerTouch HEAD so it cannot leak across orbs.
     //
-    // Why "previous level": vanilla repairs the picked stack IN PLACE only AFTER this
-    // redirect returns, then recurses. So at the next redirect call the prior pick is
-    // freshly repaired — we flush it (write the repaired copy back to the live
-    // attachment) BEFORE re-scanning. Without this flush, an attachment-backed slot's
-    // getStack rebuilds a fresh STILL-DAMAGED copy every call (the live attachment was
-    // never updated), so the same item is re-offered every recursion and vanilla's
-    // per-step XP consumption eventually integer-floors to zero → infinite recursion
-    // (StackOverflowError). Flushing makes a repaired created/consumer item leave the
-    // pool exactly as vanilla's live equipment does once mended.
+    // Vanilla repairs the picked stack in place only after this redirect returns, then
+    // recurses. So at the next redirect call the previous pick is freshly repaired, and
+    // it is flushed (the repaired copy written back to the live attachment) before the
+    // rescan. Without the flush, an attachment-backed slot's getStack builds a new,
+    // still-damaged copy on every call because the live attachment was never updated.
+    // The same item is offered again on every recursion, vanilla's per-step XP use
+    // eventually rounds down to zero, and the recursion never ends (StackOverflowError).
+    // With the flush, a repaired created or consumer item leaves the pool just as
+    // vanilla's live equipment does once mended.
     @Unique
     private List<Runnable> mk$pendingCommits;
 
@@ -99,11 +98,11 @@ public class ExperienceOrbMendMixin {
 
     @Inject(method = "playerTouch", at = @At("TAIL"))
     private void mk$mendDrain(Player player, CallbackInfo ci) {
-        mk$flushPending();          // persist the final pick
+        mk$flushPending();          // persist the last pick
         this.mk$pendingCommits = null;
     }
 
-    /** Run + clear the queued persist actions — write picked repairs to live storage. */
+    // Runs and clears the queued persist actions, writing picked repairs to live storage.
     @Unique
     private void mk$flushPending() {
         if (this.mk$pendingCommits != null && !this.mk$pendingCommits.isEmpty()) {
@@ -121,9 +120,9 @@ public class ExperienceOrbMendMixin {
                             + "Ljava/util/Optional;"))
     private Optional<EnchantedItemInUse> mk$widenMendPool(
             DataComponentType<?> effect, LivingEntity entity, Predicate<ItemStack> isDamaged) {
-        // Persist the PRIOR recursion level's pick to live storage before re-scanning,
-        // so a now-repaired created/consumer item is no longer offered (see the field
-        // doc — this is what terminates the recursion).
+        // Persist the previous recursion level's pick before rescanning, so a repaired
+        // created or consumer item is no longer offered. This is what ends the
+        // recursion (see the field comment).
         mk$flushPending();
 
         Optional<EnchantedItemInUse> vanilla =
@@ -131,27 +130,27 @@ public class ExperienceOrbMendMixin {
         if (!(entity instanceof ServerPlayer player)) return vanilla;
 
         // Gather the extra (non-vanilla) candidates. Parallel lists: pool[i] is the
-        // repair target, commits[i] is its mark-dirty/sync (null for the vanilla pick).
+        // repair target and commits[i] its mark-dirty action (null for vanilla items).
         List<EnchantedItemInUse> pool = new ArrayList<>();
         List<Runnable> commits = new ArrayList<>();
         int extras = 0;
 
-        // Opted-in slots on the player's own inventory menu — MENDING resolved from the
-        // engine by the slot's address. Two flavors:
-        //  - created slot (CreatedSlot): address by id; its storage returns a COPY, so we
-        //    queue a write-back commit (flushed before the next scan / at drain).
-        //  - vanilla inventory slot: opted in by its container address; the item is the
-        //    REAL inventory stack, so vanilla's in-place repair persists + syncs natively
-        //    (commit = null, exactly like equipped gear).
-        // Skip the per-slot scan entirely when no behavior is set anywhere — keeps
-        // normal XP pickup (the overwhelming common case) zero-cost.
+        // Opted-in slots on the player's own inventory menu, with MENDING resolved from
+        // the engine by the slot's address. Two kinds:
+        //  - a created slot (CreatedSlot), addressed by id. Its storage returns a copy,
+        //    so a write-back commit is queued (flushed before the next scan or at TAIL).
+        //  - a vanilla inventory slot, opted in by its container address. The item is the
+        //    real inventory stack, so vanilla's in-place repair persists and syncs on its
+        //    own (commit is null, as for equipped gear).
+        // The scan is skipped when no behaviour is set anywhere, so normal XP pickup,
+        // by far the common case, costs nothing extra.
         for (Slot slot : !WindowEngine.hasServerDeclarations() ? List.<Slot>of() : player.inventoryMenu.slots) {
             if (slot instanceof CreatedSlot mk) {
                 if (WindowEngine.resolve(mk.address(), ContainerKeys.MENDING).asBoolean()) {
                     ItemStack stack = mk.getItem();
                     if (mk$mendable(stack)) {
                         pool.add(new EnchantedItemInUse(stack, null, player, item -> {}));
-                        commits.add(() -> mk.set(stack));   // write back + markDirty
+                        commits.add(() -> mk.set(stack));   // write back and markDirty
                         extras++;
                     }
                 }
@@ -162,13 +161,13 @@ public class ExperienceOrbMendMixin {
                     ItemStack stack = slot.getItem();
                     if (mk$mendable(stack)) {
                         pool.add(new EnchantedItemInUse(stack, null, player, item -> {}));
-                        commits.add(null);   // real inventory stack — repairs in place
+                        commits.add(null);   // real inventory stack, repairs in place
                         extras++;
                     }
                 }
             }
         }
-        // Consumer-contributed candidates (MKC applies the predicate; consumer owns "which").
+        // Consumer candidates. The consumer picks which; this applies the mendable check.
         for (MendingCandidates.Candidate candidate : MendingCandidates.gather(player)) {
             ItemStack stack = candidate.stack();
             if (mk$mendable(stack)) {
@@ -178,16 +177,15 @@ public class ExperienceOrbMendMixin {
             }
         }
 
-        // Nothing opted in → vanilla behavior, untouched.
+        // Nothing opted in, so vanilla behaviour is left untouched.
         if (extras == 0) return vanilla;
 
-        // §0055 fair weighting: add EVERY equipped mendable item as its own pool
-        // entry — not vanilla's single pre-collapsed pick — so the opted-in registered /
-        // consumer candidates aren't over-represented versus equipped-as-a-group.
-        // (Vanilla's getRandomItemWith collapses all equipped matches to one entry;
-        // we expand them so a uniform pick weights every mendable item equally.)
-        // Equipped items repair in place on the live equipment stack, which syncs via
-        // vanilla's equipment broadcast — commit = null, exactly like vanilla's pick.
+        // Add every equipped mendable item as its own pool entry. Vanilla's
+        // getRandomItemWith collapses all equipped matches into one pick; expanding them
+        // weights every mendable item equally, so registered and consumer candidates
+        // aren't favoured over equipped items as a group. Equipped items repair in place
+        // on the live equipment stack, which syncs through vanilla's equipment broadcast,
+        // so their commit is null, as for vanilla's own pick.
         for (EquipmentSlot eq : EquipmentSlot.values()) {
             ItemStack equipped = entity.getItemBySlot(eq);
             if (mk$mendable(equipped)) {
@@ -200,14 +198,14 @@ public class ExperienceOrbMendMixin {
         int index = player.getRandom().nextInt(pool.size());
         Runnable commit = commits.get(index);
         if (commit != null && this.mk$pendingCommits != null) {
-            // Queue (don't run yet): vanilla repairs this pick in place right after we
-            // return; the next redirect call (or the TAIL drain) flushes it to live storage.
+            // Queue it rather than run it: vanilla repairs this pick in place right after
+            // the return, and the next redirect call (or the TAIL drain) flushes it.
             this.mk$pendingCommits.add(commit);
         }
         return Optional.of(pool.get(index));
     }
 
-    /** Damaged AND carries the vanilla {@code REPAIR_WITH_XP} (Mending) effect. */
+    // Damaged and carries the vanilla REPAIR_WITH_XP (Mending) effect.
     @Unique
     private static boolean mk$mendable(ItemStack stack) {
         return !stack.isEmpty() && stack.isDamaged()

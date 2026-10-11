@@ -23,43 +23,39 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 /**
- * MKC's created-slot resolver — resolves a
- * {@code CREATED_SLOT} {@link Address} to its live in-menu slot (position is
- * read off that slot's own {@code x/y}, like a vanilla slot's). This is the MKC half of THE ONE WINDOW Phase 2, and the home of the
- * canonical created-slot {@link #addressOf} encoding that mint and resolve share.
+ * Resolves a {@code CREATED_SLOT} {@link Address} to its live in-menu slot. Position
+ * is read off that slot's own {@code x/y}, as for a vanilla slot. Also home to the
+ * canonical created-slot {@link #addressOf} encoding that minting and resolving share.
  *
- * <h2>Created-slot identity is MENU-INDEPENDENT</h2>
+ * <h2>Created-slot identity does not depend on the menu</h2>
  *
- * A created slot (e.g. a pocket) is the same logical slot wherever it is shown —
- * on the survival {@code InventoryMenu}, wrapped onto the creative item-picker
- * menu, or projected onto a foreign container. So its address must NOT depend on
- * the rendering menu's family, or the same pocket would get different addresses
- * across survival↔creative. Its address roots at a CONSTANT family
- * ({@code CREATED_FAMILY}) and is identified purely by its panel + declaration
- * id ({@code panelId} / {@code groupId} / {@code localIndex}). Consequently
- * resolution does not apply a menu-family gate (that gate is for vanilla slots,
- * which ARE menu-intrinsic); the identity scan below IS the presence check.
+ * A created slot (a pocket, say) is the same logical slot wherever it is shown: on the
+ * survival {@code InventoryMenu}, wrapped onto the creative item-picker menu, or
+ * projected onto a foreign container. Its address must not depend on the rendering
+ * menu's family, or the same pocket would get different addresses in survival and
+ * creative. So it roots at a constant family (the panel family) and is identified
+ * only by {@code panelId}, {@code groupId} and {@code localIndex}.
+ * Resolution therefore skips the menu-family check (that is for vanilla slots, which
+ * belong to their menu), and the identity scan below is the presence check.
  *
- * <h2>Replaces the per-frame scan with a session-bound cache (§3.7)</h2>
+ * <h2>Cache instead of a per-frame scan</h2>
  *
- * The old {@code SlotElement.resolve()} did an O(n) identity scan over
- * {@code menu.slots} every frame per element. This keeps the same identity match
- * but binds {@code Address -> live menu index} in a cache keyed by the live menu
- * instance. A reopen produces a NEW menu instance, so the cache is invalidated
- * for free (and a GC'd menu drops its entry via the {@link WeakHashMap}). The
- * cache holds only {@code int} indices — NO {@code Slot} or container reference
- * (§3.7). Client-thread only.
+ * The old {@code SlotElement.resolve()} scanned {@code menu.slots} every frame for
+ * every element. This keeps the same identity match but caches
+ * {@code Address -> live menu index} per live menu instance. A reopen creates a new
+ * menu instance, so the cache starts fresh, and a collected menu drops its entry
+ * through the {@link WeakHashMap}. The cache holds only {@code int} indices, never a
+ * {@code Slot} or container reference. Client thread only.
  */
 public final class CreatedSlotAdapter {
 
-    /** Singleton — the adapter is stateless (cache + encoding are static). */
+    /** The adapter is stateless; the cache and encoding are static. */
     public static final CreatedSlotAdapter INSTANCE = new CreatedSlotAdapter();
 
     private CreatedSlotAdapter() {}
 
 
-    // menu instance -> (address -> matching slot's menu index). Reopen = new menu
-    // = fresh cache; GC'd menu drops its entry. Holds only indices (§3.7).
+    // menu instance -> (address -> matching slot's menu index). Holds only indices.
     private static final Map<AbstractContainerMenu, Map<Address, Integer>> CACHE =
             Collections.synchronizedMap(new WeakHashMap<>());
 
@@ -73,13 +69,13 @@ public final class CreatedSlotAdapter {
             if (mk != null && addressOf(mk).equals(address)) {
                 return menu.slots.get(cachedIndex);
             }
-            bindings.remove(address); // stale — fall through to rescan
+            bindings.remove(address); // stale, so rescan
         }
 
-        // Scan once, populating the full binding map (every created slot, free),
-        // and return the requested match if present. The IN-MENU slot (the
-        // creative wrapper on creative) — the one vanilla draws, hit-tests, and
-        // routes a click through.
+        // Scan once, filling the binding map for every created slot, and return the
+        // requested match if present. The hit is the in-menu slot (the creative
+        // wrapper on creative), which is the one vanilla draws, hit-tests and routes
+        // a click through.
         Slot hit = null;
         for (int i = 0; i < menu.slots.size(); i++) {
             CreatedSlot mk = mkcAt(menu, i);
@@ -94,48 +90,18 @@ public final class CreatedSlotAdapter {
     }
 
     /**
-     * The canonical {@link Address} of a created slot — the single source of
-     * truth shared by resolution (here) and minting. A pure function of the slot's
-     * identity, independent of any rendering menu: it nests under its panel in the
-     * unified {@link PanelAddressing#PANEL_FAMILY} (same family + {@link
-     * PanelAddressing#regKey} encoding a panel element uses), so a created slot, a
-     * panel element, and the panel itself share one coherent owner chain — a
-     * panel-level default cascades to the created slot exactly as to an element.
-     * The slot's {@code groupId + localIndex} is its durable declaration token.
+     * The canonical {@link Address} of a created slot, shared by resolution (here) and
+     * minting. It depends only on the slot's identity, not on any rendering menu. It
+     * nests under its panel in {@link PanelAddressing#PANEL_FAMILY}, with the same
+     * {@link PanelAddressing#regKey} encoding a panel element uses, so a created slot,
+     * a panel element and the panel share one owner chain and a panel-level default
+     * reaches the created slot just as it reaches an element. The slot's
+     * {@code groupId} and {@code localIndex} are its durable declaration token.
      */
     public static Address addressOf(CreatedSlot mk) {
         return Address.createdSlot(SlotGroupId.created(mk.panelId(), mk.groupId()), mk.getLocalIndex());
     }
 
-    /**
-     * The canonical {@link Address} of a created slot from its DECLARED IDENTITY —
-     * the created-slot counterpart to {@link PanelAddressing#ofPanel(String)} /
-     * {@link PanelAddressing#ofElement(String, String)}, needing NO live slot.
-     *
-     * <p>This is what lets a consumer name a created slot through the window before
-     * the menu (and the slot) exist — to set its server behavior (GATING, BINDING,
-     * MENDING) once at mod init, by identity, honoring THE ONE WINDOW
-     * thesis that behavior is keyed by address and independent of creation. The
-     * {@link #addressOf(CreatedSlot) live overload} delegates here, so a slot born later
-     * resolves the init-declared behavior the moment it appears (identical address).
-     *
-     * <p><b>Internal — consumers use a path-specific minter, not this raw encoding.</b>
-     * Each slot-creation path carries a different panel id encoding, so naming a slot
-     * goes through the minter that matches how the slot was created:
-     * <ul>
-     *   <li>container-parity {@code define()} slots → {@link ContainerPanel#address}
-     *       (it derives the {@code "panelId:groupId"} sub-space);</li>
-     *   <li>custom-menu {@code CustomContainerMenu} slots →
-     *       {@link com.trevlar.menukit.containers.api.menu.CustomContainerMenu#address} (the bare
-     *       declared panel id).</li>
-     * </ul>
-     * Calling this directly with the wrong id silently mints a non-resolving address —
-     * the footgun the two minters exist to prevent.
-     *
-     * @param panelId    the slot's panel id (as passed to {@code CreatedSlots}/builder)
-     * @param groupId    the slot's group id within that panel
-     * @param localIndex the slot's index within its group
-     */
     @ApiStatus.Internal
 
     private static @Nullable CreatedSlot mkcAt(AbstractContainerMenu menu, int index) {

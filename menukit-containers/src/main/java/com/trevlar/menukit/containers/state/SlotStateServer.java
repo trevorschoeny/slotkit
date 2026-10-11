@@ -31,7 +31,7 @@ import org.jetbrains.annotations.ApiStatus;
  * viewing player to the attachment owner (player, block entity, entity) and reads or
  * writes the library's {@link SlotStateBag}.
  *
- * <p><b>Reads never write</b> (§0067): a read looks at what is attached and answers
+ * <p>Reads never write: a read looks at what is attached and answers
  * {@code null} when nothing is, so opening a container, or a snapshot of one, attaches
  * nothing. Only a write creates an owner's bag, and a write of the channel's default
  * removes the entry instead ({@link #clearTag}).
@@ -41,7 +41,7 @@ public final class SlotStateServer {
 
     private SlotStateServer() {}
 
-    // ── Codec helpers ───────────────────────────────────────────────────
+    // Codec helpers
 
     /** The canonical stored form of {@code value}. Throws if the channel's codec cannot encode it. */
     public static <T> Tag encode(SlotStateChannel<T> channel, T value) {
@@ -66,7 +66,7 @@ public final class SlotStateServer {
         return tryDecode(channel, tag).orElse(channel.defaultValue());
     }
 
-    // ── Core read/write ─────────────────────────────────────────────────
+    // Read and write
 
     /**
      * The stored tag for a channel, key and slot, or {@code null} if none is stored, the
@@ -79,7 +79,7 @@ public final class SlotStateServer {
     }
 
     /**
-     * §0055: the menu-free read, with {@code explicitServer} when there is no viewer to
+     * The menu-free read, with {@code explicitServer} when there is no viewer to
      * derive the server from (automation reading a placed container by index).
      */
     public static @Nullable Tag readTag(PersistentContainerKey key, @Nullable Player viewer,
@@ -106,19 +106,18 @@ public final class SlotStateServer {
         if (bag != null) bag.clear(channelId, containerSlotIndex);
     }
 
-    /** §0049: true if the channel with this id is registered SHARED. */
     private static boolean isShared(Identifier channelId) {
         SlotStateChannel<?> ch = SlotStateRegistry.getChannel(channelId);
         return ch != null && ch.visibility() == SlotStateChannel.Visibility.SHARED;
     }
 
-    // ── Owner resolution ────────────────────────────────────────────────
+    // Owner resolution
 
     /**
-     * An owner's attached value: for a read, only what is attached ({@code null} when
-     * nothing is); for a write, a FRESH copy set back with {@code setAttached}. Fabric
+     * An owner's attached value. For a read, only what is attached ({@code null} when
+     * nothing is). For a write, a new copy set back with {@code setAttached}: Fabric
      * only tracks an attachment updated to a new value, so in-place mutation saves but
-     * fails to round-trip on load (docs.fabricmc.net/develop/data-attachments).
+     * does not round-trip on load (docs.fabricmc.net/develop/data-attachments).
      */
     private static <A> @Nullable A attached(AttachmentTarget owner, AttachmentType<A> type, boolean forWrite,
                                             Function<A, A> copy, Supplier<A> fresh) {
@@ -132,16 +131,17 @@ public final class SlotStateServer {
     private static @Nullable SlotStateBag resolveBag(PersistentContainerKey key, @Nullable Player viewer,
                                                      boolean forWrite, boolean shared,
                                                      @Nullable MinecraftServer explicitServer) {
-        // §0055: prefer an explicit server (menu-free reads carry no viewer to derive
-        // it from); otherwise derive it from the viewer.
+        // Prefer an explicit server, since menu-free reads have no viewer to derive it
+        // from. Otherwise derive it from the viewer.
         MinecraftServer server = explicitServer;
         if (server == null && viewer instanceof ServerPlayer sp) {
             Level lvl = sp.level();
             if (lvl instanceof ServerLevel sl) server = sl.getServer();
         }
 
-        // Player-scoped keys resolve the owner via resolvePlayer (prefers the held
-        // viewer): at connection JOIN the player is not in the player list yet (§0055).
+        // Player-scoped keys resolve the owner through resolvePlayer, which prefers the
+        // viewer already held, because at connection JOIN the player is not in the
+        // player list yet.
         if (key instanceof PersistentContainerKey.PlayerInventory pi) {
             ServerPlayer target = resolvePlayer(server, viewer, pi.playerId());
             return target == null ? null : attached(target, SlotStateAttachments.PLAYER_INVENTORY, forWrite,
@@ -183,7 +183,7 @@ public final class SlotStateServer {
         }
 
         if (key instanceof PersistentContainerKey.Modded modded) {
-            // §0055: player-scoped registered slots (pockets, equipment). Keys made by
+            // Player-scoped registered slots (pockets, equipment). Keys made by
             // KeyedStorages.player(...) carry the owning player; other Modded keys have
             // no library-known owner and resolve to nothing.
             CompoundTag payload = modded.payload();

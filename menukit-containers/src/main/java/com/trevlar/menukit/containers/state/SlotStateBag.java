@@ -9,12 +9,12 @@ import org.jspecify.annotations.Nullable;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Per-owner slot state bag — holds channel state for all registered channels
- * at a given persistent owner (one player for player-scoped keys, or one
- * player's slice inside a BE/entity's per-player map for shared owners).
+ * Slot-state bag for one owner. Holds the state of every registered channel for one
+ * persistent owner: a player for player-scoped keys, or one player's slice of a block
+ * entity's or entity's per-player map.
  *
- * <p>Storage is a {@link CompoundTag} — NBT-native, legible via
- * {@code /data get} (per THESIS.md principle 6). Structure:
+ * <p>Stored as a {@link CompoundTag}, so it is plain NBT that {@code /data get} can
+ * read. Structure:
  *
  * <pre>
  * {
@@ -28,14 +28,14 @@ import org.jetbrains.annotations.ApiStatus;
  * }
  * </pre>
  *
- * <p>The bag is mutable — callers get/put directly. Fabric serializes the
- * backing {@link CompoundTag} via the attachment's codec; library-side sync
- * uses a dedicated packet path (no {@code syncWith} auto-sync).
+ * <p>The bag is mutable, and callers read and write it directly. Fabric serializes
+ * the backing {@link CompoundTag} through the attachment's codec. The library syncs
+ * through its own packets, not {@code syncWith} auto-sync.
  */
 @ApiStatus.Internal
 public final class SlotStateBag {
 
-    /** Codec that round-trips the bag to/from a CompoundTag (attachment persistence). */
+    /** Round-trips the bag through a CompoundTag, for attachment persistence. */
     public static final Codec<SlotStateBag> CODEC =
             CompoundTag.CODEC.xmap(SlotStateBag::new, SlotStateBag::backing);
 
@@ -49,14 +49,14 @@ public final class SlotStateBag {
         this.backing = backing;
     }
 
-    /** The underlying CompoundTag. Exposed for codec round-trip only. */
+    /** The underlying CompoundTag. Exposed for the codec only. */
     public CompoundTag backing() {
         return backing;
     }
 
     /**
-     * Reads the stored Tag for the given channel + container-relative slot index.
-     * Returns {@code null} if no value is stored. Callers decode via the channel's
+     * Reads the stored Tag for a channel and container-relative slot index, or
+     * {@code null} if none is stored. Callers decode it with the channel's
      * {@code Codec<T>.parse(NbtOps.INSTANCE, tag)}.
      */
     public @Nullable Tag read(Identifier channelId, int containerSlotIndex) {
@@ -65,9 +65,7 @@ public final class SlotStateBag {
         return channelTag.get(String.valueOf(containerSlotIndex));
     }
 
-    /**
-     * Writes the given Tag at the channel + slot. Overwrites any existing value.
-     */
+    /** Writes the Tag at the channel and slot, replacing any existing value. */
     public void write(Identifier channelId, int containerSlotIndex, Tag value) {
         String cid = channelId.toString();
         CompoundTag channelTag = backing.getCompoundOrEmpty(cid);
@@ -75,7 +73,7 @@ public final class SlotStateBag {
         backing.put(cid, channelTag);
     }
 
-    /** Removes the stored value for the channel + slot. No-op if absent. */
+    /** Removes the stored value for the channel and slot, if any. */
     public void clear(Identifier channelId, int containerSlotIndex) {
         if (!backing.contains(channelId.toString())) return;
         CompoundTag channelTag = backing.getCompoundOrEmpty(channelId.toString());
@@ -92,7 +90,7 @@ public final class SlotStateBag {
         backing.remove(channelId.toString());
     }
 
-    /** True if any channel has any entry. */
+    /** True if no channel has any entry. */
     public boolean isEmpty() {
         return backing.isEmpty();
     }

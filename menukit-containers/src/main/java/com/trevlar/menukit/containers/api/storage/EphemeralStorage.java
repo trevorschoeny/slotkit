@@ -6,25 +6,18 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * In-memory storage that is not persisted. Contents are dropped via
- * the standard {@code dropInventory} pattern when the screen closes.
- *
- * <p>Implements plain {@link Storage}, not {@code PersistentStorage},
- * because there's nothing to save.
- *
- * <p>Replaces the old {@code MKContainerDef.BindingType.EPHEMERAL} +
- * {@code SimpleContainer} pattern.
+ * In-memory storage that is never saved. Its contents are dropped through the usual
+ * {@code dropInventory} pattern when the screen closes.
  */
 public class EphemeralStorage implements Storage {
 
     private final NonNullList<ItemStack> items;
 
-    /** Creates an ephemeral storage with the given number of slots. */
     public EphemeralStorage(int size) {
         this.items = NonNullList.withSize(size, ItemStack.EMPTY);
     }
 
-    /** Factory method for readability in builder API. */
+    /** Same as the constructor; reads better in builder chains. */
     public static EphemeralStorage of(int size) {
         return new EphemeralStorage(size);
     }
@@ -46,12 +39,12 @@ public class EphemeralStorage implements Storage {
 
     @Override
     public void markDirty() {
-        // No persistence, nothing to mark.
+        // Nothing is saved, so nothing to mark.
     }
 
     /**
-     * Atomically reads all items and clears the storage. Returns the
-     * items for the caller to drop into the world or transfer elsewhere.
+     * Reads all items and clears the storage in one step. Returns the items for the
+     * caller to drop into the world or move elsewhere.
      */
     public NonNullList<ItemStack> drainContents() {
         NonNullList<ItemStack> collected = NonNullList.withSize(items.size(), ItemStack.EMPTY);

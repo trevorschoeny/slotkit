@@ -13,35 +13,32 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * The library-owned seam that makes container-parity slots appear on the
- * player's own {@code InventoryMenu} — the §0019 line container parity
- * deliberately crosses, and the reason a consumer using
- * {@link com.trevlar.menukit.containers.api.slot.ContainerPanel} writes <b>no mixin</b>.
+ * Makes container-parity slots appear on the player's own {@code InventoryMenu}. This
+ * is why a consumer using
+ * {@link com.trevlar.menukit.containers.api.slot.ContainerPanel} writes no mixin.
  *
  * <h3>Why the library owns this one</h3>
  *
- * Foreign menus (chests/furnaces/modded) have no consumer-ownable per-menu seam,
- * so {@link com.trevlar.menukit.containers.core.CreatedSlotProjection} already appended to
- * them from a library-owned player-lifecycle seam. The player's <em>own</em>
- * inventory menu is different: it's built in the {@code Player} constructor
- * (never via {@code openMenu}), so the projection seam can't reach it — and its
- * constructor <em>does</em> carry the {@code Player}, so a consumer normally had
- * to write an {@code InventoryMenu.<init>} mixin themselves. Rather than make
- * every consumer copy that boilerplate, the library owns the seam once and drives
- * it from {@link ParitySlotRegistry}. (A consumer who wants bespoke
- * {@code InventoryMenu} slots that are <em>not</em> container-parity can still
- * write their own mixin + {@code CreatedSlots} call; this only services
- * parity-registered recipes.)
+ * Foreign menus (chests, furnaces, modded) have no per-menu hook a consumer could
+ * own, so {@link com.trevlar.menukit.containers.core.CreatedSlotProjection} already
+ * appended to them from a library-owned player-lifecycle hook. The player's own
+ * inventory menu is different. It is built in the {@code Player} constructor, never
+ * through {@code openMenu}, so the projection hook can't reach it. Its constructor
+ * does carry the {@code Player}, so consumers used to write an
+ * {@code InventoryMenu.<init>} mixin themselves. Instead the library owns that
+ * injection once and drives it from {@link ParitySlotRegistry}. A consumer who wants
+ * custom {@code InventoryMenu} slots outside container parity can still write their
+ * own mixin and {@code CreatedSlots} call; this only handles parity-registered
+ * recipes.
  *
  * <h3>Sync safety</h3>
  *
- * Mirrors the established consumer pattern: append at constructor TAIL so the
- * slots re-appear on every menu reconstruction (login, respawn, dimension
- * change) on both sides. {@link ParitySlotRegistry#applyTo} iterates the same
- * registry in the same order on both sides and binds the same per-player storage,
- * so server and client build a byte-identical slot block before the first
- * content sync. No-op when no parity recipe is registered (the common
- * MenuKit-only / consumer-without-parity case).
+ * Appends at constructor TAIL, so the slots come back on every menu rebuild (login,
+ * respawn, dimension change) on both sides. {@link ParitySlotRegistry#applyTo} walks
+ * the same registry in the same order on both sides and binds the same per-player
+ * storage, so server and client build a byte-identical slot block before the first
+ * content sync. Does nothing when no parity recipe is registered (MenuKit alone, or a
+ * consumer that doesn't use parity).
  */
 @Mixin(InventoryMenu.class)
 public abstract class MKCInventoryMenuMixin {

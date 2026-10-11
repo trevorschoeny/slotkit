@@ -16,46 +16,42 @@ import java.util.Objects;
 import java.util.function.BiConsumer;
 
 /**
- * Where structure lives. A SlotGroup is the composition of {@link Storage},
- * shift-click priority, capabilities (right-click), and layout metadata.
+ * A group of slots: their {@link Storage}, shift-click priority, right-click handler
+ * and layout.
  *
- * <p>The group owns its slots' <em>structure</em>, storage, layout, pairing,
- * priority. It no longer owns the behavioral contract (accept/remove/stack-cap,
- * quick-move, binding, mending): under THE ONE WINDOW those all resolve from
- * the {@code WindowEngine} keyed by each slot's {@link CreatedSlot#address()}, so a
- * group declares structure once and behavior is armed by Address (default = pure
- * vanilla). This keeps slots thin (identity only) and the group structure-only.
+ * <p>The group owns its slots' structure (storage, layout, pairing, priority) but not
+ * their behaviour. Accepting, removing, stack limits, quick-move, binding and
+ * mending all resolve from the {@code WindowEngine}, keyed by each slot's
+ * {@link CreatedSlot#address()}. So a group declares its structure once and behaviour
+ * is set by address, defaulting to plain vanilla. Slots carry only identity, and the
+ * group only structure.
  *
- *
- * <p>Part of the canonical MenuKit hierarchy:
- * Screen → Panel → SlotGroup → CreatedSlot
+ * <p>Hierarchy: Screen, then Panel, then SlotGroup, then CreatedSlot.
  */
 public class SlotGroup {
 
     private final String id;
-    // What this group IS, in MenuKit core's registry vocabulary, required, so
-    // another mod can find these slots by name (SlotGroupCategories) and decide
-    // what to do with them, and a group can never silently become "just
-    // storage" to a search that walks the player's menu. Identity, not
-    // behaviour: the category says what the slots are; what a gesture may do
-    // to them is a window key (SHIFT_CLICK_OUT, SHIFT_CLICK_IN, COLLECT, DRAG_FILL).
+    // What this group is, in MenuKit core's registry terms. Required, so another
+    // mod can find these slots by name (SlotGroupCategories) and decide what to do
+    // with them, and a group never silently looks like plain storage to a search
+    // over the player's menu. The category says what the slots are; what a gesture
+    // may do to them is a window key (SHIFT_CLICK_OUT, SHIFT_CLICK_IN, COLLECT,
+    // DRAG_FILL).
     private final SlotGroupCategory category;
     private final Storage storage;
     private final int shiftClickPriority;
 
-    // ── Layout metadata (declarative, read by the screen) ──────────────
+    // Layout, read by the screen
     private final int columns;      // grid columns for slot layout
     private final int rowGapAfter;  // 0-indexed row after which to insert a gap (-1 = none)
     private final int rowGapSize;   // gap size in pixels
 
-    // ── Right-click handler (group-level capability) ───────────────────
-    // Optional handler invoked when a slot in this group is right-clicked.
-    // Lives on the group per the canonical story, right-click is a
-    // group-level capability, not a slot-level one.
+    // Optional handler called when a slot in this group is right-clicked. It lives
+    // on the group because right-click is a group-level capability, not a slot one.
     private @Nullable BiConsumer<Player, CreatedSlot> rightClickHandler;
 
-    // Flat index range in the handler's slot list, set once during
-    // handler construction, then frozen. Used by shift-click routing.
+    // Index range in the handler's slot list, set once while the handler is built.
+    // Used by shift-click routing.
     private int flatIndexStart = -1;
     private int flatIndexEnd = -1;
 
@@ -63,8 +59,6 @@ public class SlotGroup {
     private final List<SlotGroup> pairedWith = new ArrayList<>();
 
     /**
-     * Full constructor with layout metadata.
-     *
      * @param id                  unique identifier within the panel
      * @param category            what the group is ({@link SlotGroupCategory}); required
      * @param storage             where items live
@@ -79,7 +73,7 @@ public class SlotGroup {
         this.category = Objects.requireNonNull(category, "SlotGroup '" + id + "': category is required");
         this.storage = storage;
         this.shiftClickPriority = shiftClickPriority;
-        // Auto-compute columns: min(9, storage size) if not specified
+        // Default columns: min(9, storage size)
         this.columns = columns > 0 ? columns : Math.min(9, storage.size());
         this.rowGapAfter = rowGapAfter;
         this.rowGapSize = rowGapSize;
@@ -87,6 +81,7 @@ public class SlotGroup {
 
     /**
      * @param id                  unique identifier within the panel
+     * @param category            what the group is; required
      * @param storage             where items live
      * @param shiftClickPriority  numeric priority (higher = tried first)
      */
@@ -94,12 +89,10 @@ public class SlotGroup {
         this(id, category, storage, shiftClickPriority, -1, -1, 0);
     }
 
-    /** Convenience: default priority (100). */
+    /** With the default priority, 100. */
     public SlotGroup(String id, SlotGroupCategory category, Storage storage) {
         this(id, category, storage, 100);
     }
-
-    // ── Identity ────────────────────────────────────────────────────────
 
     /** Returns this group's unique identifier within its panel. */
     public String id() { return id; }
@@ -107,17 +100,13 @@ public class SlotGroup {
     /** What this group is, in the registry vocabulary ({@code SlotGroupCategories}). */
     public SlotGroupCategory getCategory() { return category; }
 
-    // ── Axes ────────────────────────────────────────────────────────────
-
     /** Returns where items live. */
     public Storage getStorage() { return storage; }
 
     /** Returns the numeric shift-click priority (higher = tried first). */
     public int getShiftClickPriority() { return shiftClickPriority; }
 
-    // ── Layout Metadata ────────────────────────────────────────────────
-
-    /** Grid columns for slot layout. Always > 0 (auto-computed if not specified). */
+    /** Grid columns for slot layout. Always above 0 (computed if not given). */
     public int getColumns() { return columns; }
 
     /** 0-indexed row after which to insert a visual gap, or -1 for none. */
@@ -126,38 +115,32 @@ public class SlotGroup {
     /** Gap size in pixels (only meaningful if rowGapAfter >= 0). */
     public int getRowGapSize() { return rowGapSize; }
 
-    // ── Right-Click Handler ────────────────────────────────────────────
-
     /** Returns the right-click handler for this group, or null. */
     public @Nullable BiConsumer<Player, CreatedSlot> getRightClickHandler() {
         return rightClickHandler;
     }
 
-    /** Sets the right-click handler. Called during builder construction. */
+    /** Sets the right-click handler. Called by the builder. */
     public void setRightClickHandler(@Nullable BiConsumer<Player, CreatedSlot> handler) {
         this.rightClickHandler = handler;
     }
 
-    // ── Flat Index Range ───────────────────────────────────────────────
-
-    /** Returns the start of this group's flat index range (inclusive). */
+    /** Start of this group's index range in the slot list (inclusive). */
     public int getFlatIndexStart() { return flatIndexStart; }
 
-    /** Returns the end of this group's flat index range (exclusive). */
+    /** End of this group's index range in the slot list (exclusive). */
     public int getFlatIndexEnd() { return flatIndexEnd; }
 
-    /** Sets the flat index range. Called once during handler construction. */
+    /** Sets the index range. Called once while the handler is built. */
     public void setFlatIndexRange(int start, int end) {
         this.flatIndexStart = start;
         this.flatIndexEnd = end;
     }
 
     /**
-     * Returns this group's slots as a list, extracted from the handler's
-     * flat slot list. Convenience for consumers that need to iterate
-     * a group's slots without walking the flat index range manually.
+     * Returns this group's slots, taken from the handler's slot list.
      *
-     * <p><b>Internal plumbing</b>: live slots for the grouping engine, no consumer caller.
+     * <p>Internal: used by the grouping engine, with no consumer callers.
      *
      * @param handler the handler whose slot list contains this group's slots
      * @return unmodifiable list of CreatedSlots in this group
@@ -175,20 +158,17 @@ public class SlotGroup {
         return Collections.unmodifiableList(result);
     }
 
-    // ── Directional Pairing ─────────────────────────────────────────────
-
     /**
-     * Declares that shift-click from this group should prefer the target
-     * group over numeric priority. This is how furnace-style affinities
-     * work: fuel items target the fuel slot, smeltable items target the
-     * input slot.
+     * Makes shift-click from this group prefer {@code target} over numeric priority.
+     * This is how furnace-style routing works: fuel goes to the fuel slot, and
+     * smeltable items to the input slot.
      */
     public SlotGroup pairsWith(SlotGroup target) {
         pairedWith.add(target);
         return this;
     }
 
-    /** Returns the list of directional pairing targets. */
+    /** The groups this one shift-clicks into first. */
     public List<SlotGroup> getPairedWith() {
         return Collections.unmodifiableList(pairedWith);
     }

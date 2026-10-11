@@ -12,10 +12,10 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * Fires the player-join-style snapshot after {@link PlayerList#respawn}
- * completes. Respawn reconstructs {@code InventoryMenu} on the new
- * {@code ServerPlayer}; without this hook the player's inventory locks (F1)
- * would show empty until the next menu open.
+ * Sends the same snapshot as on player join once {@link PlayerList#respawn}
+ * completes. Respawn rebuilds {@code InventoryMenu} on the new {@code ServerPlayer},
+ * so without this the player's inventory slot state (locks, for example) would show
+ * empty until the next menu open.
  */
 @ApiStatus.Internal
 @Mixin(PlayerList.class)

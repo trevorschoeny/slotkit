@@ -18,34 +18,34 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
- * Creative non-inventory-tab slot <em>click</em> routing — the sync half of the
- * all-tabs parity fix ({@code MKCCreativeSlotItemPickerMixin} is the
- * visibility half).
+ * Routes clicks on registered slots in the creative tabs other than the inventory
+ * tab, so they sync. {@code MKCCreativeSlotItemPickerMixin} makes the slots appear on
+ * those tabs; this makes clicks on them reach the server.
  *
  * <h3>Why routing is needed</h3>
  *
- * Vanilla's {@code slotClicked} sends a non-inventory-tab click into
- * {@code ItemPickerMenu.clicked(slot.index)} — a client-only edit on the throwaway
- * picker menu that never reaches the slot's backing {@code Storage} on the server,
- * so an item placed in a pocket from the combat/tools tab would desync. The
- * <em>inventory</em> tab instead routes slot clicks to
- * {@code player.inventoryMenu.clicked(target.index)} + {@code broadcastChanges()},
- * and the {@code CreativeInventoryListener} vanilla keeps on {@code inventoryMenu}
- * for the whole creative screen publishes every changed slot via
- * {@code ServerboundSetCreativeModeSlotPacket} — whose out-of-range slot index the
- * §0055 server bridge ({@code CreativeSetSlotMixin}) writes.
+ * Off the inventory tab, vanilla's {@code slotClicked} sends a click into
+ * {@code ItemPickerMenu.clicked(slot.index)}, a client-only edit on the throwaway
+ * picker menu that never reaches the slot's backing {@code Storage} on the server.
+ * An item placed in a pocket from the combat or tools tab would desync. The
+ * inventory tab instead routes slot clicks to
+ * {@code player.inventoryMenu.clicked(target.index)} and {@code broadcastChanges()}.
+ * The {@code CreativeInventoryListener} vanilla keeps on {@code inventoryMenu} for the
+ * whole creative screen then sends every changed slot in a
+ * {@code ServerboundSetCreativeModeSlotPacket}, and the server-side
+ * {@code CreativeSetSlotMixin} writes those out-of-range slot indices.
  *
  * <h3>What it does</h3>
  *
- * For a click on a registered slot while <em>not</em> on the inventory tab, it
- * replicates that proven inventory-tab path and cancels vanilla's client-only one.
- * Because the listener fires per changed slot, every gesture — place, pick up,
- * clone, number-swap, shift-move — syncs identically to the inventory tab with no
- * per-gesture special-casing, except the throw (Q), whose dropped entity is its own
- * server message exactly as vanilla's inventory-tab throw special-cases it.
+ * For a click on a registered slot while not on the inventory tab, it repeats that
+ * inventory-tab path and cancels vanilla's client-only one. The listener fires per
+ * changed slot, so every gesture (place, pick up, clone, number-swap, shift-move)
+ * syncs just as on the inventory tab with no special cases. The one exception is the
+ * throw (Q), whose dropped entity is its own server message, which vanilla's
+ * inventory-tab throw also handles separately.
  *
- * <p>The inventory tab is left entirely to vanilla (it already handles slots
- * there). Non-slot slots are never touched. Client-only.
+ * <p>The inventory tab is left to vanilla, which already handles these slots there.
+ * Other slots are never touched. Client only.
  */
 @Mixin(CreativeModeInventoryScreen.class)
 public abstract class MKCCreativeSlotClickRouteMixin {
@@ -58,8 +58,8 @@ public abstract class MKCCreativeSlotClickRouteMixin {
         if (slot == null) return;
         CreatedSlot mkcSlot = CreatedSlotAccess.asMKCSlot(slot);
         if (mkcSlot == null) return;
-        // Vanilla already routes inventory-tab slot clicks correctly; only the
-        // other tabs (client-only base-set click path) need re-routing.
+        // Vanilla already routes inventory-tab clicks correctly; only the other tabs,
+        // whose click path is client-only, need rerouting.
         if (selectedTab.getType() == CreativeModeTab.Type.INVENTORY) return;
 
         Minecraft mc = Minecraft.getInstance();
@@ -67,14 +67,14 @@ public abstract class MKCCreativeSlotClickRouteMixin {
         if (player == null || !player.hasInfiniteMaterials() || mc.gameMode == null) return;
 
         if (clickType == ContainerInput.THROW && mkcSlot.hasItem()) {
-            // Drop (Q): mirror vanilla's inventory-tab throw — the dropped entity is
-            // its own creative-drop server message; the slot's remainder syncs below.
+            // Drop (Q), as vanilla's inventory-tab throw does it: the dropped entity is
+            // its own creative-drop server message, and the slot's remainder syncs below.
             ItemStack dropped = mkcSlot.remove(button == 0 ? 1 : mkcSlot.getItem().getMaxStackSize());
             player.drop(dropped, true);
             mc.gameMode.handleCreativeModeItemDrop(dropped);
         } else {
-            // Place / pick up / clone / swap / shift-move: act on the real inventory
-            // menu by the slot's own index, exactly as the inventory tab does.
+            // Place, pick up, clone, swap, shift-move: act on the real inventory menu by
+            // the slot's own index, exactly as the inventory tab does.
             player.inventoryMenu.clicked(mkcSlot.index, button, clickType, player);
         }
         // The persistent CreativeInventoryListener publishes every changed slot.

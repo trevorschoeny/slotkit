@@ -17,8 +17,8 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Shift-click routing for a {@link CustomContainerMenu}, split out of the handler
- * (§0067). Declarative, in three layers:
+ * Shift-click routing for a {@link CustomContainerMenu}, split out of the handler.
+ * Three steps:
  *
  * <ol>
  *   <li>The source slot must allow shift-click out (the {@code SHIFT_CLICK_OUT}

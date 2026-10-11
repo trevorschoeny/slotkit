@@ -8,17 +8,16 @@ import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * The one library-owned generic "open my menu" Client → Server request. Carries
- * only the {@link Identifier} of the {@code CustomMenu} the client wants opened; the
- * server-side receiver (registered once in {@code MenuKitContainers.init()}) looks the menu up
- * by that id, hops to the main thread, and calls {@code CustomMenu.open(player)}.
+ * The library's one generic "open my menu" request from client to server. Carries only
+ * the {@link Identifier} of the {@code CustomMenu} the client wants opened. The server
+ * receiver, registered once in {@code MenuKitContainers.init()}, looks the menu up by
+ * that id, moves to the main thread and calls {@code CustomMenu.open(player)}.
  *
- * <p>This replaces the per-consumer hand-rolled open payload that every custom
- * menu used to ship: one generic payload + one generic receiver serves <em>every</em>
- * {@code CustomMenu} a consumer defines, keyed by the menu's registered id. An unknown
- * id is a fail-loud log on the receiver side, never an NPE. The server opens the menu
- * only when its definition declares {@code validWhen} and it holds for the player
- * ({@code CustomMenu.handleOpenRequest}, §0067).
+ * <p>Custom menus used to ship their own hand-written open payload each. Now one
+ * payload and one receiver serve every {@code CustomMenu} a consumer defines, keyed by
+ * the menu's registered id. An unknown id is logged loudly on the receiver side, never
+ * an NPE. The server opens the menu only when its definition declares
+ * {@code validWhen} and it holds for the player ({@code CustomMenu.handleOpenRequest}).
  */
 @ApiStatus.Internal
 public record OpenMenuC2SPayload(Identifier menuId) implements CustomPacketPayload {

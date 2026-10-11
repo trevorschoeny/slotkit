@@ -28,7 +28,7 @@ import java.util.function.Predicate;
 
 /**
  * A custom container menu: its created slots, its panels as the server knows them,
- * and whether each is shown (§0067). Built by {@link SlotLayout}
+ * and whether each is shown. Built by {@link SlotLayout}
  * ({@link #builder(MenuType)}); shift-click routes through {@link QuickMoveRouter}.
  *
  * <p>A proper subclass of {@link AbstractContainerMenu}: vanilla's sync machinery
@@ -54,7 +54,7 @@ import java.util.function.Predicate;
  * A right click on a shown slot whose group has a {@link SlotLayout.PanelBuilder#rightClick}
  * handler runs the handler instead of vanilla's click. It is a click like any other: the
  * client runs it as its prediction and sends it, and the server runs it too, which is the
- * run that counts (§0067). Vanilla's take and put operations do not apply to it.
+ * run that counts. Vanilla's take and put operations do not apply to it.
  *
  * <h3>Validity</h3>
  * {@link #stillValid} is real: the menu stays open while its validity holds, checked
@@ -67,7 +67,7 @@ public class CustomContainerMenu extends AbstractContainerMenu {
     private static final Logger LOGGER = LoggerFactory.getLogger("MenuKit");
 
     /**
-     * Sentinel returned by {@link #getPanelButtonId(String)} when no panel matches.
+     * Returned by {@link #getPanelButtonId(String)} when no panel matches.
      * A raw {@code -1} must never be sent as a button id.
      */
     public static final int PANEL_NOT_FOUND = -1;
@@ -143,7 +143,7 @@ public class CustomContainerMenu extends AbstractContainerMenu {
         return new SlotLayout(menuType);
     }
 
-    // ── Panels ──────────────────────────────────────────────────────────
+    // Panels
 
     /** The panels in declaration order, as the menu knows them. */
     public List<MenuPanel> getPanels() { return panels; }
@@ -181,7 +181,7 @@ public class CustomContainerMenu extends AbstractContainerMenu {
     /**
      * A player's request to toggle panel {@code buttonId} (vanilla's container button
      * packet). Honoured only for a panel declared {@code toggleable()}; any other
-     * request is refused, so a client cannot show a panel the server hides (§0067).
+     * request is refused, so a client cannot show a panel the server hides.
      */
     @Override
     public boolean clickMenuButton(Player player, int buttonId) {
@@ -203,7 +203,7 @@ public class CustomContainerMenu extends AbstractContainerMenu {
         return i == null ? PANEL_NOT_FOUND : i;
     }
 
-    // ── Groups ──────────────────────────────────────────────────────────
+    // Groups
 
     /** The slot groups on {@code panelId}, in declaration order; empty if none or unknown. */
     public List<SlotGroup> getGroupsFor(String panelId) {
@@ -216,7 +216,7 @@ public class CustomContainerMenu extends AbstractContainerMenu {
         return slots.get(flatIndex) instanceof CreatedSlot mk ? mk.getGroup() : null;
     }
 
-    // ── Clicks, shift-click and validity ────────────────────────────────
+    // Clicks, shift-click and validity
 
     /** A right click on a slot with a handler runs the handler, on each side; any other click is vanilla's. */
     @Override

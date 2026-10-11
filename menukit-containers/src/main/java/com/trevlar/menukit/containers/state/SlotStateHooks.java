@@ -30,7 +30,7 @@ import java.util.function.Predicate;
 
 /**
  * The server's slot-state network: registration, the snapshots a menu gets when it
- * opens, the judgement of a client's write (§0067, {@link SlotStateWrites}), and the
+ * opens, the check on a client's write ({@link SlotStateWrites}), and the
  * updates co-viewers receive. The client's half is {@code SlotStateClient}.
  */
 @ApiStatus.Internal
@@ -40,7 +40,7 @@ public final class SlotStateHooks {
 
     private SlotStateHooks() {}
 
-    // ── Registration ────────────────────────────────────────────────────
+    // Registration
 
     public static void registerCommon() {
         PayloadTypeRegistry.clientboundPlay().register(
@@ -60,7 +60,7 @@ public final class SlotStateHooks {
                 SlotStateWrites.RATE.forget(handler.getPlayer().getUUID()));
     }
 
-    // ── Snapshots ───────────────────────────────────────────────────────
+    // Snapshots
 
     /** Every stored value on the player's open menu, sent as the menu opens. */
     public static void sendSnapshotForOpenedMenu(ServerPlayer player) {
@@ -82,7 +82,7 @@ public final class SlotStateHooks {
         List<SlotStateSnapshotS2CPayload.Entry> entries = buildEntries(menu, player,
                 key -> key instanceof PersistentContainerKey.PlayerInventory
                     || key instanceof PersistentContainerKey.EnderChest
-                    // §0055: player-scoped created slots (pockets, equipment) resolve to Modded keys.
+                    // Player-scoped created slots (pockets, equipment) resolve to Modded keys.
                     || key instanceof PersistentContainerKey.Modded);
         if (!entries.isEmpty()) {
             ServerPlayNetworking.send(player, new SlotStateSnapshotS2CPayload(menu.containerId, entries));
@@ -95,7 +95,7 @@ public final class SlotStateHooks {
         List<SlotStateSnapshotS2CPayload.Entry> entries = new ArrayList<>();
         for (int i = 0; i < menu.slots.size(); i++) {
             Slot slot = menu.slots.get(i);
-            // §0055: a double chest splits each slot to its owning half's key.
+            // A double chest resolves each slot to the key of the half that owns it.
             Optional<ResolvedSlot> resolved = SlotStateRegistry.resolve(slot.container, slot.getContainerSlot());
             if (resolved.isEmpty()) continue;
             if (keyFilter != null && !keyFilter.test(resolved.get().key())) continue;
@@ -120,10 +120,10 @@ public final class SlotStateHooks {
         }
     }
 
-    // ── A client's write, judged (§0067) ───────────────────────────────
+    // A client's write
 
     /**
-     * Judges and applies one write a client sent. Public for the join probe, which
+     * Checks and applies one write a client sent. Public for the join probe, which
      * drives it with crafted payloads on a dedicated server. Main thread.
      */
     public static SlotStateWrites.Verdict handleWrite(SlotStateUpdateC2SPayload payload, ServerPlayer player) {
@@ -184,7 +184,7 @@ public final class SlotStateHooks {
         return tag == null ? channel.defaultValue() : SlotStateServer.decode(channel, tag);
     }
 
-    // ── Updates to viewers ──────────────────────────────────────────────
+    // Updates to viewers
 
     /** Sends one viewer the value at a slot of their open menu. */
     public static <T> void sendValue(ServerPlayer viewer, int containerId, int menuSlotIndex,
@@ -202,7 +202,7 @@ public final class SlotStateHooks {
     /**
      * Sends a value to every player viewing the slot at {@code key} and
      * {@code localSlotIndex}, matched in each viewer's own open menu by the slot's
-     * resolved container key (§0055, §0067), and sent with that viewer's own menu id and
+     * resolved container key, and sent with that viewer's own menu id and
      * slot index. {@code includeOrigin}: whether the writer hears it too (false when the
      * writer's client already applied it).
      */

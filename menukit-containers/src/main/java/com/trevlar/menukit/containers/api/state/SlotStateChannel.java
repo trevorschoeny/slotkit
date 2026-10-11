@@ -16,49 +16,46 @@ import net.minecraft.world.inventory.Slot;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Typed per-slot state channel, the consumer-facing handle for reading and
- * writing slot state. Created via
- * {@link SlotState#register(Identifier, Codec, StreamCodec, Object)} (PRIVATE)
- * or {@link SlotState#register(Identifier, Codec, StreamCodec, Object, Visibility)}.
+ * A typed per-slot state channel, the handle consumers use to read and write slot
+ * state. Created with {@link SlotState#register(Identifier, Codec, StreamCodec, Object)}
+ * (PRIVATE) or {@link SlotState#register(Identifier, Codec, StreamCodec, Object, Visibility)}.
  *
- * <p>Dual-codec design (per THESIS.md principle 6): {@link #codec} is NBT-bound
- * for persistence (encoded to {@code Tag} via {@code NbtOps.INSTANCE}),
- * {@link #streamCodec} is binary for wire transport. Persisted values are
- * legible via vanilla's {@code /data get}; wire traffic stays lightweight.
+ * <p>A channel has two codecs. {@link #codec} is for persistence and encodes to NBT
+ * through {@code NbtOps.INSTANCE}, so stored values are readable with vanilla's
+ * {@code /data get}. {@link #streamCodec} is the compact binary form sent over the
+ * network.
  *
- * <h2>State is MENU-RESIDENT, unlike behavior</h2>
+ * <h2>State lives in the open menu; behaviour does not</h2>
  *
- * The by-{@link Address} surface here ({@link #get(Address)} / {@link #set(Address, Object)}
- * and their explicit-viewer twins) is a deliberate asymmetry with how slot
- * <em>behavior</em> is armed, and the boundary matters:
- *
- * <ul>
- *   <li><b>Behavior</b> (gating, binding, mending, quick-move) is declared by
- *       Address <em>at init</em> and resolves the moment a slot with that address
- *       appears, it lives in the engine, independent of any open menu.</li>
- *   <li><b>State</b> read/written by Address resolves against the <em>viewer's
- *       currently-open menu</em>. If the address names no live slot in that open
- *       menu, a read returns {@link #defaultValue} and a write is a no-op. There is
- *       NO by-Address path for init-time or menu-free state.</li>
- * </ul>
- *
- * <p><b>For menu-free / server-automation / init-time created-slot state</b>, use the
- * persistent-key overloads instead of an Address, they name storage directly with no
- * open menu and no live slot:
+ * The {@link Address} methods here ({@link #get(Address)}, {@link #set(Address, Object)}
+ * and their explicit-viewer versions) work differently from how slot behaviour is set
+ * up, on purpose:
  *
  * <ul>
- *   <li>{@link #get(Player, PersistentContainerKey, int)} /
- *       {@link #set(Player, PersistentContainerKey, int, Object)}, player- or
- *       BE/entity-scoped state via a {@link PersistentContainerKey} + container-slot
- *       index (server-only).</li>
- *   <li>{@link #get(Container, int)}, a SHARED value at a placed container by index,
- *       with no viewer, for hopper/dropper-style automation (§0055).</li>
+ *   <li>Behaviour (gating, binding, mending, quick-move) is declared by address at
+ *       init and applies as soon as a slot with that address appears. It lives in the
+ *       engine, independent of any open menu.</li>
+ *   <li>State read or written by address resolves against the viewer's currently
+ *       open menu. If the address names no live slot in that menu, a read returns
+ *       {@link #defaultValue} and a write does nothing. There is no address-based path
+ *       for init-time or menu-free state.</li>
  * </ul>
  *
- * <p>So: address slots for behavior and for in-menu state; reach for the
- * persistent-key recipe whenever there is no open menu to resolve against.
+ * <p>For menu-free state, server automation, or a created slot's state at init time,
+ * use the persistent-key overloads instead. They name storage directly, with
+ * no open menu and no live slot:
  *
- * <p>See {@code menukit/Design Docs/Phase 12/M1_PER_SLOT_STATE.md} §4.4.
+ * <ul>
+ *   <li>{@link #get(Player, PersistentContainerKey, int)} and
+ *       {@link #set(Player, PersistentContainerKey, int, Object)}: player-, block entity-
+ *       or entity-scoped state through a {@link PersistentContainerKey} and a
+ *       container-slot index (server only).</li>
+ *   <li>{@link #get(Container, int)}: a SHARED value at a placed container by index,
+ *       with no viewer, for hopper or dropper automation.</li>
+ * </ul>
+ *
+ * <p>In short, use addresses for behaviour and for state in an open menu, and the
+ * persistent keys whenever there is no open menu to resolve against.
  */
 public record SlotStateChannel<T>(
         Identifier id,
@@ -69,13 +66,13 @@ public record SlotStateChannel<T>(
         CanWrite canWrite) {
 
     /**
-     * Who may write this channel from a client (§0067). The server asks it for every
+     * Who may write this channel from a client. The server asks it for every
      * write a client sends, after checking that the write names the player's open menu
      * and a live slot on it, and refuses the write when it answers {@code false}. Writes
      * made by server code are not asked: the server is trusted.
      *
-     * <p>Defaults: a {@link Visibility#SHARED SHARED} channel denies every client write
-     * ({@link #DENY}), since one player's write is another player's state; a
+     * <p>By default a {@link Visibility#SHARED SHARED} channel denies every client
+     * write ({@link #DENY}), since one player's write is another player's state. A
      * {@link Visibility#PRIVATE PRIVATE} channel lets a player write their own value on
      * any live slot of their open menu ({@link #ANY}).
      */
@@ -107,58 +104,54 @@ public record SlotStateChannel<T>(
     }
 
     /**
-     * Channel visibility (§0049).
+     * Channel visibility.
      *
      * <ul>
-     *   <li><b>PRIVATE</b> (default), each viewer has their own value, keyed by
-     *       UUID. The shipped per-player model (§0034).</li>
-     *   <li><b>SHARED</b>: one player-agnostic value per slot, synced to every
-     *       viewer, and written from a client only by whom its {@link CanWrite}
-     *       allows (§0067; nobody unless declared). For cross-player features like
-     *       Inventory Max's Container Locks (one player locks slot 5, every player
-     *       sees it locked).</li>
+     *   <li>PRIVATE (the default): each viewer has their own value, keyed by UUID.</li>
+     *   <li>SHARED: one value per slot for all players, synced to every viewer, and
+     *       written from a client only by those its {@link CanWrite} allows (nobody
+     *       unless declared). For features that span players, like Inventory Max's
+     *       container locks: one player locks slot 5 and every player sees it
+     *       locked.</li>
      * </ul>
      *
-     * <p>SHARED is only meaningful on containers that are both multi-player and
-     * fixed-slot (placed shulker / chest / barrel). It is degenerate on the
-     * ender chest (inherently per-player) and inapplicable to bundles (no fixed
-     * slots), see §0049 bounds.
+     * <p>SHARED only makes sense on containers that are both multi-player and
+     * fixed-slot (a placed shulker, chest or barrel). It means nothing on the ender
+     * chest, which is per-player anyway, and does not apply to bundles, which have no
+     * fixed slots.
      */
     public enum Visibility { PRIVATE, SHARED }
 
     /**
-     * Backward-compatible constructor, produces a PRIVATE channel. Keeps every
-     * existing {@code new SlotStateChannel<>(id, codec, streamCodec, default)}
-     * call site (and the 4-arg {@link SlotState#register}) byte-for-byte
-     * unchanged (§0049: private is the default).
+     * Creates a PRIVATE channel, the default. Kept so existing
+     * {@code new SlotStateChannel<>(id, codec, streamCodec, default)} calls (and the
+     * four-argument {@link SlotState#register}) keep working unchanged.
      */
     public SlotStateChannel(Identifier id, Codec<T> codec,
             StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue) {
         this(id, codec, streamCodec, defaultValue, Visibility.PRIVATE);
     }
 
-    // ── By address ──────────────────────────────────────────────────────
-    // Name the slot by its Address (Address.createdSlot, SlotRef.address). Resolves
-    // the address to a live slot in the viewer's open menu and delegates to the
-    // Slot-keyed path below.
+    // By address. Name the slot by its Address (Address.createdSlot,
+    // SlotRef.address). Resolves the address to a live slot in the viewer's open
+    // menu, then uses the Slot-keyed path below.
 
     /**
-     * Reads this channel's value at the slot named by {@code address}, in the
-     * client player's currently open menu. The address-keyed counterpart of
-     * {@link #get(Slot)}, the only difference is identity-by-{@link Address}
-     * instead of a live {@code Slot}. Returns {@link #defaultValue} when the
-     * address names no live slot in the open menu (see
-     * {@code SlotState.readByAddress} for the resolution boundary). Use
-     * {@link #get(Player, Address)} for an explicit viewer (e.g. server-side).
+     * Reads this channel's value at the slot named by {@code address}, in the client
+     * player's currently open menu. Same as {@link #get(Slot)}, but the slot is named
+     * by {@link Address} instead of a live {@code Slot}. Returns {@link #defaultValue}
+     * when the address names no live slot in the open menu (see
+     * {@code SlotState.readByAddress}). Use {@link #get(Player, Address)} for an
+     * explicit viewer, for example on the server.
      */
     public T get(Address address) {
         return SlotState.readByAddress(this, null, address);
     }
 
     /**
-     * Reads this channel's value at the slot named by {@code address} for an
-     * explicit {@code player}, resolves the slot in that player's open menu.
-     * The address-keyed counterpart of {@link #get(Player, Slot)}.
+     * Reads this channel's value at the slot named by {@code address} for an explicit
+     * {@code player}, resolving the slot in that player's open menu. The address
+     * version of {@link #get(Player, Slot)}.
      */
     public T get(Player player, Address address) {
         return SlotState.readByAddress(this, player, address);
@@ -166,8 +159,8 @@ public record SlotStateChannel<T>(
 
     /**
      * Writes {@code value} at the slot named by {@code address}, in the client
-     * player's open menu. The address-keyed counterpart of {@link #set(Slot, Object)};
-     * a no-op when the address names no live slot in the open menu.
+     * player's open menu. The address version of {@link #set(Slot, Object)}. Does
+     * nothing when the address names no live slot in the open menu.
      */
     public void set(Address address, T value) {
         SlotState.writeByAddress(this, null, address, value);
@@ -175,16 +168,14 @@ public record SlotStateChannel<T>(
 
     /**
      * Writes {@code value} at the slot named by {@code address} for an explicit
-     * {@code player}. The address-keyed counterpart of
-     * {@link #set(Player, Slot, Object)}.
+     * {@code player}. The address version of {@link #set(Player, Slot, Object)}.
      */
     public void set(Player player, Address address, T value) {
         SlotState.writeByAddress(this, player, address, value);
     }
 
-    // ── By slot ─────────────────────────────────────────────────────────
-    // For code that already holds the live Slot (a render hook, a click handler, a
-    // veto's SlotRef.slot()). Public since 6.0.0 (§0068).
+    // By slot. For code that already holds the live Slot (a render hook, a click
+    // handler, a veto's SlotRef.slot()). Public since 6.0.0.
 
     /**
      * Reads this channel's value at {@code slot}. Works on both sides when the slot
@@ -198,73 +189,66 @@ public record SlotStateChannel<T>(
     }
 
     /**
-     * Reads this channel's value at {@code slot} with explicit player context.
-     * Required for server-side reads on BE/entity-backed containers (the
-     * per-player-private model needs to know whose state to read; SHARED
-     * channels ignore the player but the argument is still accepted).
+     * Reads this channel's value at {@code slot} for an explicit player. Needed for
+     * server-side reads on block entity or entity containers, where private state
+     * depends on whose it is. SHARED channels ignore the player but still accept it.
      */
     public T get(Player player, Slot slot) {
         return SlotState.read(this, slot, player);
     }
 
     /**
-     * Writes {@code value} at {@code slot}. See {@link #get(Slot)} for side
-     * semantics. On the client the write goes to the server, which judges it
-     * (§0067); writing the default removes the entry.
+     * Writes {@code value} at {@code slot}. See {@link #get(Slot)} for how each side
+     * behaves. On the client the write goes to the server, which checks it. Writing
+     * the default removes the entry.
      */
     public void set(Slot slot, T value) {
         SlotState.write(this, slot, null, value);
     }
 
-    /** Writes {@code value} at {@code slot} with explicit player context. */
+    /** Writes {@code value} at {@code slot} for an explicit player. */
     public void set(Player player, Slot slot, T value) {
         SlotState.write(this, slot, player, value);
     }
 
-    // ── Slot-less (persistent-key) API, server-only ────────────────────
-    // Kept public as an explicit server-automation seam: these legitimately have
-    // no Address (no open menu, no live slot), a persistent key + container-slot
-    // index names storage directly. The address-only rule covers menu-resident
-    // slots; menu-free automation is its documented exception.
+    // Persistent keys, server only. Public for server automation: with no open menu
+    // and no live slot there is no Address, so a persistent key and container-slot
+    // index name the storage directly. Addresses cover slots in an open menu; this
+    // is the documented exception for menu-free code.
 
     /**
-     * Reads this channel's value from persistent storage directly.
-     * Server-only; the client cannot synthesize a persistent key outside a
-     * menu session.
+     * Reads this channel's value straight from persistent storage. Server only; the
+     * client cannot build a persistent key outside an open menu.
      *
-     * @param player for per-player-private containers (BE, entity). May be
-     *               {@code null} for player-scoped keys where the UUID is in the
-     *               key itself, or for SHARED channels (player-agnostic).
+     * @param player for per-player private containers (block entity, entity). May be
+     *               {@code null} for player-scoped keys, where the UUID is in the key,
+     *               or for SHARED channels.
      */
     public T get(Player player, PersistentContainerKey key, int containerSlotIndex) {
         return SlotState.readPersistent(this, player, key, containerSlotIndex);
     }
 
-    /** Writes to persistent storage directly. Server-only. */
+    /** Writes straight to persistent storage. Server only. */
     public void set(Player player, PersistentContainerKey key, int containerSlotIndex, T value) {
         SlotState.writePersistent(this, player, key, containerSlotIndex, value);
     }
 
-    // ── Menu-free shared read (§0055), server-only ─────────────────────
-    // Also kept public as a server-automation seam (no Address, no open menu / no
-    // viewer): a placed container touched directly by index. See the
-    // persistent-key block above for why these are the documented exceptions to
-    // the address-only rule.
+    // Menu-free shared read, server only. Also public for server automation that
+    // touches a placed container by index with no open menu or viewer (see the
+    // persistent-key methods above).
 
     /**
-     * Reads the <b>SHARED</b> value at {@code (container, containerSlotIndex)}
-     * with no {@link Slot}, no open menu, and no viewer, for automation
-     * (hopper / dropper / dispenser) that touches a placed container directly by
-     * index. The library resolves the container internally (the resolver stays
-     * internal) and composes with composite resolution, so a double chest
-     * resolves to its owning half.
+     * Reads the SHARED value at {@code (container, containerSlotIndex)} with no
+     * {@link Slot}, open menu or viewer, for automation (hopper, dropper, dispenser)
+     * that touches a placed container directly by index. The library resolves the
+     * container internally, including composite containers, so a double chest
+     * resolves to the half that owns the slot.
      *
-     * <p>Returns {@link #defaultValue} off-server, for an unresolvable container,
-     * or for a PRIVATE channel, a private value is viewer-scoped and has no
-     * viewer on this path, so this is the shared-read primitive (§0055).
-     * Read-only: writes stay owner/menu-driven (and shared writes broadcast,
-     * §0049). The consumer composes this read into its own enforcement (e.g.
-     * blocking a hopper extract), the library reports state, it does not enforce.
+     * <p>Returns {@link #defaultValue} off the server, for a container that can't be
+     * resolved, or for a PRIVATE channel, since a private value belongs to a viewer
+     * and this path has none. Read only: writes still go through the owner or menu
+     * (and shared writes are broadcast). The consumer builds its own enforcement on
+     * this read, such as blocking a hopper extract; the library only reports state.
      */
     public T get(Container container, int containerSlotIndex) {
         return SlotState.readShared(this, container, containerSlotIndex);

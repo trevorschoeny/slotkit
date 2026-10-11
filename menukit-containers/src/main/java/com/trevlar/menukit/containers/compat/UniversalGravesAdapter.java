@@ -17,26 +17,25 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 /**
- * §0055 Phase 2 — Universal Graves adapter. Makes MKC player-slot contents land
- * <em>in</em> a UG grave (and restore on collect), generic over every
- * death-droppable player content slot via {@link PlayerSlotCapture}.
+ * Universal Graves adapter. Puts the contents of Containers' player slots into a
+ * Universal Graves grave and restores them on collect, for every death-droppable
+ * player content slot, through {@link PlayerSlotCapture}.
  *
- * <p><b>Optional dependency.</b> This class references UG types
- * ({@code eu.pb4.graves.*}, {@code modCompileOnly}) and is loaded ONLY behind a
- * {@code FabricLoader.isModLoaded("universal-graves")} guard (in
- * {@code MenuKitContainers.init}). When UG is absent the class never loads, and
- * the Phase-1 floor drops the slots beside the death spot. MKC hard-depends on UG
- * not at all.
+ * <p>Optional dependency. This class references Universal Graves types
+ * ({@code eu.pb4.graves.*}, compile-only) and loads only behind a
+ * {@code FabricLoader.isModLoaded("universal-graves")} guard in
+ * {@code MenuKitContainers.init}. When Universal Graves is absent the class never
+ * loads, and the fallback drops the slots beside the death spot.
  *
- * <p><b>Ordering.</b> UG's mask captures <em>before</em> vanilla's inventory drop
- * (it injects ahead of {@code dropEquipment}), so {@link PlayerSlotCapture#captureAndClear}
- * here clears the slots upstream of the Phase-1 {@code dropEquipment} floor — the
- * floor finds them empty and drops nothing (no dupes).
+ * <p>Universal Graves' mask captures before vanilla's inventory drop (it injects
+ * ahead of {@code dropEquipment}), so {@link PlayerSlotCapture#captureAndClear} here
+ * empties the slots before the {@code dropEquipment} fallback runs. The fallback
+ * finds them empty and drops nothing, so nothing is duplicated.
  *
- * <p><b>Identity.</b> A captured slot's real identity is {@code (attachmentId,
- * index)}; that rides UG's per-item {@link Tag} (UG's own {@code slot} int is just
- * a unique per-item key, since one mask spans multiple MKC attachments). On
- * collect, restore decodes the tag and writes each stack back to the exact slot.
+ * <p>A captured slot's real identity is {@code (attachmentId, index)}, carried in
+ * Universal Graves' per-item {@link Tag}. Its own {@code slot} int is only a unique
+ * per-item key, since one mask spans several attachments. On collect, restore
+ * decodes the tag and writes each stack back to the exact slot.
  */
 public final class UniversalGravesAdapter implements GraveInventoryMask {
 
@@ -47,7 +46,7 @@ public final class UniversalGravesAdapter implements GraveInventoryMask {
 
     private UniversalGravesAdapter() {}
 
-    /** Registers the mask with UG. Call ONLY when {@code universal-graves} is loaded. */
+    /** Registers the mask with Universal Graves. Call only when {@code universal-graves} is loaded. */
     public static void register() {
         GravesApi.registerInventoryMask(MASK_ID, new UniversalGravesAdapter());
     }

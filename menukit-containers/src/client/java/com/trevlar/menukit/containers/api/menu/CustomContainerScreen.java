@@ -39,12 +39,12 @@ import java.util.function.Consumer;
 /**
  * Client-side partner to {@link CustomContainerMenu}: a standalone screen whose panels
  * hold slot groups. Owns slot positioning, hover events, key actions and drag modes;
- * placement, render and element input belong to its {@link PanelHost} (§0065).
+ * placement, render and element input belong to its {@link PanelHost}.
  *
  * <h3>Its panels</h3>
  * The handler knows each panel's id, slot groups and whether the server shows it; how
  * a panel looks is declared on the client with {@link ClientMenu#panel} on MenuKit's
- * {@code Panel.Builder} (§0067). This screen builds one {@link Panel} per handler panel
+ * {@code Panel.Builder}. This screen builds one {@link Panel} per handler panel
  * (a raised panel of its slots when nothing is declared) and shows it while the server
  * says so.
  *
@@ -52,8 +52,7 @@ import java.util.function.Consumer;
  * The panels go into a standalone host with the title band inside the frame. The host
  * places them by their {@link PanelPosition}; an unplaced one takes the standalone
  * default (the first is the {@code main()} frame, later ones stack below it). This
- * screen tells the host what
- * the host cannot know on its own: a panel's content size includes its slot grid,
+ * screen tells the host what it cannot know on its own: a panel's content size includes its slot grid,
  * its slot frames draw between its background and its elements, the main panel
  * auto-fits its height only when it holds no slots, and a panel's own slots stay
  * live under the panel's own claim. The host is attached to
@@ -76,9 +75,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     /** Size of one slot cell (18x18: 16px item + 1px border each side). */
     private static final int SLOT_SIZE = 18;
 
-    // ── The host ───────────────────────────────────────────────────────
-
-    /** This screen's panels, placed, rendered and routed (§0065). */
+    /** Places, renders and routes input for this screen's panels. */
     private final PanelHost host;
 
     /** One client panel per handler panel, in the handler's order. */
@@ -90,23 +87,20 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     /** Panel id -> this frame's placement (absolute screen coordinates). Rebuilt each frame. */
     private Map<String, PanelHost.Placed> placements = new LinkedHashMap<>();
 
-    // ── Hover Tracking ─────────────────────────────────────────────────
-    // Tracks the previously hovered CreatedSlot to fire enter/exit events.
-    // Also exposes current hover state as a queryable property for consumers.
+    // The CreatedSlot hovered last frame, for enter and exit events. Also readable by
+    // consumers as the current hover.
     private @Nullable CreatedSlot previouslyHoveredMkSlot = null;
 
     /**
-     * Returns the currently hovered CreatedSlot, or null if the mouse
-     * isn't over a MenuKit slot. Synchronous query, consumers like HUD
-     * overlays can read this each frame without subscribing to events.
+     * The CreatedSlot under the mouse, or null if it isn't over a MenuKit slot. A HUD
+     * overlay, for example, can read this each frame without subscribing to events.
      */
     public @Nullable CreatedSlot hoveredCreatedSlot() {
         return previouslyHoveredMkSlot;
     }
 
     /**
-     * Returns the SlotGroup of the currently hovered CreatedSlot, or
-     * null. Convenience for consumers that care about group identity.
+     * The SlotGroup of the hovered CreatedSlot, or null.
      */
     public @Nullable SlotGroup getHoveredGroup() {
         return previouslyHoveredMkSlot != null
@@ -114,24 +108,22 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     }
 
     /**
-     * Captures a "return to this container" action for the currently-displayed
-     * MKC container screen, or {@code null} if the current screen is not one.
+     * A "return to this container" action for the custom container screen now
+     * showing, or {@code null} if the current screen is not one.
      *
-     * <p>Use when opening a transient client {@link net.minecraft.client.gui.screens.Screen}
-     * OVER a live MKC container: pass the captured action to
-     * {@code MKScreen.setReturnAction} so the transient screen's Back/Escape
-     * RE-OPENS the container. Re-open (not a client-only screen restore) is
-     * required because vanilla closes the server-synced menu when you
-     * {@code setScreen} away from a container, so coming back means re-issuing
-     * the open request, which is exactly what the returned {@link Runnable}
-     * does (it resolves this menu's {@link CustomMenu} handle and calls
-     * {@link ClientMenu#requestOpen()}).
+     * <p>Use it when opening a temporary client
+     * {@link net.minecraft.client.gui.screens.Screen} over an open custom container:
+     * pass the action to {@code MKScreen.setReturnAction} so the temporary screen's
+     * Back or Escape opens the container again. It has to reopen rather than just
+     * restore the screen on the client, because vanilla closes the server-synced menu
+     * when you {@code setScreen} away from a container. Coming back means sending the
+     * open request again, which is what the returned {@link Runnable} does: it finds
+     * this menu's {@link CustomMenu} handle and calls {@link ClientMenu#requestOpen()}.
      *
-     * <p>Returns {@code null} when there is nothing to return to (not in an MKC
-     * container, or the menu's type doesn't resolve to a registered handle), so
-     * callers fall back to their default navigation. Honest limit: this only
-     * restores MKC-backed containers, a vanilla container can't be cleanly
-     * re-opened client-side after the close packet.
+     * <p>Returns {@code null} when there is nothing to return to (not in a custom
+     * container, or the menu's type isn't a registered handle), so callers fall back
+     * to their usual navigation. This only restores custom containers; a vanilla
+     * container can't be cleanly reopened from the client after the close packet.
      */
     public static @Nullable Runnable captureReturnAction() {
         net.minecraft.client.gui.screens.Screen current =
@@ -151,14 +143,10 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         return () -> ClientMenu.of(handle).requestOpen();
     }
 
-    // ── Construction ───────────────────────────────────────────────────
-
-    // ── MKC-owned image dimensions (26.2 migration) ───────────────────
-    // Vanilla made imageWidth/imageHeight FINAL at 26.x (dims are a
-    // construction-time contract now). MKC's reactive layout changes them
-    // per frame, so MKC keeps its own pair, and its own leftPos/topPos target
-    // (the main frame the host resolved). recenter() applies them over
-    // super.init()'s centering; hasClickedOutside is overridden.
+    // Vanilla made imageWidth/imageHeight final in 26.x, fixed at construction. This
+    // screen's layout changes them every frame, so it keeps its own pair, and its own
+    // leftPos/topPos (the main frame the host resolved). recenter() applies them over
+    // super.init()'s centering, and hasClickedOutside is overridden.
     private int mkcImageWidth  = 176;
     private int mkcImageHeight = 100;
     private int mkcLeftPos = 0;
@@ -192,7 +180,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
 
     /**
      * One {@link Panel} per handler panel: raised by default, then the look declared with
-     * {@link ClientMenu#panel}, shown while the server shows the panel (§0067).
+     * {@link ClientMenu#panel}, shown while the server shows the panel.
      */
     private static List<Panel> buildPanels(CustomContainerMenu handler) {
         MenuType<?> type;
@@ -221,8 +209,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         recenter();   // the host's main frame wins over vanilla's centering
         positionSlots();
 
-        // Build the key dispatch table from the panel tree.
-        // Cleared and rebuilt on each init (handles screen resize re-init).
+        // Rebuild the key table from the panels on every init, including after a resize.
         keyRegistry.clear();
         registerPanelToggleKeys();
 
@@ -239,8 +226,8 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         super.removed();
     }
 
-    // ── Layout ─────────────────────────────────────────────────────────
-    // Runs each frame. Cheap. Handles visibility toggles with no invalidation step.
+    // Layout runs every frame. It is cheap, and handles visibility toggles with no
+    // invalidation step.
 
     /**
      * A panel's content size, padding excluded: the larger of its slot grid and its
@@ -390,7 +377,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         return false;
     }
 
-    // ── Rendering ──────────────────────────────────────────────────────
+    // Rendering
 
     /**
      * Layout, slot positions, then this screen's FLOW layer, all before vanilla's
@@ -414,8 +401,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         super.extractRenderState(graphics, mouseX, mouseY, delta);
         fireServerToggles();
 
-        // ── Hover tracking (fire enter/exit events) ────────────────────
-        // After the super pass, hoveredSlot is set by vanilla's pipeline.
+        // Hover enter and exit events. Vanilla has set hoveredSlot by now.
         CreatedSlot currentHovered = (this.hoveredSlot instanceof CreatedSlot mk) ? mk : null;
         if (currentHovered != previouslyHoveredMkSlot) {
             if (previouslyHoveredMkSlot != null) {
@@ -441,15 +427,14 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         }
     }
 
-    // ── Panel Visibility (public API) ──────────────────────────────────
-    // Entry point for consumers to toggle panel visibility from anywhere
-    // (HUD buttons, chat commands, game events). Routes through the
-    // same C2S sync mechanism as the keybind path.
+    // Panel visibility. Consumers can toggle a panel from anywhere (HUD buttons, chat
+    // commands, game events); it goes through the same server request as the toggle
+    // key.
 
     /**
      * Asks the server to show or hide a panel (vanilla's container button packet). The
      * server honours it only for a panel declared {@code toggleable()} and the change
-     * arrives with the next sync (§0067); the client never changes it on its own.
+     * arrives with the next sync; the client never changes it on its own.
      * Listeners hear {@code onPanelToggle} when the server's answer arrives.
      */
     public void togglePanel(String panelId) {
@@ -469,10 +454,8 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         }
     }
 
-    // ── Key Registry ──────────────────────────────────────────────────
-    // Lookup-based dispatch, not a hardcoded switch. Panel toggle keys
-    // are auto-registered from the panel tree. Custom actions can be
-    // added via registerKey(). Task 4's event bus can hook into this.
+    // Key actions, looked up by key code. Panel toggle keys are registered from the
+    // panels automatically; registerKey() adds custom ones.
 
     /** Action triggered by a key press while this screen is open. */
     @FunctionalInterface
@@ -482,7 +465,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
 
     private final Map<Integer, KeyAction> keyRegistry = new LinkedHashMap<>();
 
-    /** Registers a key action. GLFW key code → action. */
+    /** Registers an action for a GLFW key code. */
     public void registerKey(int glfwKey, KeyAction action) {
         keyRegistry.put(glfwKey, action);
     }
@@ -502,26 +485,20 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         }
     }
 
-    // ── Screen Event Bus ─────────────────────────────────────────────
-    // Per-screen-instance event system. MenuKit-scoped, fires events
-    // about things happening inside this MenuKit screen. Consumers
-    // wanting ecosystem-wide slot events use Fabric's event API.
-    //
-    // Typed callbacks, not generic Object... varargs. Each method has
-    // a default no-op so listeners only override what they care about.
+    // Events for this screen instance only, about what happens inside it. For slot
+    // events across all screens, use Fabric's event API.
 
     /**
-     * Listener for events happening within a MenuKit screen.
-     * All methods have default no-ops, override only what you need.
+     * Listener for events inside a MenuKit screen. Every method does nothing by
+     * default, so override only what you need.
      *
-     * <p>These callbacks carry {@link CreatedSlot}, the library's own slot handle for
-     * a created slot, not a raw vanilla {@code Slot}. It is the right handle for
-     * own-slot event callbacks: it carries {@link CreatedSlot#address()} (the slot's
-     * {@code Address} for the address world) plus {@code getGroupId()} /
-     * {@code getLocalIndex()} for display.
+     * <p>The callbacks pass a {@link CreatedSlot}, the library's handle for a created
+     * slot, rather than a raw vanilla {@code Slot}. It carries
+     * {@link CreatedSlot#address()} (the slot's {@code Address}) plus
+     * {@code groupId()} and {@code getLocalIndex()} for display.
      */
     public interface ScreenEventListener {
-        /** A CreatedSlot was clicked. Button: 0=left, 1=right, 2=middle. */
+        /** A CreatedSlot was clicked. Button: 0 left, 1 right, 2 middle. */
         default void onSlotClick(CreatedSlot slot, int button) {}
         /** An empty CreatedSlot was clicked with an empty cursor. */
         default void onEmptySlotClick(CreatedSlot slot, int button) {}
@@ -532,19 +509,18 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         /** A panel's visibility changed. */
         default void onPanelToggle(Panel panel, boolean nowVisible) {}
         /**
-         * A shift-click (quick move) is about to happen on a CreatedSlot.
-         * Fires BEFORE vanilla routes the items, destination is unknown
-         * at this point. The movedStack is a copy of what's in the source.
+         * A shift-click (quick move) is about to happen on a CreatedSlot. Fires before
+         * vanilla routes the items, so the destination isn't known yet. movedStack is a
+         * copy of what is in the source.
          *
-         * <p><b>Scope:</b> shift-click only. Other item-movement paths
-         * (drag-collect, double-click collect, hopper insertion, cursor
-         * placement, creative middle-click) do NOT fire this event, the
-         * name intentionally matches vanilla's {@code quickMoveStack}.
-         * For those paths, observe the relevant ecosystem hooks directly.
+         * <p>Shift-click only. Other ways items move (drag-collect, double-click
+         * collect, hopper insertion, cursor placement, creative middle-click) do not
+         * fire it; the name matches vanilla's {@code quickMoveStack} on purpose. For
+         * those, use the relevant hooks directly.
          *
-         * <p>Use for logging, analytics, or pre-transfer checks. For
-         * post-routing observation (where items ended up), a future
-         * onAfterQuickMove event would fire from quickMoveStack.
+         * <p>For logging, analytics or checks before the transfer. Seeing where the
+         * items ended up would need a later onAfterQuickMove event fired from
+         * quickMoveStack.
          */
         default void onQuickMove(CreatedSlot sourceSlot,
                                  net.minecraft.world.item.ItemStack movedStack) {}
@@ -581,19 +557,18 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         for (var listener : eventListeners) listener.onQuickMove(sourceSlot, movedStack);
     }
 
-    // ── Drag Modes ────────────────────────────────────────────────────
-    // Per-screen drag mode registry. When a mouse drag starts on a
-    // CreatedSlot, the registry is checked for a mode that accepts
-    // the drag. The active mode receives drag/end callbacks.
+    // Drag modes for this screen. When a mouse drag starts on a CreatedSlot, the
+    // registered modes are asked in turn whether to take it, and the one that does
+    // gets the drag and end callbacks.
 
     /**
-     * A custom drag behavior for MenuKit slots. The screen dispatches
-     * drag events to the active mode. Only one mode is active at a time.
+     * A custom drag behaviour for MenuKit slots. The screen sends drag events to the
+     * active mode, and only one mode is active at a time.
      */
     public interface DragMode {
         /**
-         * Called when a drag starts on a CreatedSlot.
-         * Return true to claim the drag (subsequent drag/end go to this mode).
+         * Called when a drag starts on a CreatedSlot. Return true to take the drag, so
+         * the following drag and end calls come to this mode.
          */
         boolean onDragStart(CreatedSlot slot, int button);
         /** Called when the mouse moves over a new slot during a drag. */
@@ -610,7 +585,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         dragModes.add(mode);
     }
 
-    // ── Input ──────────────────────────────────────────────────────────
+    // Input
 
     /**
      * "Inside" is any placed panel, not just the image rectangle: a region panel
@@ -643,12 +618,12 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
 
     /**
      * Click dispatch: element, drag mode, right-click handler, events, vanilla.
-     * Elements get first crack so a button never triggers the slot under it.
+     * Elements go first so a button never triggers the slot under it.
      */
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean flag) {
-        // Popover janitor: an open Dropdown closes when the click falls outside it,
-        // even if a slot or another element consumes the click.
+        // An open Dropdown closes when the click falls outside it, even if a slot or
+        // another element takes the click.
         host.notifyOutsideClick(event.x(), event.y());
 
         boolean modal = host.topmostModal() != null;
@@ -658,7 +633,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         // A modal of this screen's own claims everything.
         if (modal) return true;
 
-        // Drag mode start, check if a registered mode claims this drag
+        // Start a drag if a registered mode takes it.
         if (this.hoveredSlot instanceof CreatedSlot mkSlot && activeDrag == null) {
             for (DragMode mode : dragModes) {
                 if (mode.onDragStart(mkSlot, event.button())) {
@@ -668,9 +643,10 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
             }
         }
 
-        // A right click on a slot with a handler is sent as a plain right click, whatever
-        // the cursor holds (vanilla would start a drag): the menu runs the handler on
-        // both sides (CustomContainerMenu.clicked), so the server's run is the one that counts.
+        // A right click on a slot with a handler is sent as a plain right click whatever
+        // the cursor holds (vanilla would start a drag). The menu runs the handler on
+        // both sides (CustomContainerMenu.clicked), and the server's run is the one that
+        // counts.
         if (event.button() == 1 && this.hoveredSlot instanceof CreatedSlot mkSlot
                 && menu.rightClickHandler(mkSlot.index, 1, ContainerInput.PICKUP) != null) {
             slotClicked(mkSlot, mkSlot.index, 1, ContainerInput.PICKUP);
@@ -678,7 +654,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
             return true;
         }
 
-        // Fire slot click event (doesn't consume, vanilla still processes)
+        // Slot click events; the click still goes on to vanilla.
         if (this.hoveredSlot instanceof CreatedSlot mkSlot) {
             fireSlotClick(mkSlot, event.button());
             if (!mkSlot.hasItem() && this.menu.getCarried().isEmpty()) {

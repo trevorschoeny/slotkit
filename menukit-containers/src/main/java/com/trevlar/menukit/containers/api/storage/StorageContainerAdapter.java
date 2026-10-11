@@ -7,15 +7,15 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Adapts a MenuKit {@link Storage} to vanilla's {@link Container} interface.
- * Used during slot construction, {@link net.minecraft.world.inventory.Slot}'s
- * constructor takes a Container, but MenuKit consumers declare storage via
- * the narrower {@link Storage} interface.
+ * Adapts a MenuKit {@link Storage} to vanilla's {@link Container} interface. Needed
+ * when building slots, because {@link net.minecraft.world.inventory.Slot}'s
+ * constructor takes a Container while MenuKit consumers declare storage through the
+ * narrower {@link Storage} interface.
  *
- * <p>Used by {@link com.trevlar.menukit.containers.api.menu.CustomContainerMenu}
- * for MenuKit-native handlers. Consumers registering slots onto vanilla handlers
- * (M4) also wrap a Storage in this adapter when calling {@code addSlot} with
- * a {@link net.minecraft.world.inventory.Slot} instance.
+ * <p>{@link com.trevlar.menukit.containers.api.menu.CustomContainerMenu} uses it for
+ * MenuKit's own handlers. Consumers adding slots to vanilla handlers also wrap a
+ * Storage in this adapter when calling {@code addSlot} with a
+ * {@link net.minecraft.world.inventory.Slot}.
  */
 public class StorageContainerAdapter implements Container {
 
@@ -26,12 +26,10 @@ public class StorageContainerAdapter implements Container {
     }
 
     /**
-     * Returns the backing {@link Storage}. Exposed so internal MKC paths
-     * (notably the {@code ContainerIdentity}) can introspect the
-     * storage's nature, e.g. check whether it's a {@link KeyedStorage}
-     * without going through the vanilla {@link Container} interface.
-     * Consumer code should generally NOT reach for this; the vanilla
-     * {@link Container} surface is the right one for almost all uses.
+     * Returns the backing {@link Storage}. Exposed so internal code (notably
+     * {@code ContainerIdentity}) can check what kind of storage it is, such as a
+     * {@link KeyedStorage}, without going through {@link Container}. Consumer code
+     * should almost always use the {@link Container} methods instead.
      */
     public Storage getStorage() {
         return storage;

@@ -12,7 +12,7 @@ import java.util.Optional;
 
 /**
  * A slot-state value on the wire: the channel's own {@code StreamCodec} bytes, as the
- * channel's type promises (§0067), never NBT. The bytes ride in a length-capped array
+ * channel's type promises, never NBT. The bytes ride in a length-capped array
  * so a peer can skip a value of a channel it does not have, and decode one it does
  * with that channel's codec. Decoding never throws: a value that does not parse, or
  * leaves bytes over, is refused.

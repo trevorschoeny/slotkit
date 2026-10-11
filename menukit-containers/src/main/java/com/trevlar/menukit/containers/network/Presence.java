@@ -20,7 +20,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.function.Consumer;
 
 /**
- * Containers checks that a joining client has it, and requires it (§0069).
+ * Containers checks that a joining client has it, and requires it.
  *
  * <p>Created slots change a menu's slot count on both sides, so a client without
  * Containers on a server with it would be disconnected by a slot-count mismatch the
@@ -36,12 +36,12 @@ import java.util.function.Consumer;
  *       {@link #versionMessage(int, int)}; the same one completes the task.</li>
  *   <li>The client records that its server runs Containers. A client that joins a
  *       server without it never hears the hello, so {@link #serverHasContainers()}
- *       stays false and it builds no created slots and sends nothing Containers-only
- *       (§0069: it turns its features off instead of desyncing).</li>
+ *       stays false and it builds no created slots and sends nothing Containers-only.
+ *       It turns its features off instead of desyncing.</li>
  * </ol>
  *
  * <p>Every Containers packet carries the protocol in its id
- * ({@code menukit-containers:v1/...}, §0067), so a peer on another protocol has no
+ * ({@code menukit-containers:v1/...}), so a peer on another protocol has no
  * receiver for it and never misreads one.
  */
 @ApiStatus.Internal
@@ -60,7 +60,7 @@ public final class Presence {
     static final String MENUKIT_PAGE = "https://modrinth.com/mod/menukit";
     static final String CONTAINERS_PAGE = "https://modrinth.com/mod/menukit-containers";
 
-    // ── The two payloads ────────────────────────────────────────────────
+    // The two payloads
 
     /** Server to client, in configuration: "this server runs Containers, on this protocol". */
     public record Hello(int protocol) implements CustomPacketPayload {
@@ -78,7 +78,7 @@ public final class Presence {
         @Override public Type<Reply> type() { return TYPE; }
     }
 
-    // ── What the player reads ───────────────────────────────────────────
+    // What the player reads
 
     /** Why a client without Containers is refused: names both mods and where to get them. */
     public static Component missingMessage() {
@@ -106,7 +106,7 @@ public final class Presence {
         return null;
     }
 
-    // ── The client's side of it ─────────────────────────────────────────
+    // The client's side
 
     // True on a server (it runs Containers by definition) and in singleplayer; the
     // client sets it false when a configuration starts and true when the hello arrives.
@@ -124,13 +124,13 @@ public final class Presence {
 
     /**
      * Whether a menu on this side builds created slots: always on the server; on the
-     * client only when its server runs Containers (§0069).
+     * client only when its server runs Containers.
      */
     public static boolean buildsCreatedSlots(boolean clientSide) {
         return !clientSide || serverHasContainers;
     }
 
-    // ── The server's side of it ─────────────────────────────────────────
+    // The server's side
 
     /** The configuration task: send the hello, then wait for the client's reply. */
     private record HelloTask() implements ConfigurationTask {

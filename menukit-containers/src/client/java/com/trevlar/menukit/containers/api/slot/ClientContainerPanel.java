@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
- * The client half of a {@link ContainerPanel} (§0067): what only the client has,
+ * The client half of a {@link ContainerPanel}: what only the client has,
  * declared from the client initializer.
  *
  * <pre>{@code

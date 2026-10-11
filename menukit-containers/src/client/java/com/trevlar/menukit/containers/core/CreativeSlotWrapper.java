@@ -8,37 +8,35 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * A library-built stand-in for vanilla's package-private
- * {@code CreativeModeInventoryScreen$SlotWrapper}, used to carry a registered
- * {@link CreatedSlot} into the creative <em>non-inventory</em> tabs so it draws
- * and routes there exactly as it does on the inventory tab (§0055 creative parity,
- * extended to all tabs).
+ * The library's stand-in for vanilla's package-private
+ * {@code CreativeModeInventoryScreen$SlotWrapper}. It carries a registered
+ * {@link CreatedSlot} into the creative tabs other than the inventory tab, so it
+ * draws and takes clicks there just as it does on the inventory tab.
  *
  * <h3>Why a custom wrapper</h3>
  *
- * Vanilla only wraps {@code player.inventoryMenu}'s slots — slots included — into
- * the {@code ItemPickerMenu} on the <b>inventory</b> tab; the non-inventory tabs
- * carry a fixed base slot set (the item grid + hotbar) that never sees the slot,
- * so a slot is invisible and unclickable there. We append one of these wrappers
- * per slot to that base set ({@code MKCCreativeSlotItemPickerMixin}) so the
- * existing slot dispatch — which walks {@code menu.slots} and unwraps via
- * {@link com.trevlar.menukit.inject.Slots#target} — discovers the slot on
- * every tab. We can't construct vanilla's {@code SlotWrapper} (package-private),
- * so this mirrors its delegation and, crucially, implements the same
- * {@link SlotWrapperAccessor} unwrap seam MenuKit applies to vanilla's wrapper —
- * so {@code Slots.target}/{@code CreatedSlotAccess.asMKCSlot} resolve it to the slot with
- * no special case.
+ * Vanilla wraps {@code player.inventoryMenu}'s slots, registered ones included, into
+ * the {@code ItemPickerMenu} only on the inventory tab. The other tabs carry a fixed
+ * set of slots (the item grid and hotbar) that never includes the registered slot, so
+ * it is invisible and unclickable there. {@code MKCCreativeSlotItemPickerMixin}
+ * appends one of these wrappers per slot to that set, so the slot dispatch, which
+ * walks {@code menu.slots} and unwraps with
+ * {@link com.trevlar.menukit.inject.Slots#target}, finds the slot on every tab.
+ * Vanilla's {@code SlotWrapper} is package-private and can't be constructed here, so
+ * this copies its delegation and implements the same {@link SlotWrapperAccessor}
+ * unwrap MenuKit applies to vanilla's wrapper. That way {@code Slots.target} and
+ * {@code CreatedSlotAccess.asMKCSlot} resolve it to the slot with no special case.
  *
  * <h3>Parked, like the inventory-tab wrappers</h3>
  *
- * Constructed off-screen (the screen dispatcher draws the slot at its live
- * {@code renderX/renderY} instead), and its placement clicks are re-routed to the
- * proven inventory-tab path by {@code MKCCreativeSlotClickRouteMixin}. The
- * delegation below keeps vanilla's own reads/writes (item, may-place, take, etc.)
- * faithful for anything that does touch the wrapper directly.
+ * Built off-screen (the screen dispatcher draws the slot at its live
+ * {@code renderX/renderY} instead), and {@code MKCCreativeSlotClickRouteMixin}
+ * reroutes its placement clicks to the inventory-tab path. The delegation below keeps
+ * vanilla's own reads and writes (item, may-place, take and so on) correct for
+ * anything that touches the wrapper directly.
  *
- * <p>No client types — universal-safe — though only the client creative path ever
- * constructs it.
+ * <p>Has no client types, so it is safe on either side, though only the client's
+ * creative path builds it.
  */
 public final class CreativeSlotWrapper extends Slot implements SlotWrapperAccessor {
 
@@ -54,13 +52,13 @@ public final class CreativeSlotWrapper extends Slot implements SlotWrapperAccess
         this.target = target;
     }
 
-    /** The unwrap seam — resolves this wrapper back to its slot (see {@link SlotWrapperAccessor}). */
+    /** Unwraps this wrapper back to its slot (see {@link SlotWrapperAccessor}). */
     @Override
     public Slot mk$getTarget() {
         return this.target;
     }
 
-    // ── Faithful delegation to the wrapped slot (mirrors vanilla SlotWrapper) ──
+    // Delegation to the wrapped slot, as vanilla's SlotWrapper does
 
     @Override
     public void onTake(Player player, ItemStack stack) {

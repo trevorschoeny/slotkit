@@ -14,8 +14,8 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
- * The server's judgement of a slot-state write a client sent (§0067), as one pure
- * function so its order is provable without a server ({@code :validator-mkc:trustCheck}).
+ * The server's check on a slot-state write a client sent, as one pure function so its
+ * order can be tested without a server ({@code :validator-mkc:trustCheck}).
  *
  * <p>In order, each step refusing what fails it:
  * <ol>
@@ -29,9 +29,9 @@ import java.util.function.Predicate;
  *   <li>the player is within the write rate ({@link Rate});</li>
  *   <li>a value equal to the channel's default removes the entry instead of storing it.</li>
  * </ol>
- * The record lists {@code canWrite} before the menu and slot checks; it is asked after
- * them here because it is handed the slot, and a slot exists only once the menu
- * matches. Every check must pass either way.
+ * {@code canWrite} is asked after the menu and slot checks because it is handed the
+ * slot, and a slot exists only once the menu matches. Every check must pass either
+ * way.
  */
 @ApiStatus.Internal
 public final class SlotStateWrites {
@@ -49,11 +49,11 @@ public final class SlotStateWrites {
         }
     }
 
-    /** A judged write: the verdict, and the parsed value when it got that far. */
+    /** A checked write: the verdict, and the parsed value when it got that far. */
     public record Judged<T>(Verdict verdict, @Nullable T value) {}
 
     /**
-     * Judges one write. Each input is asked only when the steps before it passed, so a
+     * Checks one write. Each input is asked only when the steps before it passed, so a
      * refused write never reaches the consumer's {@code canWrite} or spends the rate.
      *
      * @param channel     the registered channel, or {@code null} for an unknown id

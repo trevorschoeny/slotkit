@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * The client half of a {@link CustomMenu} (§0067): its screen class, how each of its
+ * The client half of a {@link CustomMenu}: its screen class, how each of its
  * panels looks, and the request to open it. Declared from the client initializer;
  * the menu itself (its slots and panels as the server knows them) is common.
  *
@@ -97,8 +97,8 @@ public final class ClientMenu {
 
     /**
      * Asks the server to open this menu for the local player. The server opens it only
-     * when the menu declares {@code validWhen} and it holds for this player (§0067).
-     * Nothing is sent to a server without Containers (§0069).
+     * when the menu declares {@code validWhen} and it holds for this player. Nothing is
+     * sent to a server without Containers.
      */
     public void requestOpen() {
         if (!Presence.serverHasContainers()) {

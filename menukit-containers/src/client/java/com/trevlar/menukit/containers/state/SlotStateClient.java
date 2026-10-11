@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * The client's half of the slot-state network: snapshots and updates from the server,
  * decoded with each channel's {@code StreamCodec} into {@link SlotStateClientCache}.
- * An update applies only to the menu it names (§0067). A value this client cannot
+ * An update applies only to the menu it names. A value this client cannot
  * decode, or a channel it does not have, is skipped and logged once; it never throws.
  */
 @ApiStatus.Internal

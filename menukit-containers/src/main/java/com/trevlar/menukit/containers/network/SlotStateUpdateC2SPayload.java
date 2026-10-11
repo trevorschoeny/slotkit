@@ -8,7 +8,7 @@ import net.minecraft.resources.Identifier;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Client to server: a slot-state write the server judges (§0067). Names the menu the
+ * Client to server: a slot-state write for the server to check. Names the menu the
  * client wrote in ({@code containerId}, so a write that races a menu switch is refused),
  * the slot by its index in that menu, the channel, and the value as the channel's own
  * {@code StreamCodec} bytes. The server decodes those bytes with that codec, and stores

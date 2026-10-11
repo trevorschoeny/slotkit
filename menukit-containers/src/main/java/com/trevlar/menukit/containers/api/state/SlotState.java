@@ -35,11 +35,8 @@ import java.util.Optional;
 import java.util.function.Function;
 
 /**
- * Public entry point for M1 per-slot persistent state. Consumers register
- * channels at mod init; read/write via the returned {@link SlotStateChannel}
- * handles.
- *
- * <p>See {@code menukit/Design Docs/Phase 12/M1_PER_SLOT_STATE.md}.
+ * Entry point for persistent per-slot state. Consumers register channels at mod init,
+ * then read and write through the returned {@link SlotStateChannel} handles.
  */
 public final class SlotState {
 
@@ -47,7 +44,7 @@ public final class SlotState {
 
     private SlotState() {}
 
-    // ── Channel registration ────────────────────────────────────────────
+    // Channel registration
 
     /** Registers a PRIVATE channel. A second channel with the same id throws. */
     public static <T> SlotStateChannel<T> register(
@@ -57,12 +54,11 @@ public final class SlotState {
     }
 
     /**
-     * Registers a channel with explicit visibility (§0049). PRIVATE is the
-     * shipped per-player model; SHARED gives one player-agnostic value per slot,
-     * synced to and writable by every viewer, for cross-player features like
-     * Inventory Plus's Container Locks. SHARED is only meaningful on multi-player,
-     * fixed-slot containers (placed shulker/chest/barrel); see
-     * {@link SlotStateChannel.Visibility}.
+     * Registers a channel with explicit visibility. PRIVATE gives each player their own
+     * value. SHARED gives one value per slot for all players, synced to and writable by
+     * every viewer, for features that span players like Inventory Plus's container
+     * locks. SHARED only makes sense on multi-player, fixed-slot containers (a placed
+     * shulker, chest or barrel); see {@link SlotStateChannel.Visibility}.
      */
     public static <T> SlotStateChannel<T> register(
             Identifier id, Codec<T> codec,
@@ -72,7 +68,7 @@ public final class SlotState {
     }
 
     /**
-     * Registers a channel with its writer rule (§0067): who may write it from a client.
+     * Registers a channel with its writer rule: who may write it from a client.
      * A SHARED channel needs one for any client to write it; without one it keeps the
      * default, which refuses every client write. A PRIVATE channel defaults to letting a
      * player write their own value.
@@ -101,7 +97,7 @@ public final class SlotState {
         return Optional.ofNullable(SlotStateRegistry.getChannel(id));
     }
 
-    // ── Resolver registration (modded) ──────────────────────────────────
+    // Resolver registration for modded containers
 
     /** Registers a resolver for a custom block-entity class. */
     public static <T extends BlockEntity> void registerContainerResolver(
@@ -115,7 +111,7 @@ public final class SlotState {
         SlotStateRegistry.registerEntityResolver(clazz, resolver);
     }
 
-    // ── Block-portable state (§0048) ────────────────────────────────────
+    // State that travels with a block's item
 
     private static final java.util.Set<Class<? extends net.minecraft.world.level.block.entity.RandomizableContainerBlockEntity>>
             PORTABLE = java.util.concurrent.ConcurrentHashMap.newKeySet();
@@ -125,7 +121,8 @@ public final class SlotState {
 
     /**
      * Makes a container block entity's slot state travel with its item, the way a
-     * shulker box's does (§0048): broken, the state rides the item; placed, it returns.
+     * shulker box's does: when the block is broken the state goes with the item, and
+     * when it is placed the state comes back.
      * Shulker boxes are registered by default. Declare at init.
      */
     public static void registerPortable(
@@ -143,16 +140,16 @@ public final class SlotState {
         return false;
     }
 
-    // ── Internal read/write (called from SlotStateChannel) ──────────────
+    // Internal read and write, called from SlotStateChannel
 
     static <T> T read(SlotStateChannel<T> channel, Slot slot, @Nullable Player player) {
         Player viewer = resolvePlayer(slot, player);
         if (isClientSide(viewer)) {
             return SlotStateClientCache.read(channel, slot);
         }
-        // §0055: slot-aware resolution, a composite container (double chest)
-        // resolves this slot to its owning half's key + the index local to that
-        // half; single-owner containers are the identity case (local == global).
+        // A composite container (double chest) resolves this slot to the key of the
+        // half that owns it and the index within that half. For a single-owner
+        // container the local index is the global one.
         Optional<ResolvedSlot> resolved = SlotStateRegistry.resolve(slot.container, slot.getContainerSlot());
         if (resolved.isEmpty()) return channel.defaultValue();
         Tag tag = SlotStateServer.readTag(
@@ -168,7 +165,7 @@ public final class SlotState {
             writeFromClient(channel, slot, viewer, value);
             return;
         }
-        // §0055: store under the owning (half-)key at the owner-local index.
+        // Store under the owning (half's) key at the owner-local index.
         Optional<ResolvedSlot> resolved = SlotStateRegistry.resolve(slot.container, slot.getContainerSlot());
         if (resolved.isEmpty()) return;
         writeResolved(channel, resolved.get(), viewer, value);
@@ -185,7 +182,7 @@ public final class SlotState {
         }
     }
 
-    /** Stores a value, or removes the entry when it is the channel's default (§0067). Server side. */
+    /** Stores a value, or removes the entry when it is the channel's default. Server side. */
     private static <T> void writeResolved(SlotStateChannel<T> channel, ResolvedSlot slot,
                                           @Nullable Player viewer, T value) {
         if (java.util.Objects.equals(value, channel.defaultValue())) {
@@ -198,9 +195,9 @@ public final class SlotState {
 
     /**
      * A client's write: shown at once from the local cache, and sent to the server,
-     * which judges it (§0067) and sends back its own value if it refuses. Sent only when
-     * the server runs Containers (§0069), and only for a slot of the menu the player has
-     * open, which the write names.
+     * which checks it and sends back its own value if it refuses. Sent only when the
+     * server runs Containers, and only for a slot of the menu the player has open,
+     * which the write names.
      */
     private static <T> void writeFromClient(SlotStateChannel<T> channel, Slot slot, @Nullable Player viewer, T value) {
         SlotStateClientCache.write(channel, slot.container, slot.getContainerSlot(), value);
@@ -212,7 +209,7 @@ public final class SlotState {
                 open == null || (open != viewer.inventoryMenu && open.containerId == viewer.inventoryMenu.containerId)
                         ? viewer.inventoryMenu : open;
         int index = indexOn(menu, slot);
-        if (index < 0) return; // not a slot of the open menu: nothing the server could judge
+        if (index < 0) return; // not a slot of the open menu, so the server couldn't check it
         byte[] bytes;
         try {
             bytes = com.trevlar.menukit.containers.network.SlotStateWire.encode(channel, value, viewer.registryAccess());
@@ -236,24 +233,21 @@ public final class SlotState {
         writeResolved(channel, new ResolvedSlot(key, containerSlotIndex), player, value);
     }
 
-    // ── Address-keyed read/write (THE ONE WINDOW twin) ──────────────────
+    // Read and write by address
 
     /**
-     * Reads this channel's value at the slot named by {@code address}, resolving
-     * the address to a live slot through the same created-slot resolver THE ONE
-     * WINDOW uses, then delegating to the {@link Slot}-keyed read. Returns the
-     * channel default when the address resolves to no live slot in the (resolved)
-     * viewer's open menu.
+     * Reads this channel's value at the slot named by {@code address}. The address is
+     * resolved to a live slot through the same created-slot resolver the window uses,
+     * then read as a {@link Slot}. Returns the channel default when the address
+     * resolves to no live slot in the viewer's open menu.
      *
-     * <p><b>Resolution boundary.</b> An {@link Address} names an identity, not a
-     * live slot, turning it into one requires the menu it currently appears in.
-     * This resolves that menu from the viewing player's {@code containerMenu}
-     * ({@code player} when given, else the client player), so an Address read/write
-     * is meaningful exactly where the addressed slot is open. Outside an open menu
-     * holding that slot (e.g. a pure server-automation context with no viewer),
-     * there is no live slot to resolve and this returns the default, use the
-     * {@code (Container, int)} / {@code (PersistentContainerKey, int)} overloads for
-     * menu-free server automation.
+     * <p>An {@link Address} names an identity, not a live slot, so turning it into one
+     * needs the menu it currently appears in. That menu is the viewing player's
+     * {@code containerMenu} ({@code player} when given, else the client player), so an
+     * address read or write only works where the addressed slot is open. With no open
+     * menu holding that slot (server automation with no viewer, say) there is nothing
+     * to resolve and this returns the default. Menu-free server code uses the
+     * {@code (Container, int)} and {@code (PersistentContainerKey, int)} overloads.
      */
     static <T> T readByAddress(SlotStateChannel<T> channel, @Nullable Player player, Address address) {
         Slot slot = resolveSlotByAddress(player, address);
@@ -262,10 +256,9 @@ public final class SlotState {
     }
 
     /**
-     * Writes this channel's value at the slot named by {@code address}. Resolves
-     * the address to a live slot exactly as {@link #readByAddress}; a no-op when
-     * the address resolves to no live slot in the viewer's open menu (see that
-     * method's resolution boundary).
+     * Writes this channel's value at the slot named by {@code address}, resolving it
+     * exactly as {@link #readByAddress} does. Does nothing when the address resolves
+     * to no live slot in the viewer's open menu.
      */
     static <T> void writeByAddress(SlotStateChannel<T> channel, @Nullable Player player,
                                    Address address, T value) {
@@ -275,20 +268,13 @@ public final class SlotState {
     }
 
     /**
-     * The live in-menu {@link Slot} an {@link Address} names in the viewing
-     * player's open menu, or {@code null} if none. The viewer is {@code player}
-     * when given, else the client player (render thread); the menu is that player's
-     * {@code containerMenu}.
-     *
-     * <ul>
-     *   <li><b>Created slot</b>, resolved through {@link CreatedSlotAdapter}, the
-     *       engine's own {@code Address -> live CreatedSlot} resolver (the in-menu slot,
-     *       so a creative wrapper still routes correctly).</li>
-     *   <li><b>Vanilla slot</b>, found by scanning the menu for the slot whose
-     *       minted address matches (the same {@link SlotAddresses#of} encoding the
-     *       engine mints with), so a vanilla-addressed slot resolves too.</li>
-     *   <li><b>Panel / element</b>, not a slot; no live slot to resolve.</li>
-     * </ul>
+     * The live in-menu {@link Slot} an {@link Address} names in the viewing player's
+     * open menu, or {@code null}. The viewer is {@code player} when given, else the
+     * client player (render thread). A created slot resolves through
+     * {@link CreatedSlotAdapter}, which returns the in-menu slot so a creative wrapper
+     * still routes correctly. A vanilla slot is found by scanning the menu for the slot
+     * whose address matches under {@link SlotAddresses#of}, the encoding the engine
+     * mints with. A panel or element is not a slot and resolves to nothing.
      */
     private static @Nullable Slot resolveSlotByAddress(@Nullable Player player, Address address) {
         Player viewer = player != null ? player : tryClientPlayer();
@@ -305,7 +291,7 @@ public final class SlotState {
                 }
                 return null;
             }
-            default -> { // PANEL / PANEL_ELEMENT, not a slot
+            default -> { // PANEL or PANEL_ELEMENT, not a slot
                 return null;
             }
         }
@@ -326,18 +312,15 @@ public final class SlotState {
         return -1;
     }
 
-    // ── Menu-free shared read (§0055) ───────────────────────────────────
+    // Menu-free shared read
 
     /**
-     * Menu-free server-side read of the SHARED value at {@code (container,
-     * containerSlotIndex)}, no {@link Slot}, no open menu, no viewer. Serves
-     * automation (hopper / dropper / dispenser) that touches a placed container
-     * by index. The server is derived from the container's block entity (a
-     * placed container is server-side here). Returns the channel default
-     * off-server, for an unresolvable container, or for a PRIVATE channel, which
-     * has no viewer on this path, so it resolves nothing meaningful; this is the
-     * shared-read primitive (§0055). Composes with composite resolution: a double
-     * chest resolves to its owning half.
+     * Server-side read of the SHARED value at {@code (container, containerSlotIndex)}
+     * with no {@link Slot}, open menu or viewer, for automation (hopper, dropper,
+     * dispenser) that touches a placed container by index. The server comes from the
+     * container's block entity. Returns the channel default off the server, for a
+     * container that can't be resolved, or for a PRIVATE channel, which has no viewer
+     * on this path. A double chest resolves to the half that owns the slot.
      */
     static <T> T readShared(SlotStateChannel<T> channel, Container container, int containerSlotIndex) {
         MinecraftServer server = serverOf(container);
@@ -351,10 +334,9 @@ public final class SlotState {
     }
 
     /**
-     * Derives the server from a placed container for the menu-free read. The
-     * container is a server-side block entity (single chest) or a composite over
-     * block-entity halves (double chest); either way its level yields the server.
-     * Null off-server or for a non-block-entity container.
+     * The server, from a placed container's level: a block entity (single chest) or a
+     * composite of block-entity halves (double chest). Null off the server or for a
+     * container that isn't a block entity.
      */
     private static @Nullable MinecraftServer serverOf(Container container) {
         BlockEntity be = blockEntityOf(container);
@@ -364,7 +346,7 @@ public final class SlotState {
         return null;
     }
 
-    /** The backing block entity of a placed container, itself, or a composite's first half. */
+    /** The block entity behind a placed container: itself, or a composite's first half. */
     private static @Nullable BlockEntity blockEntityOf(Container container) {
         if (container instanceof BlockEntity be) return be;
         if (container instanceof CompoundContainer compound) {
@@ -375,14 +357,12 @@ public final class SlotState {
         return null;
     }
 
-    // ── Side detection ──────────────────────────────────────────────────
+    // Side detection
 
     /**
-     * Resolves a viewing player from the slot context if the caller didn't
-     * provide one. For {@link Inventory} containers we pull from
-     * {@code inv.player}. Callers that have an explicit player pass it in;
-     * callers that don't and aren't on a player-scoped container end up with
-     * null viewer and fall through to defaults.
+     * The viewing player: the explicit one if given, {@code inv.player} for an
+     * {@link Inventory} container, otherwise the client player if on the render
+     * thread. Can be null, in which case reads fall back to defaults.
      */
     private static @Nullable Player resolvePlayer(Slot slot, @Nullable Player explicit) {
         if (explicit != null) return explicit;
@@ -397,9 +377,8 @@ public final class SlotState {
     }
 
     /**
-     * Best-effort fetch of the client-side player. Called only when the slot
-     * has no player in its container and the caller didn't pass one, happens
-     * for BE/entity-backed slots on the client side.
+     * The client player, if available. Used when the slot's container has no player
+     * and the caller passed none, as for block entity or entity slots on the client.
      */
     private static @Nullable Player tryClientPlayer() {
         if (!"Render thread".equals(Thread.currentThread().getName())) return null;
@@ -410,10 +389,10 @@ public final class SlotState {
         }
     }
 
-    // The client's player, installed by MenuKitContainersClient. Not read here directly: a method
-    // returning Minecraft.getInstance().player makes the verifier load LocalPlayer
-    // with this class, and on a dedicated server that crashed every mod registering
-    // a slot-state channel (6.0.0 phase 1, found by the production join test).
+    // The client's player, installed by MenuKitContainersClient. Not read here directly:
+    // a method returning Minecraft.getInstance().player makes the verifier load
+    // LocalPlayer with this class, and on a dedicated server that crashed every mod
+    // registering a slot-state channel (found by the production join test).
     private static volatile java.util.function.Supplier<@Nullable Player> clientPlayer = () -> null;
 
     /** MenuKitContainersClient installs the client player lookup at client init. */
@@ -436,9 +415,9 @@ public final class SlotState {
         clientSender = java.util.Objects.requireNonNull(sender, "sender");
     }
 
-    // ── Helpers used by packet receivers ────────────────────────────────
+    // Helpers for packet receivers
 
-    /** Finds a slot in the given menu by container-relative index + container match. */
+    /** Finds the slot in {@code menu} whose container resolves to {@code key}, at {@code containerSlotIndex}. */
     public static @Nullable Slot findSlotByContainerIndex(
             net.minecraft.world.inventory.AbstractContainerMenu menu,
             PersistentContainerKey key, int containerSlotIndex) {

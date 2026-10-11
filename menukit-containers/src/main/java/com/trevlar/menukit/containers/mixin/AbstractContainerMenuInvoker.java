@@ -11,48 +11,40 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
 /**
- * MenuKit-Containers internal invoker — exposes vanilla's {@code protected}
- * {@link AbstractContainerMenu#addSlot(Slot)} so the consumer-invoked
- * slot-slot helper ({@link com.trevlar.menukit.containers.api.slot.CreatedSlots})
- * can append registered slots to a vanilla menu it does not subclass.
+ * Exposes vanilla's {@code protected} {@link AbstractContainerMenu#addSlot(Slot)} so
+ * {@link com.trevlar.menukit.containers.api.slot.CreatedSlots} can append registered
+ * slots to a vanilla menu it does not subclass.
  *
- * <p><b>§0019 / §0055 note.</b> This is a pure access shim: it exposes an
- * existing vanilla method, injects no behavior, registers no hook, and owns
- * no code path. The slot itself is performed by the <em>consumer's</em>
- * mixin (which calls the helper); this invoker only lets the helper reach a
- * {@code protected} method from outside the menu's class hierarchy. It
- * mirrors MK's {@code SlotPositionAccessor} ({@code @Accessor} on vanilla
- * {@code Slot}) — the established access-shim pattern §0019 permits, distinct
- * from the "decorate every screen" hooks and registration surfaces §0019
- * forbids.
+ * <p>Access only: it exposes an existing vanilla method, injects no behaviour,
+ * registers no hook and owns no code path. The slot is added by whoever calls the
+ * helper; this invoker only lets the helper reach a {@code protected} method from
+ * outside the menu's class hierarchy. Same pattern as MenuKit's
+ * {@code SlotPositionAccessor} ({@code @Accessor} on vanilla {@code Slot}).
  *
- * <p>Applies on both sides (the vanilla menu is constructed client- and
- * server-side; the slot runs in both), so it lives in the general mixin
- * block, not the client block.
+ * <p>Applies on both sides, since the vanilla menu is built on client and server
+ * and slots are added on both. So it lives in the common mixin block, not the
+ * client block.
  */
 @ApiStatus.Internal
 @Mixin(AbstractContainerMenu.class)
 public interface AbstractContainerMenuInvoker {
 
     /**
-     * Calls vanilla's {@code addSlot} — appends the slot to {@code this.slots}
-     * (assigning {@code slot.index}) and grows the parallel sync-tracking
-     * lists ({@code lastSlots} / {@code remoteSlots}) so {@code broadcastChanges}
-     * stays consistent. Replicating this by hand would desync those lists, so
-     * the invoker reuses vanilla's exact bookkeeping.
+     * Calls vanilla's {@code addSlot}, which appends the slot to {@code this.slots}
+     * (assigning {@code slot.index}) and grows the parallel sync-tracking lists
+     * ({@code lastSlots}, {@code remoteSlots}) so {@code broadcastChanges} stays
+     * consistent. Doing this by hand would desync those lists.
      */
     @Invoker("addSlot")
     Slot mk$addSlot(Slot slot);
 
     /**
-     * Calls vanilla's {@code moveItemStackTo} — the merge-into-partials then
-     * fill-empties routine vanilla's own {@code quickMoveStack} uses. Exposed so
-     * {@link com.trevlar.menukit.containers.core.the menu's own quickMoveStack} can drive shift-click
-     * routing into / out of registered slots on a <em>foreign</em> menu (chest,
-     * furnace) without reimplementing the merge logic — the library routes the
-     * consumer's own slot through vanilla's exact placement, it invents no
-     * behavior. Absorbed from inventory-max's hand-built equivalent so consumers
-     * stop re-declaring it.
+     * Calls vanilla's {@code moveItemStackTo}, the fill-partial-stacks-then-empty-slots
+     * routine vanilla's own {@code quickMoveStack} uses. Exposed so a menu's own
+     * quickMoveStack can route shift-clicks into and out of registered slots on a
+     * foreign menu (chest, furnace) with vanilla's exact placement instead of
+     * reimplementing the merge. Taken over from inventory-max's hand-built version so
+     * consumers don't each declare it.
      */
     @Invoker("moveItemStackTo")
     boolean mk$moveItemStackTo(ItemStack stack, int startIndex, int endIndex,
