@@ -29,8 +29,8 @@ import org.jspecify.annotations.Nullable;
  * acting ({@link #ownerOf}). Automation (a hopper) never touches a menu, and stays
  * {@code null}.
  *
- * <p>Was Containers' {@code GatingContext} thread-local (5.0.0); moved here so the
- * MenuKit operation seams can see the player without Containers installed.
+ * <p>This was Containers' {@code GatingContext} thread-local in 5.0.0. It lives here
+ * so MenuKit's operation seams can see the player without Containers installed.
  */
 @ApiStatus.Internal
 public final class ActingPlayer {
@@ -55,13 +55,13 @@ public final class ActingPlayer {
         set(outer);
     }
 
-    /** Capture the acting player for the duration of a click transaction. Prefer {@link #enter}, which nests. */
+    /** Sets the acting player for a click transaction. Prefer {@link #enter}, which nests. */
     public static void set(@Nullable Player player) {
         if (player != null) CURRENT.set(player);
         else CURRENT.remove();
     }
 
-    /** Always called in a {@code finally}; never relied on a return path. */
+    /** Always called in a {@code finally}, never left to a return path. */
     public static void clear() {
         CURRENT.remove();
     }
@@ -77,8 +77,8 @@ public final class ActingPlayer {
      * that player's inventory, so a move on it with no click behind it is that
      * player's. {@code null} for a menu that shows no player inventory.
      *
-     * <p>ponytail: a scan of the slot list per move; cache per menu if a profile
-     * ever shows it.
+     * <p>Scans the slot list on every move. Cache it per menu if a profile ever
+     * shows the cost.
      */
     public static @Nullable Player ownerOf(AbstractContainerMenu menu) {
         for (Slot slot : menu.slots) {

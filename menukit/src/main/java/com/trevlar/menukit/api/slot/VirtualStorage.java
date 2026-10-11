@@ -6,15 +6,14 @@ import java.util.function.BiConsumer;
 import java.util.function.IntFunction;
 
 /**
- * The escape hatch. Backed by a supplier (read) and a mutator (write),
- * so consumers can bridge any external data source into MenuKit's
- * Storage interface.
+ * Storage backed by a read function and a write function, so a consumer can
+ * bring any external data source into MenuKit's {@link Storage} interface.
  *
- * <p>Implements plain {@link Storage}, not {@code PersistentStorage}.
- * Persistence is the external source's responsibility, not ours.
+ * <p>Implements plain {@link Storage}, not {@code PersistentStorage}: saving is
+ * up to the external source.
  *
- * <p>Absorbs the old {@code MKContainerSource} / {@code LiveContainerSource}
- * pattern where consumers provided arbitrary read/write callbacks.
+ * <p>Replaces the old {@code MKContainerSource} and {@code LiveContainerSource},
+ * where consumers supplied their own read and write callbacks.
  */
 public class VirtualStorage implements Storage {
 
@@ -38,7 +37,7 @@ public class VirtualStorage implements Storage {
         this.dirtyCallback = dirtyCallback;
     }
 
-    /** Convenience: no-op dirty callback. */
+    /** With a dirty callback that does nothing. */
     public VirtualStorage(int size, IntFunction<ItemStack> getter,
                           BiConsumer<Integer, ItemStack> setter) {
         this(size, getter, setter, () -> {});

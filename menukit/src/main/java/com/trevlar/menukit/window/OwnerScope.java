@@ -5,44 +5,43 @@ import net.minecraft.resources.Identifier;
 import java.util.Objects;
 
 /**
- * Namespaces an owner-coordinate when a bare {@code (family, index)} would alias
- * — the disambiguation tool inside a {@code RootOwner}.
+ * Namespaces an owner coordinate when a bare {@code (family, index)} would be
+ * ambiguous. Used inside a {@code RootOwner}.
  *
- * <h2>The two collision sources (kept distinct on purpose)</h2>
+ * <h2>Two separate sources of collision</h2>
  *
- * Two genuinely-unlike sources can make the same flat index mean different
- * things; they are namespaced here but are NOT asserted to share a source:
+ * Two unrelated things can make the same flat index mean different things. Both
+ * are namespaced here, as separate scopes:
  * <ul>
- *   <li>{@link Tab} — the active creative tab. The creative menu rebuilds its
- *       slot list per selected tab, so index 5 means different content per tab.
- *       Source: {@code BuiltInRegistries.CREATIVE_MODE_TAB.getKey(
- *       CreativeModeInventoryScreen.selectedTab)} (a stable {@code
- *       Identifier}). The discriminator lives on the SCREEN, not the menu,
- *       so {@code Tab} is <b>CLIENT-tier-only</b> — a server-tier address must
- *       never carry a tab scope.</li>
- *   <li>{@link Sub} — a composite/multi-backing menu (double chest, furnace
- *       segments). Source: the stable per-backing id from §0055 composite
- *       resolution ({@code ResolvedSlot.key()}), adapted to an MK-safe string at
- *       the (MKC) mint site.</li>
+ *   <li>{@link Tab}: the active creative tab. The creative menu rebuilds its slot
+ *       list for each tab, so index 5 holds different content per tab. The id is
+ *       {@code BuiltInRegistries.CREATIVE_MODE_TAB.getKey(
+ *       CreativeModeInventoryScreen.selectedTab)}, a stable {@code Identifier}.
+ *       It lives on the screen, not the menu, so {@code Tab} is client-tier only:
+ *       a server-tier address must never carry a tab scope.</li>
+ *   <li>{@link Sub}: a menu backed by more than one container (a double chest,
+ *       furnace segments). The id is the stable per-backing key from composite
+ *       resolution ({@code ResolvedSlot.key()}), turned into a string where
+ *       MenuKit: Containers mints the address.</li>
  * </ul>
  *
- * <h2>Sealed-extensible</h2>
+ * <h2>Open to new scopes</h2>
  *
- * New scopes are additive; handlers treat this non-exhaustively. The two sources
- * stay separate constructors rather than one merged "scope id" so a future
- * collision source can be added without conflating it with these.
+ * New scopes can be added; handlers always keep a default branch. The two sources
+ * stay separate types rather than one merged "scope id", so a new source can be
+ * added without being confused with these.
  */
 public sealed interface OwnerScope permits OwnerScope.Primary, OwnerScope.Tab, OwnerScope.Sub {
 
-    /** The default scope — no namespacing needed (the common case). */
+    /** The default scope, with no namespacing (the common case). */
     record Primary() implements OwnerScope {}
 
-    /** Active-creative-tab scope (CLIENT-tier only). */
+    /** The active creative tab's scope. Client tier only. */
     record Tab(Identifier tabId) implements OwnerScope {
         public Tab { Objects.requireNonNull(tabId, "tabId"); }
     }
 
-    /** Composite per-backing scope (server-derivable from §0055). */
+    /** A per-backing scope for a composite container. The server can derive it. */
     record Sub(String backingId) implements OwnerScope {
         public Sub {
             Objects.requireNonNull(backingId, "backingId");
@@ -50,13 +49,13 @@ public sealed interface OwnerScope permits OwnerScope.Primary, OwnerScope.Tab, O
         }
     }
 
-    /** Shared instance of the default scope (Primary has no state). */
+    /** Shared instance of the default scope. */
     Primary PRIMARY = new Primary();
 
-    /** The default scope — no namespacing. */
+    /** The default scope, with no namespacing. */
     static OwnerScope primary() { return PRIMARY; }
 
-    /** Creative-tab scope from a stable tab id. CLIENT-tier only. */
+    /** Creative-tab scope from a stable tab id. Client tier only. */
     static OwnerScope tab(Identifier tabId) { return new Tab(tabId); }
 
     /** Composite per-backing scope from a stable backing id. */

@@ -6,19 +6,18 @@ import java.util.EnumSet;
 import java.util.Objects;
 
 /**
- * Names ONE behavior the window can resolve, gating, visibility, a panel's
- * opacity, a reaction, and so on. The engine is generic over the key, so adding a
- * behavior is exactly: declare a new {@code BehaviorKey} (id + value type +
- * library default + tier + applicable kinds). Zero engine change; the cascade,
- * store, tiers, and ports all key on this uniformly.
+ * Names one behavior the window can resolve: gating, visibility, a panel's
+ * opacity, a reaction and so on. The engine is generic over the key, so adding a
+ * behavior means declaring a new {@code BehaviorKey} (id, value type, library
+ * default, tier, applicable kinds), with no engine change.
  *
  * @param id            the stable name.
- * @param valueType     the resolved value's type (for safe heterogeneous storage).
- * @param libraryDefault the always-present bottom of the cascade, a genuine
- *                       vanilla-equivalent neutral, returned when nothing
- *                       overrides. The reason {@code resolve} is total (never null).
- * @param tier          {@link Tier#CLIENT} (MK-alone) or {@link Tier#SERVER}
- *                       (MKC-unlocked).
+ * @param valueType     the resolved value's type, for type-safe storage.
+ * @param libraryDefault the bottom of the cascade, a neutral value that matches
+ *                       vanilla, returned when nothing overrides. It is why
+ *                       {@code resolve} never returns null.
+ * @param tier          {@link Tier#CLIENT} (works with MenuKit alone) or
+ *                       {@link Tier#SERVER} (needs MenuKit: Containers).
  * @param appliesTo     which {@link KindTag}s this behavior is valid on, checked
  *                       at the call boundary (a slot verb is unreachable on a
  *                       panel), never inside resolution.
@@ -32,15 +31,14 @@ public record BehaviorKey<V>(Identifier id, Class<V> valueType, V libraryDefault
         Objects.requireNonNull(tier, "tier");
         Objects.requireNonNull(appliesTo, "appliesTo");
         if (appliesTo.isEmpty()) throw new IllegalArgumentException("appliesTo must name at least one kind");
-        appliesTo = EnumSet.copyOf(appliesTo); // defensive copy, EnumSet is mutable
+        appliesTo = EnumSet.copyOf(appliesTo); // EnumSet is mutable
     }
 
-    /** Whether this behavior is valid on {@code kind} (the call-boundary applicability check). */
+    /** Whether this behavior is valid on {@code kind}. Checked at the call boundary. */
     public boolean appliesTo(KindTag kind) {
         return appliesTo.contains(kind);
     }
 
-    /** Convenience constructor. */
     public static <V> BehaviorKey<V> of(Identifier id, Class<V> valueType, V libraryDefault,
                                         Tier tier, KindTag first, KindTag... rest) {
         return new BehaviorKey<>(id, valueType, libraryDefault, tier, EnumSet.of(first, rest));

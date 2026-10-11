@@ -22,14 +22,14 @@ import org.jspecify.annotations.Nullable;
 /**
  * The gate decision every seam asks: resolve {@link BehaviorKeys#GATING} (and
  * {@link BehaviorKeys#BINDING}) for a slot by its {@link Address} and apply it.
- * One question per slot per vanilla method (§0064):
+ * One question per slot per vanilla method:
  *
  * <ul>
  *   <li>{@code Slot.mayPlace}, {@code mayPickup}, {@code getMaxStackSize}: the
  *       slot-level seam, which every path consults (a click's {@code safeInsert}
  *       and {@code tryRemove}, the empty pass of a shift-click, pick-all, the
  *       creative bridge). A created slot resolves here too, through the installed
- *       addressing rule, so it no longer gates itself a second time.</li>
+ *       addressing rule, so it does not gate itself a second time.</li>
  *   <li>The merge pass of {@code moveItemStackTo} never asks {@code mayPlace}, so
  *       it asks {@link #mayPlaceOnMove} once per slot instead.</li>
  *   <li>Hoppers and dispensers, which reach a slot by container and index.</li>
@@ -38,7 +38,7 @@ import org.jspecify.annotations.Nullable;
  * <p>When nobody has declared any server behaviour, every method returns at once and
  * vanilla interaction pays nothing: the slots nobody touches stay exactly vanilla.
  *
- * <p>Internal plumbing: every caller is a MenuKit seam. Consumers declare a gate with
+ * <p>Every caller is a MenuKit seam. Consumers declare a gate with
  * {@code Window.slot(address).gate(...)} and never call these.
  */
 @ApiStatus.Internal
@@ -46,7 +46,7 @@ public final class SlotGating {
 
     private SlotGating() {}
 
-    // ── Slot-level: no menu in hand, the slot's own address ────────────────
+    // Slot level: no menu in hand, so the slot's own address.
 
     /** Whether {@code stack} may be placed into {@code slot}. */
     public static boolean mayPlaceAt(Slot slot, ItemStack stack) {
@@ -72,7 +72,7 @@ public final class SlotGating {
         return gate == SlotGate.OPEN ? vanillaMax : Math.min(gate.maxStackSize(stack, vanillaMax), vanillaMax);
     }
 
-    // ── The merge pass of a shift-click: the menu is in hand ───────────────
+    // The merge pass of a shift-click, with the menu in hand.
 
     /**
      * Whether {@code stack} may merge into {@code slot} during {@code moveItemStackTo}.
@@ -85,7 +85,7 @@ public final class SlotGating {
         return gate == SlotGate.OPEN || gate.mayPlace(stack, GatingContext.current());
     }
 
-    // ── Automation: container and index, no menu, no player ────────────────
+    // Automation: container and index, no menu, no player.
 
     /** Whether automation may insert {@code stack} into a placed container's slot. */
     public static boolean mayPlaceInto(Container container, int slotIndex, ItemStack stack) {
@@ -100,8 +100,6 @@ public final class SlotGating {
         SlotGate gate = automationGate(container, slotIndex);
         return gate == SlotGate.OPEN || gate.mayPickup(null, GatingContext.current());
     }
-
-    // ── internals ──────────────────────────────────────────────────────────
 
     private static SlotGate gateOf(Slot slot) {
         Address address = ClientSlotAddressing.addressOf(slot);

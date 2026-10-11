@@ -5,12 +5,11 @@ import net.minecraft.resources.Identifier;
 import java.util.Objects;
 
 /**
- * Why a reaction fired, an <b>open</b>, identity-tagged descriptor, deliberately
- * <em>not</em> a sealed enum a consumer must {@code switch} over (architecture
- * Part 2 §6). A {@link ReactiveHook} that cares can compare {@link #id()}; one
- * that doesn't can ignore it entirely. The library fires one cause, {@link #SYNC};
- * a consumer mints its own with {@link #of(Identifier)} without touching this type,
- * the same open-for-extension shape as {@link BehaviorKey}.
+ * Why a reaction fired. It is an open, id-tagged value rather than a sealed enum a
+ * consumer has to {@code switch} over. A {@link ReactiveHook} that cares compares
+ * {@link #id()}; one that doesn't ignores it. The library fires one cause,
+ * {@link #SYNC}, and a consumer mints its own with {@link #of(Identifier)}, the
+ * same open shape as {@link BehaviorKey}.
  */
 public record ReactCause(Identifier id) {
 
@@ -18,7 +17,7 @@ public record ReactCause(Identifier id) {
         Objects.requireNonNull(id, "id");
     }
 
-    /** Mint a cause from any identifier (consumer- or future-verb-defined). */
+    /** Mints a cause from any identifier. */
     public static ReactCause of(Identifier id) {
         return new ReactCause(id);
     }
@@ -27,6 +26,6 @@ public record ReactCause(Identifier id) {
         return new ReactCause(Identifier.fromNamespaceAndPath("menukit", path));
     }
 
-    /** The client observed synced slot contents change (no authority; observed tier). */
+    /** The client saw synced slot contents change. Observed only, with no authority. */
     public static final ReactCause SYNC = builtin("sync");
 }

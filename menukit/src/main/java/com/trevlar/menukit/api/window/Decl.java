@@ -4,22 +4,21 @@ import com.trevlar.menukit.window.Token;
 import java.util.Objects;
 
 /**
- * A behavior declaration at ONE specificity level (per-slot, per-group, …). The
- * tri-state of THE ONE WINDOW's cascade, made structural:
+ * A behavior declaration at one specificity level (per slot, per group and so on):
  *
  * <ul>
- *   <li>{@link Set}, this level declares an explicit value; the walk STOPS here
- *       and uses it (including an explicit OFF, e.g. {@code Set(TriBool.FALSE)}).</li>
- *   <li>{@link Inherit}, this level explicitly defers; the walk falls through to
- *       the next-lower level. Behaviorally identical to the absence of any
- *       declaration at this level, but nameable on purpose.</li>
+ *   <li>{@link Set}: this level declares a value, and the cascade stops here and
+ *       uses it, an explicit off such as {@code Set(TriBool.FALSE)} included.</li>
+ *   <li>{@link Inherit}: this level defers, and the cascade falls through to the
+ *       next level down. It behaves exactly like no declaration, but can be
+ *       written on purpose.</li>
  * </ul>
  *
- * <h2>FROZEN-CLOSED</h2>
+ * <h2>Closed</h2>
  *
- * Unlike {@link KindTag} / {@link Token} (frozen-OPEN), the {@code Decl} permits
- * set {@code {Set, Inherit}} is frozen forever, there is never a third kind of
- * declaration. The resolver may switch on it exhaustively.
+ * Unlike {@link KindTag} and {@link Token}, which are open to new values,
+ * {@code Decl} will only ever be {@code Set} or {@code Inherit}, so the resolver
+ * may switch on it exhaustively.
  */
 public sealed interface Decl<V> permits Decl.Set, Decl.Inherit {
 

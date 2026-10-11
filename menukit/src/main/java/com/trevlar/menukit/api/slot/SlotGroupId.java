@@ -22,17 +22,15 @@ import java.util.Objects;
  * rectangles and its bounding box means nothing. Anchor to a group; search by
  * category.
  *
- * <h2>The identity already existed, in two shapes</h2>
- *
- * No new names are minted for this:
+ * <h2>Two shapes, both from names that already exist</h2>
  *
  * <ul>
- *   <li>{@link Category}, a vanilla resolver emits exactly one contiguous run per
- *       category per menu, so for vanilla the category already <em>is</em> the
- *       group's name. Derived, never hand-authored, so
- *       {@code PLAYER_INVENTORY} keeps being named once and every container type
- *       keeps inheriting it from the shared resolver helper.</li>
- *   <li>{@link Created}, every created slot already carries its
+ *   <li>{@link Category}: a vanilla resolver emits exactly one contiguous run per
+ *       category per menu, so for vanilla the category is the group's name. It
+ *       is derived, never written by hand, so {@code PLAYER_INVENTORY} is named
+ *       once and every container type inherits it from the shared resolver
+ *       helper.</li>
+ *   <li>{@link Created}: every created slot already carries its
  *       {@code (panelId, groupId)}. Equality is on those two alone; the category a
  *       group declared is a property of the group, not part of its name, so a
  *       group cannot become a different group by being re-categorised.</li>

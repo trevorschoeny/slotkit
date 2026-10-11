@@ -3,32 +3,29 @@ package com.trevlar.menukit.api.window;
 import java.util.Objects;
 
 /**
- * The base of THE ONE WINDOW's typed handle family, an immutable value addressing
- * one thing by its {@link Address}, never by a held live reference (the menu and
- * every {@code Slot} are recreated each reopen, so a held reference would dangle).
- * Carries only the address; {@code equals}/{@code hashCode} are over it, so two
- * handles naming the same thing are interchangeable and safe as map keys.
+ * The base of the window's typed handles: an immutable value that addresses one
+ * thing by its {@link Address}, never by a live reference. The menu and every
+ * {@code Slot} are recreated on each reopen, so a held reference would go stale.
+ * {@code equals} and {@code hashCode} are over the address, so two handles naming
+ * the same thing are interchangeable and safe as map keys.
  *
- * <h2>Two-layer surface (architecture Part 2 §2)</h2>
+ * <h2>Two layers</h2>
  *
  * <ul>
- *   <li><b>Generic substrate</b> (here, every kind): {@link #set}/{@link #behavior}
- * the engine is the truth. Any behavior, including ones added later, with
- *       zero new handle code.</li>
- *   <li><b>Named sugar</b> (the typed subclasses): {@code SlotHandle.gate(...)},
- *       {@code PanelHandle.opacity(...)}, thin, discoverable wrappers over the
- *       substrate, restricted per kind so a slot verb is unreachable on a panel
- *       handle (compile-checked).</li>
+ *   <li><b>Generic</b> (here, for every kind): {@link #set} and {@link #behavior}
+ *       reach any behavior, including ones added later, with no new handle code.</li>
+ *   <li><b>Named methods</b> (the typed subclasses): {@code SlotHandle.gate(...)},
+ *       {@code PanelHandle.opacity(...)}, thin wrappers over the generic layer,
+ *       limited per kind so a slot verb on a panel handle does not compile.</li>
  * </ul>
  *
- * <p>The handle never returns the raw backing (no {@code getSlot()}), per the Law
- * of Demeter, reads go through {@link #behavior}, which resolves the engine
- * cascade and is always non-null. Writes route to {@link WindowEngine#set}.
+ * <p>The handle never returns the raw backing (no {@code getSlot()}). Reads go
+ * through {@link #behavior}, which resolves the cascade and is never null. Writes
+ * go to {@link WindowEngine#set}.
  *
- * <p>Sealed to the three kinds that exist; new kinds extend the family additively
- * (KindTag is FROZEN-OPEN). A handle is a value, held by the consumer, resolved
- * per call (late binding), so one consumer line addresses "this thing" across
- * reopen, across sides, and across the vanilla/created divide.
+ * <p>Sealed to the three kinds that exist; a new kind would add a subclass. A
+ * handle is resolved on each call, so one consumer line addresses the same thing
+ * across reopens, across sides, and for vanilla and created slots alike.
  */
 public abstract sealed class WindowHandle
         permits SlotHandle, ElementHandle, PanelHandle {
@@ -39,32 +36,30 @@ public abstract sealed class WindowHandle
         this.address = Objects.requireNonNull(address, "address");
     }
 
-    /** The {@link Address} this handle names, the side-table key for its behavior. */
+    /** The {@link Address} this handle names, the key its behavior is stored under. */
     public final Address address() {
         return address;
     }
 
-    // ── Generic substrate, the engine is the truth ─────────────────────────
-
-    /** Declare a behavior on this address (per-slot specificity). Returns {@code this} to chain. */
+    /** Declares a behavior on this address (per-slot specificity). Returns {@code this}. */
     public final <V> WindowHandle set(BehaviorKey<V> key, Decl<V> decl) {
         WindowEngine.set(address, key, decl);
         return this;
     }
 
-    /** Declare a behavior to an explicit value (sugar for {@code set(key, Decl.set(value))}). */
+    /** Declares a behavior's value. Shorthand for {@code set(key, Decl.set(value))}. */
     public final <V> WindowHandle set(BehaviorKey<V> key, V value) {
         WindowEngine.set(address, key, Decl.set(value));
         return this;
     }
 
-    /** Clear a per-address declaration back to inheriting (sugar for {@code set(key, Decl.inherit())}). */
+    /** Clears this address's declaration back to inheriting. Shorthand for {@code set(key, Decl.inherit())}. */
     public final <V> WindowHandle clear(BehaviorKey<V> key) {
         WindowEngine.set(address, key, Decl.inherit());
         return this;
     }
 
-    /** The fully-resolved value of {@code key} at this address, never null (cascade → libraryDefault). */
+    /** The resolved value of {@code key} at this address. Never null: the cascade ends at the library default. */
     public final <V> V behavior(BehaviorKey<V> key) {
         return WindowEngine.resolve(address, key);
     }

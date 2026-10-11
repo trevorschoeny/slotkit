@@ -14,9 +14,9 @@ import org.jetbrains.annotations.ApiStatus;
  * <p>Two things have to hold at once. An {@code Identifier} path allows only
  * {@code [a-z0-9_.-/]}, and the strings coming in are consumer-authored (a panel id
  * carries a colon, a category may carry anything). And {@link GroupKey} equality is
- * by id alone, so if two distinct keys sanitized to the same id they would silently
- * share declarations — one mod's group inheriting another's. Sanitizing alone gets
- * the first and breaks the second, so allocated ids are also kept distinct here.
+ * by id alone, so two distinct keys that sanitized to the same id would silently
+ * share declarations, one mod's group inheriting another's. Sanitizing alone fixes
+ * the first and breaks the second, so the encoding here also keeps ids distinct.
  *
  * <p>Internal: the library allocates these for the category and slot-group rungs. A
  * consumer building its own {@code GroupKey} picks its own {@code Identifier}.
@@ -31,7 +31,7 @@ public final class GroupIds {
      * The key is encoded injectively (every character outside {@code [a-z0-9.-]},
      * {@code _} included, becomes {@code _} and its code in hex, then {@code _}),
      * so two different keys never collide and the id depends on nothing but the
-     * key: no allocation order, so no mod load order (§0063).
+     * key. No allocation order means no dependence on mod load order.
      */
     public static Identifier of(String prefix, String key) {
         StringBuilder out = new StringBuilder(prefix).append('/');

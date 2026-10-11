@@ -11,8 +11,8 @@ import net.minecraft.resources.Identifier;
  *       reactions.</li>
  *   <li>Server tier, the slot author's rules: {@link #GATING} (what a slot accepts
  *       and releases, and how many), {@link #BINDING} (Curse of Binding on any
- *       slot), and the eleven {@linkplain SlotOperations operations}. Containers keeps {@code ContainerKeys.MENDING}, whose seam
- *       (the XP orb) is its own.</li>
+ *       slot), and the eleven {@linkplain SlotOperations operations}. Containers
+ *       keeps {@code ContainerKeys.MENDING}, whose seam (the XP orb) is its own.</li>
  * </ul>
  */
 public final class BehaviorKeys {
@@ -24,28 +24,28 @@ public final class BehaviorKeys {
     }
 
     /**
-     * Whether an addressable thing is shown, a client-side {@link VisibilityRule}
-     * predicate (re-evaluated each frame), so one key spans static hide and dynamic
-     * reveal (hover). Client-tier, every kind. Default {@link VisibilityRule#VISIBLE}.
-     * Resolved + evaluated on the client only (never server-side; see VisibilityRule).
+     * Whether an addressable thing is shown: a client-side {@link VisibilityRule},
+     * evaluated each frame, so one key covers both a fixed hide and a reveal on
+     * hover. Client tier, every kind. Default {@link VisibilityRule#VISIBLE}.
+     * Resolved and evaluated on the client only (see VisibilityRule).
      */
     public static final BehaviorKey<VisibilityRule> VISIBILITY = BehaviorKey.of(
             id("visibility"), VisibilityRule.class, VisibilityRule.VISIBLE, Tier.CLIENT,
             KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT, KindTag.PANEL_ELEMENT, KindTag.PANEL);
 
     /**
-     * Whether a panel is interaction-opaque (eats clicks over its bounds). Client-
-     * tier, panels only. Default {@link TriBool#TRUE} (M9: panels opaque by default).
+     * Whether a panel is opaque to input, taking clicks over its bounds. Client
+     * tier, panels only. Default {@link TriBool#TRUE}: panels are opaque.
      */
     public static final BehaviorKey<TriBool> OPACITY = BehaviorKey.of(
             id("opacity"), TriBool.class, TriBool.TRUE, Tier.CLIENT, KindTag.PANEL);
 
-    // ── The slot author's rules (server tier, every slot kind) ─────────────────
+    // The slot author's rules: server tier, every slot kind.
 
     /**
      * What a slot accepts and releases, and its per-item stack cap: a
      * {@link SlotGate}. Default {@link SlotGate#OPEN}, exactly vanilla. MenuKit
-     * enforces it once at each vanilla method that moves items (§0064).
+     * enforces it once at each vanilla method that moves items.
      */
     public static final BehaviorKey<SlotGate> GATING = BehaviorKey.of(
             id("gating"), SlotGate.class, SlotGate.OPEN, Tier.SERVER,
@@ -60,39 +60,36 @@ public final class BehaviorKeys {
             id("binding"), TriBool.class, TriBool.FALSE, Tier.SERVER,
             KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
 
-    // ── Reactions, slot kinds only; default = no-op hook ─────────────────────
-    //
-    // Client-observed only: the client diffs a slot's synced contents each tick.
-    // There is no server-side pair: 6.0.0 removed the declared one, which
-    // nothing fired.
+    // Reactions: slot kinds only, defaulting to a no-op hook. Client-observed only:
+    // the client diffs a slot's synced contents each tick. There is no server-side
+    // pair; 6.0.0 removed the declared one, which nothing fired.
 
     /**
-     * Fires on the client when synced slot contents grow, pure UI feedback (flash,
-     * sound, badge), no authority. CLIENT tier → MK-alone capable, and fires for
-     * created slots too (their contents sync identically). Default {@link ReactiveHook#NONE}.
+     * Fires on the client when synced slot contents grow. UI feedback only (a flash,
+     * a sound, a badge), with no authority. Client tier, so it works with MenuKit
+     * alone, and it fires for created slots too, whose contents sync the same way.
+     * Default {@link ReactiveHook#NONE}.
      */
     public static final BehaviorKey<ReactiveHook> ON_INSERT_OBSERVED = BehaviorKey.of(
             id("on_insert_observed"), ReactiveHook.class, ReactiveHook.NONE, Tier.CLIENT,
             KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
 
     /**
-     * Fires on the client when synced slot contents shrink, pure UI feedback, no
-     * authority. CLIENT tier; default {@link ReactiveHook#NONE}.
+     * Fires on the client when synced slot contents shrink. UI feedback only, with
+     * no authority. Client tier; default {@link ReactiveHook#NONE}.
      */
     public static final BehaviorKey<ReactiveHook> ON_TAKE_OBSERVED = BehaviorKey.of(
             id("on_take_observed"), ReactiveHook.class, ReactiveHook.NONE, Tier.CLIENT,
             KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT);
 
-    // ── Operations, every slot kind; default = vanilla (participates) ────────
-    //
-    // An OPERATION is something done TO a slot, as opposed to a CATEGORY, which
-    // says what the slot IS. See {@link SlotOperations} for the split, for how a
-    // mod adds an operation of its own, and for how one is blocked. Vanilla's
-    // operations are split as far as they go, one key per thing a player can do
-    // to a slot, so a mod that blocks them can block each on its own; a settings
-    // screen groups them however it likes. All eleven are TriBool, default TRUE
-    // (vanilla), SERVER tier, every slot kind, and enforced at vanilla's own seams
-    // by MenuKit's MKOperationsMixin and MKInventoryInsertMixin.
+    // Operations: every slot kind, defaulting to vanilla. An operation is something
+    // done to a slot; a category says what the slot is. SlotOperations covers the
+    // split, how a mod adds an operation of its own, and how one is blocked.
+    // Vanilla's operations are split as far as they go, one key per thing a player
+    // can do to a slot, so a mod can block each on its own; a settings screen groups
+    // them however it likes. All eleven are TriBool, default TRUE, server tier,
+    // every slot kind, and enforced at vanilla's own seams by MKOperationsMixin and
+    // MKInventoryInsertMixin.
 
     /**
      * Operation: whether vanilla's double-click collect may take from this slot

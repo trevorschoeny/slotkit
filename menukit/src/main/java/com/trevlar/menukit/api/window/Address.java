@@ -20,10 +20,9 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * THE keystone of THE ONE WINDOW: one kind-agnostic value that names ANY
- * addressable thing, a vanilla slot, a created slot, a panel element, or a panel
- * itself, so the engine can resolve every behavior by address without ever
- * asking what kind it is.
+ * One value that names any addressable thing (a vanilla slot, a created slot, a
+ * panel element or a panel itself), so the engine can resolve every behavior by
+ * address without asking what kind it is.
  *
  * <h2>The four shapes</h2>
  * <pre>
@@ -32,25 +31,22 @@ import java.util.Objects;
  *   panel element  : NestedOwner(RootOwner(family,scope), RegToken(panel)) + DeclToken(id) + PANEL_ELEMENT
  *   panel itself   : RootOwner(family, scope)              + RegToken(panel) + PANEL
  * </pre>
- * The old slot-only {@code SlotAddress(family, index)} is exactly the first line
- * this is a strict superset, not a replacement.
+ * The old slot-only {@code SlotAddress(family, index)} is exactly the first line.
  *
  * <h2>Identity contract</h2>
  *
- * Equality is component-wise over {@code (owner, token, kind)}, automatic from
- * the record. {@code KindTag} participates in equality so a panel and a slot at
- * the same coordinate can never collide, and a created slot vs a panel element at
- * the same declaration id are distinct. The address holds NO live object, so two
- * addresses naming the same thing are {@code .equals()} and interchangeable.
- * safe to store in a static map, compare, and pass across the client/server
- * boundary as a key. Reopen-stability follows: the same logical thing rebuilds to
- * an equal address as long as its sources are deterministic (Mojang's menu index;
- * the consumer's panel/decl ids; the registration order), which the keystone
- * checks confirmed they are.
+ * Equality is over {@code (owner, token, kind)}, from the record. {@code KindTag}
+ * takes part so a panel and a slot at the same coordinate never collide, and a
+ * created slot and a panel element with the same declaration id stay distinct.
+ * The address holds no live object, so two addresses naming the same thing are
+ * equal and interchangeable: safe to keep in a static map, compare, and pass
+ * across the client/server boundary as a key. The same thing rebuilds to an equal
+ * address after a reopen, because its sources are deterministic (vanilla's menu
+ * index, the consumer's panel and declaration ids, the registration order).
  *
  * <h2>Minting one</h2>
  *
- * One public minter per kind (§0063):
+ * One public minter per kind:
  * <ul>
  *   <li>a created slot: {@link #createdSlot(SlotGroupId.Created, int)}, from the
  *       group's id ({@code ContainerPanel.groupId}, {@code CreatedSlots.groupId},
@@ -69,20 +65,19 @@ import java.util.Objects;
  * codec-based config. Never save an address's internals: their shape may change,
  * the text form's meaning does not.
  *
- * <h2>Sources (wired at mint time)</h2>
- * The value-level constructors here are fed by the confirmed live sources: the
- * creative tab via {@code OwnerScope.tab(BuiltInRegistries.CREATIVE_MODE_TAB
- * .getKey(selectedTab))} (client-tier); the created-slot {@code DeclToken} from
- * its {@code (groupId, localIndex)} registration coordinate; the panel-element
- * {@code DeclToken} from {@code PanelElement.declId()} or its list
- * position; the composite backing via {@code OwnerScope.sub(...)} from §0055.
+ * <h2>Sources</h2>
+ * Where the value-level factories get their parts: the creative tab from
+ * {@code OwnerScope.tab(BuiltInRegistries.CREATIVE_MODE_TAB.getKey(selectedTab))}
+ * (client tier); a created slot's {@code DeclToken} from its
+ * {@code (groupId, localIndex)} registration coordinate; a panel element's
+ * {@code DeclToken} from {@code PanelElement.declId()} or its list position; a
+ * composite container's backing from {@code OwnerScope.sub(...)}.
  *
- * <p><b>Tier invariant (enforcement seat = the engine, Phase 3):</b> an
- * {@code OwnerScope.Tab} scope is CLIENT-tier only (the active tab lives on the
- * screen, never the menu). The pure value cannot enforce this (it has no notion
- * of tier); the engine's tier check must reject a {@code Tab}-scoped address on
- * SERVER-tier resolution. Flagged here so the Phase-2 mint sites and the Phase-3
- * engine honor it.
+ * <p>An {@code OwnerScope.Tab} scope is client tier only, since the active tab
+ * lives on the screen, never the menu. The value itself has no notion of tier and
+ * cannot enforce this, so the engine's tier check has to reject a
+ * {@code Tab}-scoped address in server-tier resolution, and mint sites must
+ * respect it.
  */
 public record Address(OwnerRef owner, Token token, KindTag kind) {
 
@@ -92,7 +87,7 @@ public record Address(OwnerRef owner, Token token, KindTag kind) {
         Objects.requireNonNull(kind, "kind");
     }
 
-    // ── Public minters, one per kind (§0063) ───────────────────────────
+    // Public minters, one per kind.
 
     /** Slot {@code index} of a created slot group. */
     public static Address createdSlot(SlotGroupId.Created group, int index) {
@@ -114,7 +109,7 @@ public record Address(OwnerRef owner, Token token, KindTag kind) {
     // a mod's id, so no group id can end in something that looks like an index.
     private static final String CREATED_SEP = String.valueOf((char) 0);
 
-    // ── The value-level factories for the four shapes (plumbing) ───────
+    // The value-level factories for the four shapes, for the library's own use.
 
 
     /** A vanilla slot at a menu-space index. */
@@ -127,7 +122,7 @@ public record Address(OwnerRef owner, Token token, KindTag kind) {
     @ApiStatus.Internal
     public static Address createdSlot(ScreenFamilyKey family, OwnerScope scope,
                                       Identifier panelRegKey, String declId) {
-        // Differs from panelElement(...) ONLY by the KindTag, keep them in sync.
+        // Differs from panelElement(...) only by the KindTag; keep them in sync.
         return new Address(panelOwner(family, scope, panelRegKey), Token.decl(declId), KindTag.CREATED_SLOT);
     }
 
@@ -135,7 +130,7 @@ public record Address(OwnerRef owner, Token token, KindTag kind) {
     @ApiStatus.Internal
     public static Address panelElement(ScreenFamilyKey family, OwnerScope scope,
                                        Identifier panelRegKey, String declId) {
-        // Differs from createdSlot(...) ONLY by the KindTag, keep them in sync.
+        // Differs from createdSlot(...) only by the KindTag; keep them in sync.
         return new Address(panelOwner(family, scope, panelRegKey), Token.decl(declId), KindTag.PANEL_ELEMENT);
     }
 
@@ -145,12 +140,12 @@ public record Address(OwnerRef owner, Token token, KindTag kind) {
         return new Address(OwnerRef.root(family, scope), Token.reg(panelRegKey), KindTag.PANEL);
     }
 
-    /** The owner-ref a panel's children share: nested under the panel within its family+scope. */
+    /** The owner a panel's children share: nested under the panel, within its family and scope. */
     private static OwnerRef panelOwner(ScreenFamilyKey family, OwnerScope scope, Identifier panelRegKey) {
         return OwnerRef.nested(OwnerRef.root(family, scope), Token.reg(panelRegKey));
     }
 
-    // ── Text form ──────────────────────────────────────────────────────
+    // Text form.
 
     /**
      * The stable text form: the kind, the root family and scope, each nesting

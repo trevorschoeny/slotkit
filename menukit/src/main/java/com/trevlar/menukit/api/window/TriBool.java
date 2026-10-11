@@ -1,18 +1,16 @@
 package com.trevlar.menukit.api.window;
 
 /**
- * An explicit two-valued boolean for boolean {@link BehaviorKey}s, the value a
- * {@link Decl.Set} carries, so "explicitly off" is a real declared value
- * distinct from "unset / inherit".
+ * The value a {@link Decl.Set} carries for a boolean {@link BehaviorKey}, so
+ * "explicitly off" is a declared value, distinct from "unset" or "inherit".
  *
- * <h2>Why not {@code boolean}/{@code Boolean}</h2>
+ * <h2>Why not {@code boolean} or {@code Boolean}</h2>
  *
- * The cascade's tri-state is structural: a level either declares {@code Set(v)}
- * (stop, use {@code v}) or doesn't contribute ({@code Inherit} / absent, fall
- * through). Carrying a primitive {@code boolean} inside {@code Set} would make
- * {@code Set(FALSE)} and "no declaration" look the same to a careless reader and
- * invites a nullable {@code Boolean}. A dedicated enum makes {@code Set(FALSE)}
- * unmistakably a declared OFF, never confused with {@code Inherit} or absence.
+ * A cascade level either declares {@code Set(v)} (stop, use {@code v}) or does
+ * not contribute ({@code Inherit} or absent, fall through). A primitive inside
+ * {@code Set} makes {@code Set(FALSE)} easy to misread as "no declaration" and
+ * invites a nullable {@code Boolean}. With an enum, {@code Set(FALSE)} is plainly
+ * a declared off.
  */
 public enum TriBool {
     TRUE,

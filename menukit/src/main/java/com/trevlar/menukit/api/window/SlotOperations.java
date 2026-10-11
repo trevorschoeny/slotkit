@@ -120,7 +120,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <ol>
  *   <li><b>The cascade</b> is what the slot's author declared, most specific wins:
  *       <pre>per-slot declaration  &gt;  the slot's group  &gt;  the group's category  &gt;  the key's default</pre>
- *       This is the window's ordinary cascade (§0055); the group and the category
+ *       This is the window's ordinary cascade; the group and the category
  *       are two rungs inside its per-group level, ordered by
  *       {@link GroupKey#precedence()}. {@link #inherent} declares the category rung.
  *       A vanilla slot's group and category are one rung: vanilla contributes one
@@ -275,7 +275,7 @@ public final class SlotOperations {
     /** One {@link GroupKey} per category that has inherent operations; minted by {@link #inherent} only. */
     private static final Map<SlotGroupCategory, GroupKey> CATEGORY_GROUPS = new ConcurrentHashMap<>();
 
-    // ── The vocabulary ─────────────────────────────────────────────────────
+    // The vocabulary
 
     /**
      * Publishes {@code operation} so other mods can discover it through
@@ -343,9 +343,9 @@ public final class SlotOperations {
         synchronized (DEFINED) {
             List<BehaviorKey<?>> out = new java.util.ArrayList<>(DEFINED.size());
             for (Definition d : DEFINED.values()) out.add(d.key());
-            // By namespace, never by which mod loaded first (§0063); within one
-            // namespace, the order its mod defined them in (a stable sort), since one
-            // mod's own order is deliberate: vanilla's eleven are ordered for a list.
+            // Sorted by namespace, never by which mod loaded first. Within one namespace
+            // the stable sort keeps the mod's own definition order, which is deliberate:
+            // vanilla's eleven are ordered for a list.
             out.sort(java.util.Comparator.comparing(k -> k.id().getNamespace()));
             return List.copyOf(out);
         }
@@ -400,7 +400,7 @@ public final class SlotOperations {
 
     private static final Map<Identifier, CachedGroups> GROUPS_CACHE = new ConcurrentHashMap<>();
 
-    // ── Name and description ───────────────────────────────────────────────
+    // Name and description
 
     /** The translation key an operation's name lives under: {@code slot_operation.<namespace>.<path>}. */
     public static String langKey(BehaviorKey<?> operation) {
@@ -417,7 +417,7 @@ public final class SlotOperations {
         return Component.translatable(langKey(operation) + ".description");
     }
 
-    // ── A category's inherent operations ───────────────────────────────────
+    // A category's inherent operations
 
     /**
      * Declares {@code value} as the default for {@code operation} on every slot in
@@ -436,18 +436,14 @@ public final class SlotOperations {
         WindowEngine.setGroup(mintGroupFor(category), operation, Decl.set(value));
     }
 
-    /**
-     * The {@link GroupKey} standing for "every slot whose group declared
-     * {@code category}". One per category, minted by the first {@link #inherent}
-     * for it, id-unique so two categories can never share a binding. Its membership
-     * predicate answers for created slots; a vanilla slot is stated as a member by
-     * {@link #allows}.
-     */
+    // The GroupKey for "every slot whose group declared this category", minted once per
+    // category so two categories never share a binding. Its predicate answers for created
+    // slots; allows() states a vanilla slot's membership itself.
     private static GroupKey mintGroupFor(SlotGroupCategory category) {
         return CATEGORY_GROUPS.computeIfAbsent(category, c -> new GroupKey(
                 GroupIds.of("category", c.namespace() + "/" + c.path()),
                 address -> {
-                    // The category recorded once, on the group (§0063).
+                    // The category is recorded once, on the group.
                     com.trevlar.menukit.api.slot.SlotGroupId.Created g =
                             com.trevlar.menukit.api.slot.SlotGroups.groupOf(address);
                     return g != null && c.equals(com.trevlar.menukit.api.slot.SlotGroups.categoryOf(g));
@@ -455,7 +451,7 @@ public final class SlotOperations {
                 GroupKey.PRECEDENCE_CATEGORY));
     }
 
-    // ── Vetoes ─────────────────────────────────────────────────────────────
+    // Vetoes
 
     /**
      * A rule that refuses an operation on a slot, laid over the cascade by a mod
@@ -519,7 +515,7 @@ public final class SlotOperations {
         }
     }
 
-    // ── Simulated clicks ───────────────────────────────────────────────────
+    // Simulated clicks
 
     /** Sends {@code clicks} as {@code operation}, for both the slots they take from and put into. */
     public static void as(BehaviorKey<TriBool> operation, Runnable clicks) {
@@ -535,7 +531,7 @@ public final class SlotOperations {
         ClickTags.run(new ClickTags.Tag(take, put), clicks);
     }
 
-    // ── The one question ───────────────────────────────────────────────────
+    // The one question
 
     /**
      * Whether {@code operation} may act on the slot {@code ref} describes: the
@@ -597,14 +593,9 @@ public final class SlotOperations {
         return allowsGesture(SlotRef.of(menu, slot, player), gesture);
     }
 
-    /**
-     * The cascade's answer. A menu slot is addressed through the installed slot
-     * addressing rule (kind-aware once Containers is present); an off-menu slot
-     * through its container identity, which MenuKit alone cannot mint, so it falls
-     * to the key's default and the vetoes decide ({@code docs/limits.md}). A
-     * vanilla slot's category, known from the menu, is stated as a membership so
-     * the category rung reaches it.
-     */
+    // A menu slot is addressed through the installed addressing rule (kind-aware once
+    // Containers is present). An off-menu slot needs a container identity MenuKit alone
+    // cannot mint, so it falls to the key's default and the vetoes decide (docs/limits.md).
     private static boolean cascade(SlotRef ref, BehaviorKey<TriBool> operation) {
         Address address = ref.address();
         if (address == null) return operation.libraryDefault().asBoolean(); // no identity to declare on

@@ -11,9 +11,8 @@ import org.jspecify.annotations.Nullable;
 import java.util.UUID;
 
 /**
- * The probe a test mod checks the click-tag hand-off and the in-world actions
- * through (§0038, §0068): which operation a sent click carried, and whether an
- * action would be refused. MenuKit's validators use it. A shipping mod tags its
+ * Lets a test mod check the click-tag hand-off and the in-world actions: which
+ * operation a sent click carried, and whether an action would be refused. MenuKit's validators use it. A shipping mod tags its
  * clicks with {@link SlotOperations#as} and never records or claims a tag itself.
  */
 public final class OperationProbe {

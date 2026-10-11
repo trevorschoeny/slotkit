@@ -9,8 +9,8 @@ package com.trevlar.menukit.api.slot;
  * own.
  *
  * <p>{@code width}/{@code height} are the 16×16 item box (vanilla's slot item
- * area). The recessed 18×18 frame is the item box expanded by 1px on each side
- * ({@code x-1}, {@code width+2}), derive it at the call-site when the frame, not
+ * area). The recessed 18×18 frame is the item box grown by 1 px on each side
+ * ({@code x-1}, {@code width+2}). Derive it at the call site when the frame, not
  * the item, is what matters.
  */
 public record SlotScreenRect(int x, int y, int width, int height) {

@@ -7,16 +7,12 @@ import org.spongepowered.asm.mixin.Mutable;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
 /**
- * MenuKit internal mixin — makes Slot.x and Slot.y mutable.
+ * Makes {@code Slot.x} and {@code Slot.y} writable. Vanilla declares them
+ * {@code public final int}; this accessor drops the {@code final} so slots can be
+ * moved at runtime.
  *
- * <p>Vanilla declares these as {@code public final int}. This accessor
- * removes the {@code final} modifier so we can reposition slots at runtime.
- *
- * <p>Used by MKCreativeMixin to fix MKSlot positions on the creative
- * inventory tab, where vanilla's selectTab wraps them in SlotWrapper
- * with wrong coordinates.
- *
- * <p>Part of the <b>MenuKit</b> framework internals. Users never see this.
+ * <p>MKCreativeMixin uses it to fix MKSlot positions on the creative inventory
+ * tab, where vanilla's selectTab wraps them in SlotWrapper with wrong coordinates.
  */
 @ApiStatus.Internal
 @Mixin(Slot.class)

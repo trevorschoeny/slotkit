@@ -21,11 +21,11 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * {@code mayPickup} internally, and the stack cap is {@code getMaxStackSize}, so
  * gating the three predicates here covers every path (direct click, the empty pass
  * of a shift-click, pick-all, the creative bridge) once. A created slot resolves
- * through the same seam by its created address, so it no longer gates itself a
+ * through the same seam by its created address, so it does not gate itself a
  * second time.
  *
- * <p>Zero cost when nothing is gated: {@link SlotGating} returns before minting an
- * address unless some server behaviour has been declared.
+ * <p>Costs nothing when nothing is gated: {@link SlotGating} returns before minting
+ * an address unless some server behaviour has been declared.
  */
 @Mixin(Slot.class)
 public class MKSlotGateMixin {

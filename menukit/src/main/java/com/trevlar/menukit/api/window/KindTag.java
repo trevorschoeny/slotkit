@@ -1,28 +1,26 @@
 package com.trevlar.menukit.api.window;
 
 /**
- * What KIND of addressable thing an {@link Address} names, the one place THE
- * ONE WINDOW distinguishes a slot from an element from a panel.
+ * What kind of addressable thing an {@link Address} names. This is the one place
+ * the window tells a slot from an element from a panel.
  *
- * <h2>Role in the engine (kind-agnostic resolution)</h2>
+ * <h2>Role in the engine</h2>
  *
- * The resolver NEVER branches on {@code KindTag} to choose a code path. The tag
- * participates only in {@link Address} equality/hashCode (so a panel and a slot
- * at the same coordinate can never collide) and in a key's <em>applicability</em>
- * (a {@code BehaviorKey} declares which kinds it applies to, checked at the call
- * boundary, never inside resolution). This keeps resolution kind-blind while
- * keys stay kind-typed.
+ * The resolver never branches on {@code KindTag}. The tag takes part only in
+ * {@link Address} equality (so a panel and a slot at the same coordinate never
+ * collide) and in which kinds a {@code BehaviorKey} applies to, checked at the
+ * call boundary, never inside resolution. Resolution stays kind-blind while keys
+ * stay kind-typed.
  *
- * <h2>FROZEN-OPEN</h2>
+ * <h2>Open to new kinds</h2>
  *
- * New kinds are additive: the engine treats this enum non-exhaustively (always a
- * default branch), so adding a constant later is source-compatible. Contrast the
- * {@code Decl} declaration type, which is FROZEN-CLOSED (no new arms, ever).
+ * The engine always has a default branch for this enum, so adding a constant later
+ * is source-compatible. {@code Decl}, by contrast, is closed: it gets no new arms.
  */
 public enum KindTag {
     /** A vanilla {@code net.minecraft.world.inventory.Slot} the consumer did not create. */
     VANILLA_SLOT,
-    /** A slot brought into being through MKC creation (a real synced slot in menu space). */
+    /** A slot created through MenuKit: Containers (a real synced slot in menu space). */
     CREATED_SLOT,
     /** A non-slot panel element (button, label, decoration). */
     PANEL_ELEMENT,

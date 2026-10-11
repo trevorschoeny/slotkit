@@ -10,11 +10,11 @@ import net.minecraft.world.inventory.MenuType;
 import java.util.Locale;
 
 /**
- * Derives the stable {@link ScreenFamilyKey} and {@link OwnerScope} of a LIVE
- * menu — the client mint of an {@link Address}'s root owner. This is the seat of
- * the held-handle no-op: the resolver compares an address's root against what
- * {@code WindowMint} derives from the currently-open menu, and a mismatch (wrong
- * or no screen) resolves to nothing.
+ * Derives the stable {@link ScreenFamilyKey} and {@link OwnerScope} of a live
+ * menu, which the client uses as an {@link Address}'s root owner. This is what
+ * makes a handle held past its screen a no-op: the resolver compares an address's
+ * root with what {@code WindowMint} derives from the open menu, and a mismatch
+ * (another screen, or none) resolves to nothing.
  *
  * <h2>Family</h2>
  *
@@ -41,21 +41,19 @@ public final class WindowMint {
             Identifier id = BuiltInRegistries.MENU.getKey(type);
             if (id != null) return ScreenFamilyKey.of(id);
         } catch (UnsupportedOperationException typeless) {
-            // Menus built directly (e.g. the creative menu) throw rather than
-            // expose a MenuType — fall through to the synthetic id.
+            // Menus built directly (the creative menu, for one) throw here
+            // instead of returning a MenuType, so use the synthetic id.
         }
         return ScreenFamilyKey.of(synthetic(menu));
     }
 
     /**
-     * The scope of a live menu.
-     *
-     * <p><b>Phase 2a:</b> {@code PRIMARY} (the common case). Phase 2b wires the
-     * two namespacing sources: the active creative tab → {@code OwnerScope.tab(
-     * BuiltInRegistries.CREATIVE_MODE_TAB.getKey(selectedTab))} (client-tier; via
-     * a creative-screen accessor), and a composite/double-chest backing →
-     * {@code OwnerScope.sub(backingId)} from §0055. Until then a creative-tab or
-     * composite address simply won't match (resolves empty) — safe, never wrong.
+     * The scope of a live menu. Always {@code PRIMARY} for now. The two namespacing
+     * sources are not wired yet: the active creative tab ({@code OwnerScope.tab(
+     * BuiltInRegistries.CREATIVE_MODE_TAB.getKey(selectedTab))}, client tier, through
+     * a creative-screen accessor) and a double chest's backing
+     * ({@code OwnerScope.sub(backingId)}). Until they are, a creative-tab or
+     * composite address does not match and resolves empty, which is safe.
      */
     public static OwnerScope scopeOf(AbstractContainerMenu menu) {
         return OwnerScope.primary();

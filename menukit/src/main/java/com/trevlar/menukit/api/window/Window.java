@@ -4,20 +4,20 @@ import com.trevlar.menukit.window.PanelAddressing;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
 /**
- * The entry point to THE ONE WINDOW, how a consumer obtains a typed handle to set
- * or read behavior on anything addressable.
+ * The entry point to the window: where a consumer gets a typed handle to set or read
+ * behavior on anything addressable.
  *
- * <h2>Menu-independent vs menu-bound</h2>
+ * <h2>Menu-independent and menu-bound</h2>
  *
- * A panel, a panel element, and a created slot have ONE address everywhere they
- * appear (rooted at a constant family by id), so handles to them need no menu and
- * are reached statically, {@link #panel}, {@link #element}. This matters for a
- * standalone screen that has panels but no {@code AbstractContainerMenu} at all:
- * you still address its panels the same way.
+ * A panel, a panel element and a created slot have one address everywhere they
+ * appear (rooted at a constant family by id), so their handles need no menu and
+ * are reached statically through {@link #panel} and {@link #element}. A standalone
+ * screen with panels but no {@code AbstractContainerMenu} addresses its panels the
+ * same way.
  *
- * <p>Only a <em>vanilla</em> slot is identified by its position in a live menu, so
- * addressing one by index needs that menu, {@link #view(AbstractContainerMenu)}
- * returns the menu-bound {@link WindowView} for {@code slot(int)} and friends.
+ * <p>Only a vanilla slot is identified by its position in a live menu, so
+ * addressing one by index needs that menu: {@link #view(AbstractContainerMenu)}
+ * returns the menu-bound {@link WindowView} for {@code slot(int)} and the rest.
  */
 public final class Window {
 
@@ -33,7 +33,7 @@ public final class Window {
         return new ElementHandle(PanelAddressing.ofElement(panelId, elementDeclId));
     }
 
-    /** A handle on anything already named by an {@link Address} (slot/element/panel). */
+    /** A handle on anything already named by an {@link Address} (slot, element or panel). */
     public static SlotHandle slot(Address address) {
         return new SlotHandle(address);
     }

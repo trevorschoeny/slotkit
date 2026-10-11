@@ -9,24 +9,23 @@ import org.jetbrains.annotations.ApiStatus;
 import java.util.Objects;
 
 /**
- * The per-session facade of THE ONE WINDOW, bound to the current concrete menu,
- * it mints typed {@link WindowHandle}s (architecture Part 2 §2). A handle is a
- * value addressing one thing; the view is how you obtain one for "this slot on the
- * screen in front of me."
+ * The window's view of one open menu, which mints typed {@link WindowHandle}s. A
+ * handle is a value addressing one thing; the view is how you get one for "this
+ * slot on the screen in front of me".
  *
- * <h2>What it does today</h2>
+ * <h2>What it does</h2>
  *
  * Mints handles by address. {@link #slot(int)} turns a vanilla menu index into a
- * slot handle (via {@link VanillaAddressing}); the address-taking minters wrap an
- * address a consumer already holds (e.g. a created slot's address, or a panel's),
- * checking the {@link KindTag} so a panel address can't masquerade as a slot.
+ * slot handle (through {@link VanillaAddressing}); the methods that take an address
+ * wrap one a consumer already holds (a created slot's address, or a panel's),
+ * checking the {@link KindTag} so a panel address can't pass as a slot.
  *
- * <p>Behavior set/get on a handle is pure engine ({@link WindowEngine}, by
- * address) and needs no live resolution, so the SET API is fully usable now,
- * MK-alone, for client-tier behavior and (with MKC present) server-tier behavior.
- * Live resolution (reading a slot's contents, decoration draw) and the
- * created-slot/panel/element <em>minting by identity</em> arrive with the
- * panel/element resolver wiring; this view grows there, additively.
+ * <p>Setting and reading behavior on a handle goes straight to the engine
+ * ({@link WindowEngine}, by address) and needs no live resolution. So it works with
+ * MenuKit alone for client-tier behavior, and with Containers present for
+ * server-tier behavior too. Live resolution (reading a slot's contents, drawing a
+ * decoration) and minting created slots, panels and elements by identity are not
+ * here yet.
  */
 public final class WindowView {
 
@@ -42,13 +41,10 @@ public final class WindowView {
     }
 
     /**
-     * A handle on the vanilla slot at flat menu {@code index}.
-     *
-     * <p><b>Internal plumbing.</b> The address-only public way to name a vanilla
-     * slot is {@link #slot(Address)} (with an address minted by identity). This
-     * int-index minter exists for the library's own resolution path and is not a
-     * consumer surface, a flat menu index is exactly the menu-coupling THE ONE
-     * WINDOW's addressing replaces.
+     * A handle on the vanilla slot at flat menu {@code index}. For the library's
+     * own resolution only. Consumers name a vanilla slot with {@link #slot(Address)}
+     * and an address minted by identity, since a flat menu index ties the slot to
+     * one menu, which is what addressing exists to avoid.
      */
     @ApiStatus.Internal
     public SlotHandle slot(int index) {
@@ -73,8 +69,8 @@ public final class WindowView {
         return new PanelHandle(address);
     }
 
-    // ── Identity minters (menu-independent: the panel subtree roots at a constant
-    //    family, so these need no live screen, one address everywhere) ──────────
+    // By identity. The panel subtree roots at a constant family, so these need no
+    // live screen and give one address everywhere.
 
     /** A handle on the panel with id {@code panelId} (its own visibility and opacity). */
     public PanelHandle panel(String panelId) {

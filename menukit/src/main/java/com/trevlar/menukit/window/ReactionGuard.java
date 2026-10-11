@@ -6,34 +6,33 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * The frozen re-entrancy bound of the reactive contract (architecture Part 3
- * §3.6 / #3b). A reaction may write back through the window, which can trigger
- * another reaction; without a bound, slot→element→panel→slot could loop forever.
+ * Bounds re-entry for reactions. A reaction may write back through the window,
+ * which can trigger another reaction; without a bound, a chain from slot to element
+ * to panel and back to the slot could loop forever.
  *
- * <h2>Two bounds, both per-propagation</h2>
+ * <h2>Two bounds, both per propagation</h2>
  *
  * <ol>
- *   <li><b>Visited set keyed by {@code (Address, BehaviorKey)}</b> — not by slot
- *       alone, so a cross-kind chain (a slot's observed take → an element's observed
- *       reaction → a panel's visibility → re-touching the slot) terminates the
- *       same way an all-slot chain does: the first time an {@code (Address, key)}
- *       pair repeats on the current propagation <em>stack</em>, that branch ends.
- *       The pair is on the set only while it is live on the stack ({@link #run}
- *       removes it on the way out), so a sibling branch may fire the same pair.</li>
- *   <li><b>Depth limit</b> — an absolute ceiling on nesting, so even an
- *       all-distinct-pairs chain can't run away.</li>
+ *   <li><b>A visited set keyed by {@code (Address, BehaviorKey)}</b>, not by slot
+ *       alone, so a chain across kinds (a slot's observed take, then an element's
+ *       reaction, then a panel's visibility, then the slot again) ends the same way
+ *       an all-slot chain does: the first time a pair repeats on the current
+ *       propagation stack, that branch ends. A pair is in the set only while it is
+ *       on the stack ({@link #run} removes it on the way out), so a sibling branch
+ *       may fire the same pair.</li>
+ *   <li><b>A depth limit</b> on nesting, so even a chain of all-distinct pairs
+ *       can't run away.</li>
  * </ol>
  *
- * <p>The state is a {@link ThreadLocal} (observed reactions fire on the client thread).
- * It is naturally empty again once the outermost {@link #run} returns — that is
- * the "reset when the transaction/sync sweep completes" the architecture names —
- * and the ThreadLocal is removed at depth zero so nothing leaks across sweeps.
+ * <p>The state is a {@link ThreadLocal}, since observed reactions fire on the
+ * client thread. It is empty again once the outermost {@link #run} returns, and the
+ * ThreadLocal is removed at depth zero so nothing leaks from one sweep to the next.
  */
 public final class ReactionGuard {
 
     private ReactionGuard() {}
 
-    /** Absolute nesting ceiling for one propagation. Generous; real chains are 1–2 deep. */
+    /** Nesting ceiling for one propagation. Generous: real chains are one or two deep. */
     static final int MAX_DEPTH = 16;
 
     private record Visit(Address address, BehaviorKey<?> key) {}
@@ -46,11 +45,10 @@ public final class ReactionGuard {
     private static final ThreadLocal<Propagation> STATE = new ThreadLocal<>();
 
     /**
-     * Run {@code body} as a reaction for {@code (address, key)} iff the bound
-     * allows it — i.e. that pair is not already live on this propagation's stack
-     * and the depth ceiling is not reached. Otherwise the branch is dropped
-     * silently (the loop is broken, not crashed). Always balanced: the pair is
-     * removed and depth restored even if {@code body} throws.
+     * Runs {@code body} as a reaction for {@code (address, key)} if the pair is not
+     * already on this propagation's stack and the depth ceiling is not reached.
+     * Otherwise the branch is dropped silently, which breaks the loop without a
+     * crash. The pair is removed and the depth restored even if {@code body} throws.
      *
      * @return {@code true} if {@code body} ran, {@code false} if the bound dropped it.
      */
@@ -63,9 +61,8 @@ public final class ReactionGuard {
         }
         Visit visit = new Visit(address, key);
         if (p.depth >= MAX_DEPTH || !p.onStack.add(visit)) {
-            // Bound hit: drop this branch. If we created the propagation just now
-            // (the outermost call itself is over-deep — impossible at depth 0, but
-            // keep the cleanup honest), tear it back down.
+            // Bound hit: drop this branch. If this call created the propagation
+            // (which can't happen at depth 0), remove it again anyway.
             if (outermost) STATE.remove();
             return false;
         }
@@ -76,7 +73,7 @@ public final class ReactionGuard {
         } finally {
             p.depth--;
             p.onStack.remove(visit);
-            if (outermost) STATE.remove(); // sweep complete → reset
+            if (outermost) STATE.remove(); // sweep complete, reset
         }
     }
 }

@@ -3,24 +3,23 @@ package com.trevlar.menukit.window;
 import com.trevlar.menukit.api.window.Address;
 
 /**
- * The owner an {@link Address} is resolved relative to — the chain that lets a
- * handle re-bind to the live backing each call (and that makes the held-handle
- * "wrong/no screen" case a clean no-op: an owner that doesn't resolve against the
- * live session yields the neutral default).
+ * The owner an {@link Address} is resolved relative to. The chain lets a handle
+ * bind again to the live backing on each call, and makes a handle held past its
+ * screen a no-op: an owner that doesn't resolve against the live session yields the
+ * neutral default.
  *
  * <ul>
- *   <li>{@link RootOwner} — bottoms out the chain at a menu family + scope.</li>
- *   <li>{@link NestedOwner} — a thing owned by another addressable (a panel
- *       element owned by its panel; a panel-in-panel). Composes to arbitrary
- *       depth; every chain terminates at a {@link RootOwner}.</li>
+ *   <li>{@link RootOwner}: the bottom of the chain, a menu family and a scope.</li>
+ *   <li>{@link NestedOwner}: a thing owned by another addressable (an element owned
+ *       by its panel, a panel in a panel). Nests to any depth; every chain ends at
+ *       a {@link RootOwner}.</li>
  * </ul>
  *
- * <p>The owner level also IS the cascade scope: a group/inheritance default
- * attached at an {@code OwnerRef} is inherited by every {@link Address} whose
- * owner chain passes through it (the nesting gives panel→element inheritance for
- * free). Pure value (record equality).
+ * <p>The owner level is also the cascade scope: a default attached at an
+ * {@code OwnerRef} is inherited by every {@link Address} whose owner chain passes
+ * through it, which is how an element inherits from its panel.
  *
- * <p>Sealed-extensible; FROZEN-OPEN like {@link Token}.
+ * <p>Sealed, but open to new arms, like {@link Token}.
  */
 public sealed interface OwnerRef permits OwnerRef.RootOwner, OwnerRef.NestedOwner {
 

@@ -9,23 +9,23 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 
 /**
- * The client-observed slot INTERACTION signals, which slot the cursor is over
- * ({@link #hovered}) and which slot was last clicked ({@link #selected}), as
- * {@link Address}es. The interaction sibling of {@link ObservedReactions} (which
- * observes content): both are pure client observers keyed by address through
- * {@link ClientSlotAddressing}.
+ * Which slot the cursor is over ({@link #hovered}) and which slot was last clicked
+ * ({@link #selected}), as {@link Address}es, observed on the client. The
+ * {@link ObservedReactions} counterpart for interaction rather than content: both
+ * are client observers keyed by address through {@link ClientSlotAddressing}.
  *
- * <h2>Address-keyed, by design</h2>
+ * <h2>Keyed by address</h2>
  *
- * A consumer reacts to its OWN addressed things, {@code WindowSignals.isHovered(addr)}
- * / {@code isSelected(addr)} where {@code addr} is a panel/created-slot address it
- * minted by id. It does NOT ask "what vanilla index is hovered", addressing by
- * identity is what makes a rule work the same in creative and survival (a created
- * slot has one address in both). The hover/click are captured by {@code MenuKitClient}
- * (hover each client tick; selection on a screen click; cleared on close) and mapped
- * through the shared addressing, so a hovered created slot reports its created address.
+ * A consumer asks about its own things, {@code WindowSignals.isHovered(addr)} or
+ * {@code isSelected(addr)}, where {@code addr} is a panel or created-slot address it
+ * minted by id. It does not ask which vanilla index is hovered: addressing by
+ * identity makes a rule work the same in creative and survival, since a created
+ * slot has one address in both. {@code MenuKitClient} captures hover each client
+ * tick and selection on a screen click, clears the selection on close, and maps
+ * both through the shared addressing, so a hovered created slot reports its
+ * created address.
  *
- * <p>Client-thread only.
+ * <p>Client thread only.
  */
 public final class WindowSignals {
 
@@ -34,19 +34,17 @@ public final class WindowSignals {
     private static volatile @Nullable Address hovered;
     private static volatile @Nullable Address selected;
 
-    // Display names (SlotNames) for the hovered/selected slot, computed here, where
-    // the live slot is in hand, so a consumer holding only the address can still read
-    // a human label. Pure display; mirrors the address fields above.
+    // Display names (SlotNames) for the hovered and selected slot, computed here
+    // where the live slot is in hand, so a consumer holding only the address can
+    // still read a label.
     private static volatile @Nullable String hoveredName;
     private static volatile @Nullable String selectedName;
 
     /**
-     * Update the hovered slot (MenuKitClient, each client tick). Null clears it.
-     *
-     * <p><b>Internal write feeder.</b> Only MK's client tick feeds the signals;
-     * it takes raw vanilla {@code Slot}s straight off the live screen. Consumers
-     * READ the signals through the public address-keyed/display API below
-     * ({@link #isHovered}/{@link #hoveredName}/…); they never feed them.
+     * Updates the hovered slot (MenuKitClient, each client tick). Null clears it.
+     * Only MenuKit's client tick writes the signals, from raw slots on the live
+     * screen. Consumers read them through {@link #isHovered}, {@link #hoveredName}
+     * and the rest.
      */
     @ApiStatus.Internal
     public static void tickHover(@Nullable AbstractContainerMenu menu, @Nullable Slot hoveredSlot) {
@@ -56,10 +54,8 @@ public final class WindowSignals {
     }
 
     /**
-     * Record the last-clicked slot (MenuKitClient, on a screen click).
-     *
-     * <p><b>Internal write feeder</b> (see {@link #tickHover}). Consumers read the
-     * selection through the public API ({@link #isSelected}/{@link #selectedName}).
+     * Records the last-clicked slot (MenuKitClient, on a screen click). Consumers
+     * read the selection through {@link #isSelected} and {@link #selectedName}.
      */
     @ApiStatus.Internal
     public static void recordClick(@Nullable AbstractContainerMenu menu, @Nullable Slot clickedSlot) {
@@ -70,12 +66,8 @@ public final class WindowSignals {
     }
 
     /**
-     * Clear the selection (MenuKitClient, when a container screen closes).
-     *
-     * <p><b>Internal write feeder</b> (see {@link #tickHover}/{@link #recordClick}).
-     * the third member of the write trio. Only MK's client lifecycle calls it;
-     * consumers read the selection through the public API
-     * ({@link #isSelected}/{@link #selectedName}) and never reset it themselves.
+     * Clears the selection (MenuKitClient, when a container screen closes). Only
+     * MenuKit calls it; consumers never reset the selection themselves.
      */
     @ApiStatus.Internal
     public static void clearSelection() {
@@ -95,7 +87,7 @@ public final class WindowSignals {
     /** The last-clicked slot's display name, or {@code null}. */
     public static @Nullable String selectedName() { return selectedName; }
 
-    /** Whether {@code address} is the currently-hovered slot. */
+    /** Whether {@code address} is the hovered slot. */
     public static boolean isHovered(@Nullable Address address) {
         return address != null && address.equals(hovered);
     }

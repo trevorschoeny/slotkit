@@ -10,13 +10,12 @@ import java.util.function.Predicate;
  * {@code GroupKey} applies to every address the predicate accepts, unless a
  * per-slot declaration overrides it.
  *
- * <h2>Window-side, not creation-bound (RULED #2 property c)</h2>
+ * <h2>Not tied to slot creation</h2>
  *
- * Membership is evaluated against an address, so a group can bulk-address vanilla
- * slots, created slots, elements, or panels alike, it is NOT a creation
- * construct welded to a slot group. Membership is evaluated per-resolve, so an
- * address that comes to match later (a slot that appears after the group was
- * declared) joins automatically.
+ * Membership is tested against an address, so a group can address vanilla slots,
+ * created slots, elements or panels alike; it is not bound to a slot group. It is
+ * tested on every resolve, so an address that matches later (a slot that appears
+ * after the group was declared) joins automatically.
  *
  * <h2>Identity</h2>
  *
@@ -29,8 +28,8 @@ import java.util.function.Predicate;
  * Several groups can match one address, and they are not equally specific: a slot
  * group's own declaration should outrank the inherent declarations of the category
  * that group belongs to. {@link #precedence()} orders them, <b>higher wins</b>, with
- * a tie at one precedence going to the id that sorts last (never load order). The library uses
- * {@link #PRECEDENCE_CATEGORY} and {@link #PRECEDENCE_GROUP}; a consumer bulk-group
+ * a tie at one precedence going to the id that sorts last, never to load order. The library
+ * uses {@link #PRECEDENCE_CATEGORY} and {@link #PRECEDENCE_GROUP}; a consumer's bulk group
  * defaults to {@link #PRECEDENCE_DEFAULT}, below both, because a hand-declared group
  * is the broadest thing in the picture unless it says otherwise.
  *
@@ -57,8 +56,8 @@ public final class GroupKey {
             new java.util.concurrent.ConcurrentHashMap<>();
 
     /**
-     * The cascade group of a slot group: one identity for the registry's group and
-     * the engine's (§0063), at {@link #PRECEDENCE_GROUP}. A created group's
+     * The cascade group of a slot group, at {@link #PRECEDENCE_GROUP}. The registry's
+     * group and the engine's share this one identity. A created group's
      * membership follows from a slot's address, so it holds wherever the slot is
      * resolved, hoppers and pickup included. A category group's membership depends
      * on the menu, so the seam that has the menu states it

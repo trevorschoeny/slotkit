@@ -9,12 +9,12 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
- * The resolution engine of THE ONE WINDOW: one store, one cascade, one method,
+ * The window's resolution engine: one store, one cascade, one method,
  * {@link #resolve(Address, BehaviorKey)}. It never branches on {@link KindTag}; it
  * walks the declarations for an address and returns a fully resolved value, never
  * null.
  *
- * <h2>One store with a tier axis (§0063)</h2>
+ * <h2>One store per tier</h2>
  *
  * Every declaration lives in the store for its key's {@link Tier}. A SERVER key
  * (what a slot accepts, the operations, reactions with authority) is held and
@@ -70,8 +70,6 @@ public final class WindowEngine {
         return STORES.get(key.tier());
     }
 
-    // ── declare ────────────────────────────────────────────────────────
-
     /**
      * Declares {@code key} on one address, the most specific level. Writing
      * {@link Decl#inherit()} removes the declaration.
@@ -108,8 +106,6 @@ public final class WindowEngine {
         }
         bindingFor(store(key), group).put(key, decl);
     }
-
-    // ── resolve ────────────────────────────────────────────────────────
 
     /** The fully resolved value of {@code key} at {@code address}; never null. */
     public static <V> V resolve(Address address, BehaviorKey<V> key) {
@@ -158,8 +154,6 @@ public final class WindowEngine {
         }
         return null;
     }
-
-    // ── internals ──────────────────────────────────────────────────────
 
     @SuppressWarnings("unchecked")
     private static <V> Decl<V> declAt(Store s, Address address, BehaviorKey<V> key) {

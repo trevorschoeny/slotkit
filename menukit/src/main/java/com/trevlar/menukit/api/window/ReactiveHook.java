@@ -7,16 +7,15 @@ package com.trevlar.menukit.api.window;
  * reaction can be set per-slot, per-group, or as a library default, and overridden
  * the identical way.
  *
- * <p>The default for a reaction key is a genuine no-op (Bloch Item 21: default
- * methods / Null-Object only as true no-ops), so a slot nobody reacts to costs
- * nothing and never crashes.
+ * <p>The default for a reaction key is a true no-op, so a slot nobody reacts to
+ * costs nothing and never crashes.
  */
 @FunctionalInterface
 public interface ReactiveHook {
 
-    /** React to a contents change. Implementations should be cheap and side-effect-honest. */
+    /** Reacts to a contents change. Keep it cheap. */
     void react(ReactEvent event);
 
-    /** The Null-Object reaction, does nothing. The library default for every reaction key. */
+    /** Does nothing. The library default for every reaction key. */
     ReactiveHook NONE = event -> {};
 }

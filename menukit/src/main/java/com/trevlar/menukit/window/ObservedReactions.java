@@ -16,47 +16,47 @@ import java.util.Map;
 import java.util.WeakHashMap;
 
 /**
- * The reactive verbs: a client-side detector that fires {@code ON_INSERT_OBSERVED}
- * / {@code ON_TAKE_OBSERVED} when a slot's synced contents change. Pure UI feedback
- * (flash/sound/badge), no authority, MK-alone capable.
+ * Fires {@code ON_INSERT_OBSERVED} and {@code ON_TAKE_OBSERVED} on the client when
+ * a slot's synced contents change. UI feedback only (a flash, a sound, a badge),
+ * with no authority, and it works with MenuKit alone.
  *
  * <h2>How it works</h2>
  *
  * Each client tick, for the open container menu, it diffs every slot against a
- * per-menu snapshot and fires the observed reaction for any change (via
- * {@link WindowReactions#fireInsert}/{@code fireTake}).
- * First sight of a menu only snapshots (no fire on open). A reopen is a new menu
- * instance, so its snapshot starts fresh ({@link WeakHashMap}, GC-friendly).
+ * per-menu snapshot and fires the observed reaction for any change
+ * ({@link WindowReactions#fireInsert}, {@code fireTake}). The first sight of a
+ * menu only takes the snapshot, so nothing fires on open. A reopen is a new menu
+ * instance, so its snapshot starts fresh (a {@link WeakHashMap}, so old menus can
+ * be collected).
  *
  * <h2>Kind-aware addressing</h2>
  *
- * A changed slot is addressed through {@link ClientSlotAddressing} — the shared
- * client slot→address rule (MK-alone: vanilla slots; MKC installs the kind-aware
- * {@code SlotAddresses.of} so created slots resolve to their created address). The
- * reaction resolves at the SAME address a consumer set it on, and the same address
- * {@link WindowSignals} reports for hover/click.
+ * A changed slot is addressed through {@link ClientSlotAddressing}, the shared rule
+ * (vanilla slots with MenuKit alone; with Containers, created slots resolve to their
+ * created address). So the reaction resolves at the address a consumer set it on,
+ * the same one {@link WindowSignals} reports for hover and click.
  *
- * <p>Client-thread only. A slot with no observed reaction resolves to
- * {@link ReactiveHook#NONE} and the fire-entry short-circuits, so the common case
- * (nobody reacting) costs a resolve and nothing else.
+ * <p>Client thread only. A slot with no observed reaction resolves to
+ * {@link ReactiveHook#NONE} and returns early, so the common case (nobody reacting)
+ * costs one resolve.
  */
 public final class ObservedReactions {
 
     private ObservedReactions() {}
 
-    // menu instance -> last-seen contents (copies). Reopen = new menu = fresh.
+    // Last-seen contents (copies) per menu instance. A reopen is a new menu, so it starts fresh.
     private static final Map<AbstractContainerMenu, List<ItemStack>> SNAPSHOTS = new WeakHashMap<>();
 
     /**
-     * Drive one client tick: diff {@code menu}'s slots against the snapshot and fire
+     * Runs one client tick: diffs {@code menu}'s slots against the snapshot and fires
      * observed reactions for changes. Pass {@code null} when no container menu is
-     * open (a no-op). Call from the client tick.
+     * open (a no-op).
      */
     public static void tick(@Nullable AbstractContainerMenu menu) {
         if (menu == null) return;
         List<Slot> slots = menu.slots;
         List<ItemStack> snap = SNAPSHOTS.get(menu);
-        if (snap == null) {                 // first sight: snapshot, never fire on open
+        if (snap == null) {                 // first sight: snapshot only, never fire on open
             SNAPSHOTS.put(menu, snapshot(slots));
             return;
         }
@@ -68,7 +68,7 @@ public final class ObservedReactions {
 
             Address address = ClientSlotAddressing.addressOf(menu, slot);
             // A swap (same count, different item) is both a take of the old and an
-            // insert of the new — classify by content, fire both when both happen.
+            // insert of the new, so classify by content and fire both when both happen.
             boolean tookOld = !before.isEmpty()
                     && (after.isEmpty() || !ItemStack.isSameItemSameComponents(before, after)
                         || after.getCount() < before.getCount());

@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 /**
  * Which operation a click is being sent <em>for</em>, when a mod simulates it.
  *
- * <h2>The problem this solves</h2>
+ * <h2>Why</h2>
  *
  * A client-side inventory mod performs its operations by sending vanilla clicks:
  * a restock equips armour with a shift-click, a sort shuffles with plain clicks.
@@ -104,13 +104,13 @@ public final class ClickTags {
     }
 
     /**
-     * The operations a tagged {@code gesture} is judged by for the vetoes, or
-     * {@code null} when {@code gesture} is not a vanilla gesture (then it is asked
-     * about plainly, tag or no tag).
+     * The operations the vetoes judge a tagged {@code gesture} by, or {@code null}
+     * when {@code gesture} is not a vanilla gesture (then it is asked about as
+     * itself, tag or no tag).
      */
     public static @Nullable List<BehaviorKey<TriBool>> carriedFor(Tag tag, BehaviorKey<TriBool> gesture) {
         if (!BehaviorKeys.VANILLA_OPERATIONS.contains(gesture)) return null;
-        SlotOperations.Role role = SlotOperations.role(gesture); // one source for roles: the definition
+        SlotOperations.Role role = SlotOperations.role(gesture); // roles come only from the definition
         if (role == null) return null;
         return switch (role) {
             case TAKE -> List.of(tag.take());
@@ -119,7 +119,7 @@ public final class ClickTags {
         };
     }
 
-    // ── Client → integrated server ─────────────────────────────────────────
+    // From the client to the integrated server.
 
     // A tag is recorded under the key the server will know the action by: a click
     // by (player, menu, slot, button, input), a player action (Q, Ctrl-Q, F with no
@@ -130,9 +130,9 @@ public final class ClickTags {
 
     // The server handles a click packet within a tick or two. A tag older than this
     // belongs to a packet the server dropped (its menu closed in between) and must
-    // not be claimed by a later, untagged click that happens to match.
-    // ponytail: a fixed window; if a click can legitimately wait longer (a server
-    // stalled past it), the click is judged as its gesture, which is the strict side.
+    // not be claimed by a later, untagged click that happens to match. The window
+    // is fixed: a click that legitimately waits longer (a server stalled past it)
+    // is judged as its gesture, which is the strict side.
     private static final long EXPIRY_NANOS = 5_000_000_000L;
 
     private static final ConcurrentLinkedQueue<Pending> PENDING = new ConcurrentLinkedQueue<>();

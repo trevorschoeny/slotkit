@@ -14,27 +14,25 @@ import org.jspecify.annotations.Nullable;
 import java.util.Objects;
 
 /**
- * The single "live slot → {@link Address}" mapping, on both sides: the client's
- * slot observers (observed reactions, {@link ObservedReactions}; interaction
- * signals, {@link WindowSignals}) and the operation seams and vetoes, which run on
- * the server too ({@link SlotOperations}, {@link SlotRef}). The name predates that;
- * 6.0.0's naming pass renames it. MK-alone the default addresses
- * vanilla slots only ({@link VanillaAddressing}); MKC installs the kind-aware
- * {@code SlotAddresses.of} so a created slot resolves to its created address. One
- * install point, one resolution rule, so two observers can never disagree on which
- * address a slot has.
+ * The one mapping from a live slot to its {@link Address}, on both sides. The
+ * client's slot observers use it ({@link ObservedReactions}, {@link WindowSignals}),
+ * and so do the operation seams and vetoes, which run on the server too
+ * ({@link SlotOperations}, {@link SlotRef}); the class name is older than that.
+ * With MenuKit alone it addresses vanilla slots only ({@link VanillaAddressing}).
+ * MenuKit: Containers installs the kind-aware {@code SlotAddresses.of}, so a created
+ * slot resolves to its created address. With one rule installed in one place, two
+ * observers can never disagree on a slot's address.
  *
- * <p><b>Internal plumbing.</b> Both ends are library-owned: MKC {@link #install}s
- * its kind-aware rule and MK's client observers {@link #addressOf} live slots
- * through it. Consumers address slots by {@link Address}; they neither install nor
- * call this directly.
+ * <p>Both ends are inside the library: Containers {@link #install}s its rule and
+ * MenuKit's observers call {@link #addressOf}. Consumers address slots by
+ * {@link Address} and never call this.
  */
 @ApiStatus.Internal
 public final class ClientSlotAddressing {
 
     private ClientSlotAddressing() {}
 
-    /** Maps a live slot to its {@link Address}; swapped for the kind-aware MKC one when present. */
+    /** Maps a live slot to its {@link Address}. Replaced by Containers' kind-aware rule when it is present. */
     @FunctionalInterface
     public interface SlotAddressFn {
         Address addressOf(AbstractContainerMenu menu, Slot slot);
@@ -52,7 +50,7 @@ public final class ClientSlotAddressing {
 
     private static volatile SlotAddressFn fn = VanillaAddressing::addressOf;
 
-    /** MKC installs its kind-aware {@code SlotAddresses.of} here from common init, on both sides. */
+    /** Containers installs its kind-aware {@code SlotAddresses.of} here from common init, on both sides. */
     public static void install(SlotAddressFn impl) {
         com.trevlar.menukit.api.window.Declarations.requireOpen("ClientSlotAddressing.install");
         fn = Objects.requireNonNull(impl, "impl");

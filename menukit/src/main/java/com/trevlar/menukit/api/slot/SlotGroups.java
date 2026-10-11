@@ -56,10 +56,10 @@ import java.util.concurrent.ConcurrentHashMap;
  *       screen, its mod declares it at init too.</li>
  * </ul>
  *
- * Declaring is idempotent. A group's category is fixed by its first declaration; a
- * later one may add the group to a {@link SlotGroupSet}. A contradiction (a second
- * category, a second set) is logged and ignored, never thrown: a listing is not
- * worth crashing a player's game over.
+ * Declaring the same thing again does nothing. A group's category and its
+ * {@link SlotGroupSet} are fixed by its first declaration. A contradiction (a
+ * second category, a second set, or a set added later) throws, since which
+ * declaration won would otherwise depend on mod load order.
  *
  * <h2>For a settings screen</h2>
  *
@@ -82,7 +82,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * Only the group's own declaration, in the group's own namespace (a category
  * group's category namespace; a created group's panel-id namespace), and only its
- * first. Anything else is an error (§0063): no mod can move another mod's group
+ * first. Anything else is an error, so no mod can move another mod's group
  * between rows, and no row changes under a screen that has already shown it.
  *
  * <h2>Names</h2>
@@ -129,7 +129,7 @@ public final class SlotGroups {
     // A created slot's group, from its address: the address carries its panel's
     // registration key and the group id before its index, so this index (filled as
     // groups are declared) names the group without a menu. The group's category is
-    // then the one recorded on the group (§0063).
+    // then the one recorded on the group.
     private static final Map<String, SlotGroupId.Created> CREATED_BY_ADDRESS = new ConcurrentHashMap<>();
 
     private static String createdKey(net.minecraft.resources.Identifier regKey, String groupId) {
@@ -154,7 +154,7 @@ public final class SlotGroups {
     // Bumped on every change to DECLARED. Readers cache against it (listing() here,
     // SlotOperations.groups(op)), so a declaration invalidates them all at once.
     private static volatile long generation = 0;
-    /** Set by the first read of a row: from then on no group may join a set. */
+    /** The cached listing, rebuilt when {@code generation} has moved on. */
     private static volatile @Nullable List<Entry> listingCache;
     private static long listingGeneration = -1;
 
@@ -164,10 +164,10 @@ public final class SlotGroups {
         return generation;
     }
 
-    // ── The group a slot is in ─────────────────────────────────────────────
+    // The group a slot is in
 
     /**
-     * Port (§0062): the created group a live slot belongs to, or {@code null} for a
+     * The created group a live slot belongs to, or {@code null} for a
      * slot that is not a created one. MenuKit-Containers installs it at init; with
      * MenuKit alone there are no created slots.
      */
@@ -216,7 +216,7 @@ public final class SlotGroups {
         return SlotGroupId.category(category);
     }
 
-    // ── Declaring ──────────────────────────────────────────────────────────
+    // Declaring
 
     /** Declares a group and its category. Idempotent; see the class doc. */
     public static void declare(SlotGroupId id, SlotGroupCategory category) {
@@ -235,7 +235,7 @@ public final class SlotGroups {
 
     /**
      * A group declared as a menu is built ({@code CreatedSlots.onto}): an index MenuKit
-     * fills, idempotent, so it stays legal after declarations freeze (§0063).
+     * fills, idempotent, so it stays legal after declarations freeze.
      */
     @org.jetbrains.annotations.ApiStatus.Internal
     public static void declareDerived(SlotGroupId id, SlotGroupCategory category) {
@@ -245,8 +245,8 @@ public final class SlotGroups {
     private static synchronized void record(SlotGroupId id, SlotGroupCategory category, @Nullable SlotGroupSet set) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(category, "category");
-        // Every conflict is an error at the second declaration (§0063): which of two
-        // mods would win otherwise depends on load order, which Fabric does not define.
+        // Every conflict is an error at the second declaration: which of two mods
+        // would win otherwise depends on load order, which Fabric does not define.
         if (id instanceof SlotGroupId.Category v && !v.category().equals(category)) {
             throw new IllegalStateException("SlotGroups: " + id.asString() + " is named by its category "
                     + v.category() + " and cannot be declared as " + category);
@@ -286,7 +286,7 @@ public final class SlotGroups {
         };
     }
 
-    // ── Reading ────────────────────────────────────────────────────────────
+    // Reading
 
     /** Every declared group: vanilla's in MenuKit's category order, then the rest by id text. */
     public static List<SlotGroupId> all() {
@@ -365,7 +365,7 @@ public final class SlotGroups {
         return List.copyOf(out);
     }
 
-    // ── Names ──────────────────────────────────────────────────────────────
+    // Names
 
     /** The translation key a group's name lives under; see the class doc. */
     public static String langKey(SlotGroupId id) {
@@ -390,7 +390,7 @@ public final class SlotGroups {
         return Component.translatable(langKey(set));
     }
 
-    // ── Source ─────────────────────────────────────────────────────────────
+    // Source
 
     /** The mod a group comes from, or {@code null} for vanilla's; see the class doc. */
     public static @Nullable Component source(SlotGroupId id) {
@@ -423,7 +423,7 @@ public final class SlotGroups {
         return s.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_.-]", ".");
     }
 
-    // ── Order ──────────────────────────────────────────────────────────────
+    // Order
 
     private static final List<SlotGroupCategory> VANILLA_ORDER = SlotGroupCategory.vanilla();
 

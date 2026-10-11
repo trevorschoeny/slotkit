@@ -1,22 +1,18 @@
 package com.trevlar.menukit.api.slot;
 
 /**
- * Pure identity tag identifying a slot group for SlotGroupContext panel
- * targeting. A category says <i>"treat this slot group as PLAYER_INVENTORY
- * (or whatever) for targeting purposes."</i> Categories carry no behavior;
- * where to anchor and what to render lives on the adapter / panel.
- *
- * <p>See {@code Design Docs/Phase 12.5/M8_FOUR_CONTEXT_MODEL.md} §5.2 for
- * the identity-not-behavior design and §6 for the vanilla-v1 coverage
- * inventory this class hosts as public constants.
+ * An identity tag for a slot group, used to target slot-group panels. A category
+ * says "treat this slot group as PLAYER_INVENTORY (or whatever) for targeting".
+ * Categories carry no behavior; where to anchor and what to render belong to the
+ * adapter and the panel.
  *
  * <p><b>Mint your own freely.</b> A category is just a namespaced name, so a mod
  * declares one with {@code new SlotGroupCategory("mymod", "pouch")} whenever no
  * vanilla category would give another mod the right answer about its slots. Pick a
- * vanilla category instead when you want to inherit its meaning, a pocket that
+ * vanilla category instead when you want to inherit its meaning: a pocket that
  * should turn up in every inventory search declares {@link #PLAYER_INVENTORY}, and
- * gets found by mods that have never heard of pockets. That choice is the whole
- * interoperability decision, and it is the consumer's to make.
+ * gets found by mods that have never heard of pockets. That choice decides how the
+ * slots work with other mods, and it is the consumer's to make.
  *
  * <p>Every category, vanilla or minted, is listed by
  * {@code SlotGroupCategories.all()}; the slots in one on an open menu are
@@ -26,7 +22,7 @@ package com.trevlar.menukit.api.slot;
  * ({@code SlotGroupCategories.register(MyMenu.class, ...)}, first-registration-wins;
  * see {@link com.trevlar.menukit.api.slot.SlotGroupCategories}).
  *
- * <p><b>Identity only, still.</b> A category says what a slot <em>is</em>, never
+ * <p><b>Identity only.</b> A category says what a slot <em>is</em>, never
  * what may be done to it. What a bulk shortcut may do is an
  * {@linkplain com.trevlar.menukit.api.window.SlotOperations operation}, declared
  * separately, though a category may carry inherent operation defaults for the
@@ -36,13 +32,11 @@ import java.util.List;
 
 public record SlotGroupCategory(String namespace, String path) {
 
-    // Vanilla 26.2 categories, exhaustive coverage per M8 Principle 11's
-    // exhaustive-coverage exception (low per-item cost + high migration cost
-    // if a consumer discovers a category that wasn't shipped). Each has a
-    // corresponding resolver registered in MenuKitClient; see §6 of the
-    // M8 design doc for the full mapping table.
+    // Every vanilla 26.2 category. Each costs little to ship, while a consumer
+    // finding one missing later would be costly to migrate. Each has a resolver
+    // registered in MenuKitClient.
 
-    // ── Player-scoped ──────────────────────────────────────────────────
+    // Player-scoped
 
     public static final SlotGroupCategory PLAYER_INVENTORY =
             new SlotGroupCategory("menukit", "player_inventory");
@@ -53,7 +47,7 @@ public record SlotGroupCategory(String namespace, String path) {
     public static final SlotGroupCategory PLAYER_OFFHAND =
             new SlotGroupCategory("menukit", "player_offhand");
 
-    // ── Storage containers ─────────────────────────────────────────────
+    // Storage containers
 
     public static final SlotGroupCategory CHEST_STORAGE =
             new SlotGroupCategory("menukit", "chest_storage");
@@ -64,7 +58,7 @@ public record SlotGroupCategory(String namespace, String path) {
     public static final SlotGroupCategory HOPPER_STORAGE =
             new SlotGroupCategory("menukit", "hopper_storage");
 
-    // ── Crafting family ────────────────────────────────────────────────
+    // Crafting family
 
     public static final SlotGroupCategory CRAFTING_INPUT =
             new SlotGroupCategory("menukit", "crafting_input");
@@ -75,7 +69,7 @@ public record SlotGroupCategory(String namespace, String path) {
     public static final SlotGroupCategory CRAFTER_RESULT =
             new SlotGroupCategory("menukit", "crafter_result");
 
-    // ── Furnace family (shared across furnace / smoker / blast furnace) ─
+    // Furnace family (furnace, smoker and blast furnace share these)
 
     public static final SlotGroupCategory FURNACE_INPUT =
             new SlotGroupCategory("menukit", "furnace_input");
@@ -84,7 +78,7 @@ public record SlotGroupCategory(String namespace, String path) {
     public static final SlotGroupCategory FURNACE_OUTPUT =
             new SlotGroupCategory("menukit", "furnace_output");
 
-    // ── Utility blocks with slots ──────────────────────────────────────
+    // Utility blocks with slots
 
     public static final SlotGroupCategory ENCHANTING_INPUT =
             new SlotGroupCategory("menukit", "enchanting_input");
@@ -131,7 +125,7 @@ public record SlotGroupCategory(String namespace, String path) {
     public static final SlotGroupCategory CARTOGRAPHY_OUTPUT =
             new SlotGroupCategory("menukit", "cartography_output");
 
-    // ── Brewing ────────────────────────────────────────────────────────
+    // Brewing
 
     public static final SlotGroupCategory BREWING_POTIONS =
             new SlotGroupCategory("menukit", "brewing_potions");
@@ -140,19 +134,19 @@ public record SlotGroupCategory(String namespace, String path) {
     public static final SlotGroupCategory BREWING_FUEL =
             new SlotGroupCategory("menukit", "brewing_fuel");
 
-    // ── Trading ────────────────────────────────────────────────────────
+    // Trading
 
     public static final SlotGroupCategory MERCHANT_PAYMENT =
             new SlotGroupCategory("menukit", "merchant_payment");
     public static final SlotGroupCategory MERCHANT_RESULT =
             new SlotGroupCategory("menukit", "merchant_result");
 
-    // ── Beacon ─────────────────────────────────────────────────────────
+    // Beacon
 
     public static final SlotGroupCategory BEACON_PAYMENT =
             new SlotGroupCategory("menukit", "beacon_payment");
 
-    // ── Mount (shared via AbstractMountInventoryMenu) ──────────────────
+    // Mount (shared via AbstractMountInventoryMenu)
 
     public static final SlotGroupCategory MOUNT_SADDLE =
             new SlotGroupCategory("menukit", "mount_saddle");

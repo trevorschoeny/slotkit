@@ -3,26 +3,20 @@ package com.trevlar.menukit.api.slot;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Where items live. Narrow data interface, get, set, size, markDirty.
+ * Where items live: get, set, size and markDirty.
  *
- * <p>Storage is deliberately minimal. It does not know who owns it, when
- * to save, or which player it belongs to. Those concerns live on
- * {@code CustomContainerMenu} or a
- * binding registry, never here.
+ * <p>Storage does not know who owns it, when to save, or which player it belongs
+ * to. Those belong to {@code CustomContainerMenu} or a binding registry.
  *
- * <p>Each Storage is adapted internally to vanilla's {@code Container}
- * interface by the handler during slot construction (via
- * {@code StorageContainerAdapter}). Consumers never see {@code Container};
- * they see Storage.
+ * <p>When slots are built, each Storage is wrapped in vanilla's {@code Container}
+ * interface ({@code StorageContainerAdapter}). Consumers see only Storage.
  *
- * <p>For persistent storage (BlockEntity-scoped, Player-attached, Item-attached),
- * see {@code StorageAttachment}. M7's factories produce Storage views
- * backed by Fabric attachments or DataComponents with auto-persistence.
- * For session-only storage, see {@code EphemeralStorage}. For virtual
- * observer views, see {@link VirtualStorage}.
+ * <p>For persistent storage (on a block entity, a player or an item), see
+ * {@code StorageAttachment}, whose factories produce Storage views backed by Fabric
+ * attachments or data components that save themselves. For session-only storage,
+ * see {@code EphemeralStorage}. For virtual observer views, see
+ * {@link VirtualStorage}.
  *
- * See {@code StorageAttachment}
- * See {@code EphemeralStorage}
  * @see VirtualStorage
  */
 public interface Storage {
@@ -36,6 +30,6 @@ public interface Storage {
     /** Returns the number of slots in this storage. */
     int size();
 
-    /** Marks this storage as dirty (contents changed). */
+    /** Marks this storage as changed. */
     void markDirty();
 }

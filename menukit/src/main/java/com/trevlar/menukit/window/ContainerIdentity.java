@@ -31,7 +31,7 @@ import java.util.function.Function;
  * a chest slot's {@link Address} the same whether it is reached through its menu,
  * by a hopper, or after a reopen.
  *
- * <p>Lives in MenuKit, both sides (§0062). Until 6.0.0 Containers installed it
+ * <p>Lives in MenuKit, on both sides. Until 6.0.0 Containers installed it
  * through a port, so a vanilla slot's address changed depending on whether
  * Containers was loaded.
  *
@@ -49,7 +49,7 @@ import java.util.function.Function;
  * </ol>
  *
  * A player's ender chest resolves to its player (the player records it as it is
- * built, since the container has no owner link; §0067). Horse-family storage has
+ * built, since the container has no owner link). Horse-family storage has
  * no link back to its entity and falls through to no identity, so its slots are
  * addressed through the menu. A double chest splits its global index to the half
  * that owns the slot.
@@ -72,7 +72,6 @@ public final class ContainerIdentity {
         EXTENSIONS.add(Objects.requireNonNull(extension, "extension"));
     }
 
-    /** A modded block entity class resolves through {@code resolver} instead of its position. */
     // A player's ender chest container carries no link to its player, so the player
     // records it as it is built (MKEnderChestOwnerMixin). Weak keys: the container goes
     // with its player. Server side is what reads it; the client's ender chest menu is
@@ -85,6 +84,7 @@ public final class ContainerIdentity {
         ENDER_OWNERS.put(Objects.requireNonNull(container, "container"), Objects.requireNonNull(owner, "owner"));
     }
 
+    /** A modded block entity class resolves through {@code resolver} instead of its position. */
     public static <T extends BlockEntity> void registerBlockEntityResolver(
             Class<T> type, Function<T, PersistentContainerKey> resolver) {
         com.trevlar.menukit.api.window.Declarations.requireOpen("a block-entity container resolver for " + type.getName());
@@ -176,7 +176,7 @@ public final class ContainerIdentity {
         return Optional.empty();
     }
 
-    // ── The text a key becomes in an address ───────────────────────────────
+    // The text a key becomes in an address.
 
     /** A slot's owner as the scope id an {@link Address} carries, and its local index. */
     public record Scoped(String scopeId, int localIndex) {}
@@ -188,7 +188,7 @@ public final class ContainerIdentity {
     }
 
     // Built once per key and reused, since addresses are minted per slot per frame.
-    // ponytail: bounded by clearing at 4096 keys; an LRU if a server ever churns more.
+    // Bounded by clearing at 4096 keys; switch to an LRU if a server ever churns more.
     private static final int MAX_IDS = 4096;
     private static final Map<PersistentContainerKey, String> IDS = new ConcurrentHashMap<>();
 

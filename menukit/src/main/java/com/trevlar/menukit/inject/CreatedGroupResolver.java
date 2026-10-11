@@ -11,15 +11,15 @@ import org.jetbrains.annotations.ApiStatus;
 import java.util.List;
 
 /**
- * The universal seat: reports the created slot groups present on <em>any</em>
- * menu. MenuKit-Containers installs one implementation at init; MenuKit alone
- * there are no created slots and the seat stays empty.
+ * Reports the created slot groups present on any menu. MenuKit-Containers
+ * installs the one implementation at init. With MenuKit alone there are no created
+ * slots and nothing is installed.
  *
  * <p>Distinct from {@link SlotGroupResolver}, which answers per menu class and
  * per category, because a created group is neither. It sits on whatever menu the
  * player opened, so no menu class names it, and it must report itself as its own
- * group rather than being folded into its category — several created groups can
- * share one category and they do not share a bounding box.
+ * group rather than being folded into its category: several created groups can
+ * share one category, and they do not share a bounding box.
  */
 @ApiStatus.Internal
 @FunctionalInterface

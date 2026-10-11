@@ -14,7 +14,7 @@ import java.util.UUID;
  *
  * <p>Each variant names a stable owner (player UUID, block position and dimension,
  * entity UUID, or a mod-defined scope) that the library uses to find the slot's
- * state in a Fabric attachment on the natural owner (§0034).
+ * state in a Fabric attachment on that owner.
  */
 public sealed interface PersistentContainerKey {
 
@@ -36,7 +36,7 @@ public sealed interface PersistentContainerKey {
      * library; the mod defines its shape. {@code resolverId} identifies the
      * mod's registered resolver and attachment binding.
      *
-     * <p>An immutable value (§0067): the payload is copied in and copied out, so a
+     * <p>Immutable: the payload is copied in and copied out, so a
      * key used as a map key never changes under the map.
      */
     record Modded(Identifier resolverId, CompoundTag payload)

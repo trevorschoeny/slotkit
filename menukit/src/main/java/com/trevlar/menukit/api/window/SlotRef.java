@@ -56,7 +56,7 @@ public record SlotRef(Container container, int containerSlot, @Nullable Slot slo
 
     /** A slot reached through an open menu: the click and shift-click seams. */
     public static SlotRef of(AbstractContainerMenu menu, Slot slot, @Nullable Player player) {
-        Slot target = Slots.target(slot); // identity off the creative wrapper, as everywhere
+        Slot target = Slots.target(slot); // identity comes from under the creative wrapper
         return new SlotRef(target.container, target.getContainerSlot(), slot, menu, player,
                 categoryOf(menu, slot), addressOf(menu, slot));
     }
@@ -87,7 +87,7 @@ public record SlotRef(Container container, int containerSlot, @Nullable Slot slo
     // A menu's slot list is fixed at construction (Containers appends its created
     // slots there too), so its category map is computed once per menu instance and
     // read for every slot a shift-click walks. Weak keys: a menu lives as long as
-    // its screen. ponytail: no invalidation; if a menu ever grows slots after it
+    // its screen. Nothing invalidates it; if a menu ever gains slots after it
     // opens, key this on (menu, slots.size()).
     private static final Map<AbstractContainerMenu, Map<Slot, SlotGroupCategory>> CATEGORIES =
             Collections.synchronizedMap(new WeakHashMap<>());

@@ -34,14 +34,11 @@ import java.util.Map;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Library-shipped {@link SlotGroupResolver} registrations for every vanilla
- * 26.2 {@link AbstractContainerMenu} whose slots map to named categories
- * in the M8 v1 coverage catalog. See
- * {@code Design Docs/Phase 12.5/M8_FOUR_CONTEXT_MODEL.md} §6 for the full
- * category list and §11.2 for the resolver count.
+ * The {@link SlotGroupResolver}s MenuKit ships for every vanilla 26.2
+ * {@link AbstractContainerMenu} whose slots map to named categories.
  *
- * <p>Slot-index ranges verified against vanilla source at
- * {@code net.minecraft.world.inventory.*Menu} in the Loom-cached decompile.
+ * <p>Slot-index ranges were checked against vanilla's
+ * {@code net.minecraft.world.inventory.*Menu} classes in the Loom decompile.
  * Most menus follow a "N specific slots + 27 player inventory + 9 player
  * hotbar" pattern; variable-size menus (ChestMenu,
  * HorseInventoryMenu) derive their specific-slot count from
@@ -50,9 +47,8 @@ import org.jetbrains.annotations.ApiStatus;
  * <p>Each resolver returns an immutable map keyed by {@link SlotGroupCategory},
  * whose values are slot-index arrays into {@code menu.slots}
  * ({@link SlotGroupCategories#of} dereferences them to {@code Slot}s). Empty
- * arrays are omitted per {@link SlotGroupResolver}'s contract. These library
- * resolvers express the index ranges directly — the same knowledge the per-menu
- * comments document.
+ * arrays are omitted, as {@link SlotGroupResolver} requires. The index ranges are
+ * written out directly, with each menu's layout in the comment above it.
  */
 @ApiStatus.Internal
 public final class VanillaSlotGroupResolvers {
@@ -60,7 +56,7 @@ public final class VanillaSlotGroupResolvers {
     private VanillaSlotGroupResolvers() {}
 
     /**
-     * Called once from {@code MK.init}, on both sides. Registers a resolver for
+     * Called once from {@code MenuKit.init}, on both sides. Registers a resolver for
      * each vanilla menu class that exists on a server, so a vanilla slot has its
      * category there too: the operations cascade, {@code AppliesTo} and
      * {@code SlotGroups.of} resolve on the server that enforces them. (Until 6.0.0
@@ -76,7 +72,7 @@ public final class VanillaSlotGroupResolvers {
         registerMounts();
     }
 
-    // ── Shared helpers ──────────────────────────────────────────────────
+    // Shared helpers
 
     /** A contiguous index range {@code [fromInclusive, toExclusive)} as an {@code int[]}. */
     static int[] range(int fromInclusive, int toExclusive) {
@@ -95,7 +91,7 @@ public final class VanillaSlotGroupResolvers {
         out.put(SlotGroupCategory.PLAYER_HOTBAR, range(startIndex + 27, startIndex + 36));
     }
 
-    // ── Player inventory (survival + creative INVENTORY tab) ────────────
+    // Player inventory (survival, and creative's inventory tab), and storage
 
     private static void registerPlayerAndStorage() {
         // InventoryMenu: 1 result + 4 crafting (2×2) + 4 armor + 27 inv + 9 hotbar + 1 offhand
@@ -146,7 +142,7 @@ public final class VanillaSlotGroupResolvers {
         });
     }
 
-    // ── Crafting family ────────────────────────────────────────────────
+    // Crafting family
 
     private static void registerCraftingFamily() {
         // CraftingMenu: 1 result + 9 crafting (3×3) + 27 inv + 9 hotbar = 46 slots
@@ -169,12 +165,12 @@ public final class VanillaSlotGroupResolvers {
         });
     }
 
-    // ── Furnace family ──────────────────────────────────────────────────
+    // Furnace family
 
     private static void registerFurnaceFamily() {
         // AbstractFurnaceMenu: slot 0 input, 1 fuel, 2 output. Then 27 inv + 9 hotbar.
-        // Same layout for FurnaceMenu, SmokerMenu, BlastFurnaceMenu — three
-        // resolvers register identically.
+        // FurnaceMenu, SmokerMenu and BlastFurnaceMenu share the layout, so one
+        // resolver registers for all three.
         SlotGroupResolver furnaceResolver = menu -> {
             Map<SlotGroupCategory, int[]> out = new LinkedHashMap<>();
             out.put(SlotGroupCategory.FURNACE_INPUT, range(0, 1));
@@ -188,7 +184,7 @@ public final class VanillaSlotGroupResolvers {
         SlotGroupCategories.register(BlastFurnaceMenu.class, furnaceResolver);
     }
 
-    // ── Utility blocks with slots ───────────────────────────────────────
+    // Utility blocks with slots
 
     private static void registerUtilityBlocks() {
         // EnchantmentMenu: slot 0 input, slot 1 lapis. Then 27 inv + 9 hotbar.
@@ -260,7 +256,7 @@ public final class VanillaSlotGroupResolvers {
         });
     }
 
-    // ── Brewing / Trading / Beacon ──────────────────────────────────────
+    // Brewing, trading and beacon
 
     private static void registerBrewingTradingBeacon() {
         // BrewingStandMenu: slots 0-2 potions, 3 ingredient, 4 fuel. Then inv.
@@ -291,7 +287,7 @@ public final class VanillaSlotGroupResolvers {
         });
     }
 
-    // ── Mounts (horse + nautilus via AbstractMountInventoryMenu) ────────
+    // Mounts (horse and nautilus, through AbstractMountInventoryMenu)
 
     private static void registerMounts() {
         // HorseInventoryMenu: slot 0 saddle, 1 body armor, then optional storage
@@ -319,7 +315,5 @@ public final class VanillaSlotGroupResolvers {
             return Collections.unmodifiableMap(out);
         });
     }
-
-    // ── Creative ItemPickerMenu — dynamic (per-tab) resolution ──────────
 
 }

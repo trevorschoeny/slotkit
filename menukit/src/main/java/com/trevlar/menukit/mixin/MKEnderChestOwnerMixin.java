@@ -13,7 +13,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * Records whose ender chest a player's {@link PlayerEnderChestContainer} is, as the
- * player is built, so {@link ContainerIdentity} resolves it to that player (§0067).
+ * player is built, so {@link ContainerIdentity} resolves it to that player.
  * Vanilla's container keeps no link to its player.
  */
 @Mixin(Player.class)
