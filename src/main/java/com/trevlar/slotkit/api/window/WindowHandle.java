@@ -14,21 +14,20 @@ import java.util.Objects;
  * <ul>
  *   <li><b>Generic</b> (here, for every kind): {@link #set} and {@link #behavior}
  *       reach any behavior, including ones added later, with no new handle code.</li>
- *   <li><b>Named methods</b> (the typed subclasses): {@code SlotHandle.gate(...)},
- *       {@code PanelHandle.opacity(...)}, thin wrappers over the generic layer,
- *       limited per kind so a slot verb on a panel handle does not compile.</li>
+ *   <li><b>Named methods</b> (the typed subclass): {@code SlotHandle.gate(...)},
+ *       thin wrappers over the generic layer.</li>
  * </ul>
  *
  * <p>The handle never returns the raw backing (no {@code getSlot()}). Reads go
  * through {@link #behavior}, which resolves the cascade and is never null. Writes
  * go to {@link WindowEngine#set}.
  *
- * <p>Sealed to the three kinds that exist; a new kind would add a subclass. A
+ * <p>Sealed to the one kind it serves, slots; a new kind would add a subclass. A
  * handle is resolved on each call, so one consumer line addresses the same thing
  * across reopens, across sides, and for vanilla and created slots alike.
  */
 public abstract sealed class WindowHandle
-        permits SlotHandle, ElementHandle, PanelHandle {
+        permits SlotHandle {
 
     final Address address;
 

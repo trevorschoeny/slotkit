@@ -1,17 +1,16 @@
 package com.trevlar.slotkit.core;
 
-import com.trevlar.menukit.inject.SlotHoverResult;
-import com.trevlar.menukit.inject.SlotScreenHook;
+import com.trevlar.menukit.api.host.SlotHoverResult;
+import com.trevlar.menukit.api.host.SlotScreenHook;
 
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 
 import java.util.Set;
 
 /**
- * Containers' implementation of MenuKit's {@link com.trevlar.menukit.inject.SlotScreenHook}.
- * This is where input for registered slots hosted in panels plugs into MenuKit's
- * screen dispatch. Registered with {@code SlotScreenDispatcher.setHook} at client
- * init.
+ * SlotKit's implementation of MenuKit's {@link SlotScreenHook}: where input for
+ * registered slots hosted in panels plugs into MenuKit's screen dispatch. Installed
+ * once ({@link #INSTANCE}) with {@code SlotScreenHook.install} at client init.
  *
  * <p>It handles input and the per-frame park. Vanilla draws a registered slot in its
  * own slot pass at the {@code Slot.x/y} its {@code SlotElement} wrote, so this hook
@@ -28,6 +27,11 @@ import java.util.Set;
  * never constructs this.
  */
 public final class CreatedSlotScreenHook implements SlotScreenHook {
+
+    /** The one hook, installed into MenuKit at client init and asked directly by SlotKit's own mixins. */
+    public static final CreatedSlotScreenHook INSTANCE = new CreatedSlotScreenHook();
+
+    private CreatedSlotScreenHook() {}
 
     @Override
     public boolean isCreated(net.minecraft.world.inventory.Slot slot) {

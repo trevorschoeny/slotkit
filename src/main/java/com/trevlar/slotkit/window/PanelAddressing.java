@@ -6,9 +6,9 @@ import net.minecraft.resources.Identifier;
 import java.util.Locale;
 
 /**
- * Mints the {@link Address} of a panel and of a panel element. The counterparts
- * are {@link VanillaAddressing} for vanilla slots and MenuKit: Containers'
- * created-slot adapter for created slots.
+ * The panel subtree's addressing: the family and the panel reg key a created slot's
+ * address nests under. The counterpart is {@link VanillaAddressing} for vanilla
+ * slots.
  *
  * <h2>One family for the whole panel subtree</h2>
  *
@@ -29,26 +29,14 @@ public final class PanelAddressing {
             ScreenFamilyKey.of(Identifier.fromNamespaceAndPath("menukit", "panel"));
 
     /**
-     * A panel's id as a deterministic {@link Identifier}. Panel and element minting
-     * (here) and created-slot minting (MenuKit: Containers' adapter) share this one
-     * encoding, so a created slot and a {@code PanelHandle} for its panel produce
-     * the same {@code RegToken}. The owner-chain cascade depends on it.
+     * A panel's id as a deterministic {@link Identifier}. The encoding is saved
+     * text (a created slot's address holds it), so it never changes.
      */
     public static Identifier regKey(String panelId) {
         Identifier parsed = Identifier.tryParse(panelId);
         if (parsed != null) return parsed;
         return Identifier.fromNamespaceAndPath("menukit",
                 "panel/" + panelId.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_.-]", "_"));
-    }
-
-    /** The {@link Address} of a panel by id. */
-    public static Address ofPanel(String panelId) {
-        return Address.panel(PANEL_FAMILY, OwnerScope.primary(), regKey(panelId));
-    }
-
-    /** The {@link Address} of a panel element by ids. */
-    public static Address ofElement(String panelId, String elementDeclId) {
-        return Address.panelElement(PANEL_FAMILY, OwnerScope.primary(), regKey(panelId), elementDeclId);
     }
 
 }

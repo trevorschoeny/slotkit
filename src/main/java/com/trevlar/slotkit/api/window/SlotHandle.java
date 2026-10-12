@@ -5,7 +5,7 @@ package com.trevlar.slotkit.api.window;
  * {@link WindowHandle#set}. The slot author's server rules are {@link #gate} and
  * {@link #binding}; operations are set by key
  * ({@code set(BehaviorKeys.SHIFT_CLICK_IN, TriBool.FALSE)}). The client-observed
- * reactions ({@link ReactiveHook}) and visibility have shorthand methods here too.
+ * reactions ({@link ReactiveHook}) have shorthand methods here too.
  */
 public final class SlotHandle extends WindowHandle {
 
@@ -25,18 +25,7 @@ public final class SlotHandle extends WindowHandle {
         super(address);
     }
 
-    /** Drives this slot's client visibility by a {@link VisibilityRule}. A created slot's contents keep syncing either way. */
-    public SlotHandle visibility(VisibilityRule rule) {
-        set(BehaviorKeys.VISIBILITY, rule);
-        return this;
-    }
-
-    /** Shows or hides this slot on the client (a constant rule). */
-    public SlotHandle visibility(boolean visible) {
-        return visibility(VisibilityRule.of(visible));
-    }
-
-    /** Client-observed reaction when synced contents grow. UI feedback only; works with MenuKit alone. */
+    /** Client-observed reaction when synced contents grow. UI feedback only; works on any server. */
     public SlotHandle onInsertObserved(ReactiveHook hook) {
         set(BehaviorKeys.ON_INSERT_OBSERVED, hook);
         return this;

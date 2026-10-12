@@ -2,7 +2,7 @@ package com.trevlar.slotkit.api.group;
 
 import com.trevlar.slotkit.api.group.SlotGroupPanelAdapter;
 import com.trevlar.slotkit.core.Slots;
-import com.trevlar.menukit.mixin.AbstractContainerScreenAccessor;
+import com.trevlar.slotkit.mixin.AbstractContainerScreenAccessor;
 
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.entity.player.Inventory;

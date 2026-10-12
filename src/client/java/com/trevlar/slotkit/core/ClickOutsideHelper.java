@@ -1,6 +1,5 @@
 package com.trevlar.slotkit.core;
 
-import com.trevlar.menukit.inject.SlotScreenDispatcher;
 
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.world.inventory.Slot;
@@ -39,7 +38,7 @@ public final class ClickOutsideHelper {
         // scan below can never see it. Ask the same resolution getHoveredSlot uses,
         // which knows the runtime position and unwraps the creative wrapper. If it
         // claims a slot or an in-panel point, the click is on the menu.
-        if (SlotScreenDispatcher.fireResolveHover(self, mouseX, mouseY).handled()) {
+        if (CreatedSlotScreenHook.INSTANCE.resolveHover(self, mouseX, mouseY).handled()) {
             return true;
         }
 

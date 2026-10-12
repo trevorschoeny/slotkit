@@ -4,17 +4,14 @@ import com.trevlar.menukit.api.panel.Panel;
 import com.trevlar.menukit.api.panel.PanelPosition;
 import com.trevlar.slotkit.api.slot.CreatedSlot;
 import com.trevlar.menukit.api.element.PanelElement;
-import com.trevlar.menukit.core.PanelRendering;
 import com.trevlar.menukit.api.panel.PanelStyle;
 import com.trevlar.menukit.api.panel.ScreenKind;
 import com.trevlar.slotkit.api.slot.CreatedSlotGroup;
-import com.trevlar.menukit.core.*;
 import com.trevlar.slotkit.core.*;
 import com.trevlar.slotkit.core.*;
-import com.trevlar.menukit.inject.LayerPlan;
-import com.trevlar.menukit.inject.PanelHost;
+import com.trevlar.menukit.api.host.OwnHost;
+import com.trevlar.menukit.api.element.SlotRendering;
 import com.trevlar.menukit.api.panel.Reference;
-import com.trevlar.menukit.inject.ScreenPanelRegistry;
 import com.trevlar.slotkit.mixin.SlotPositionAccessor;
 
 import com.mojang.blaze3d.platform.InputConstants;
@@ -41,7 +38,7 @@ import java.util.function.Consumer;
 /**
  * Client-side partner to {@link CustomContainerMenu}: a standalone screen whose panels
  * hold slot groups. Owns slot positioning, hover events, key actions and drag modes;
- * placement, render and element input belong to its {@link PanelHost}.
+ * placement, render and element input belong to its MenuKit {@link OwnHost}.
  *
  * <h3>Its panels</h3>
  * The handler knows each panel's id, slot groups and whether the server shows it; how
@@ -57,9 +54,8 @@ import java.util.function.Consumer;
  * screen tells the host what it cannot know on its own: a panel's content size includes its slot grid,
  * its slot frames draw between its background and its elements, the main panel
  * auto-fits its height only when it holds no slots, and a panel's own slots stay
- * live under the panel's own claim. The host is attached to
- * {@link ScreenPanelRegistry}, so claims and modals see these panels together with
- * anything injected onto this screen.
+ * live under the panel's own claim. The host is attached to MenuKit's screen, so
+ * claims and modals see these panels together with anything injected onto it.
  *
  * <h3>Frame order</h3>
  * <ol>
@@ -78,7 +74,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     private static final int SLOT_SIZE = 18;
 
     /** Places, renders and routes input for this screen's panels. */
-    private final PanelHost host;
+    private final OwnHost host;
 
     /** One client panel per handler panel, in the handler's order. */
     private final List<Panel> panels;
@@ -87,7 +83,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     private final Map<String, Boolean> lastShown = new LinkedHashMap<>();
 
     /** Panel id -> this frame's placement (absolute screen coordinates). Rebuilt each frame. */
-    private Map<String, PanelHost.Placed> placements = new LinkedHashMap<>();
+    private Map<String, OwnHost.Placement> placements = new LinkedHashMap<>();
 
     // The CreatedSlot hovered last frame, for enter and exit events. Also readable by
     // consumers as the current hover.
@@ -159,9 +155,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         super(handler, inventory, title);
         // A container screen (it is an AbstractContainerScreen), so its panels draw
         // in the container look, as every inventory's do (ScreenKind.of).
-        this.host = PanelHost.standalone(ScreenKind.CONTAINER,
-                        () -> new PanelHost.Frame(this.width, this.height, null),
-                        PanelHost.TitleBand.IN_FRAME)
+        this.host = OwnHost.of(this, ScreenKind.CONTAINER, OwnHost.TitleBand.IN_FRAME)
                 .contentSize(this::contentSize)
                 // A slot-bearing main can't scroll: its slots sit in absolute
                 // coordinates with no scroll hook. A pure-element main can.
@@ -173,7 +167,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
                 panels.stream().map(Panel::getPosition).toList());
         for (int i = 0; i < panels.size(); i++) {
             Panel panel = panels.get(i);
-            host.add(panel, positions.get(i), panel.interiorPadding(), "", i);
+            host.add(panel, positions.get(i), panel.interiorPadding());
             lastShown.put(panel.id(), panel.isVisible());
         }
         // Initial layout sets the image size before init() runs.
@@ -218,13 +212,12 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         // Claims and modals see this screen's panels; widget-wrapping elements
         // (TextField etc.) register their vanilla widget (detach-then-attach, so a
         // resize re-registers them).
-        ScreenPanelRegistry.attachOwnHost(this, host);
-        host.attach(this);
+        host.attach();
     }
 
     @Override
     public void removed() {
-        host.detach(this);
+        host.detach();
         super.removed();
     }
 
@@ -271,9 +264,9 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
      * chrome and overlays), vanilla's 176x100 minimum stays, centred.
      */
     private void computeLayout() {
-        PanelHost.Layout layout = host.layout();
-        Map<String, PanelHost.Placed> byId = new LinkedHashMap<>();
-        for (PanelHost.Placed p : layout.placed()) byId.put(p.panel().id(), p);
+        OwnHost.Layout layout = host.layout();
+        Map<String, OwnHost.Placement> byId = new LinkedHashMap<>();
+        for (OwnHost.Placement p : layout.placed()) byId.put(p.panel().id(), p);
         this.placements = byId;
 
         Reference main = layout.main();
@@ -292,7 +285,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         // The "Inventory" label: 8px right of the player panel's left edge and 11px
         // above its top, the standard vanilla offsets, in leftPos/topPos-relative
         // coordinates (vanilla draws labels translated by leftPos/topPos).
-        PanelHost.Placed player = placements.get("player");
+        OwnHost.Placement player = placements.get("player");
         if (player != null) {
             this.inventoryLabelX = player.x() - mkcLeftPos + 8;
             this.inventoryLabelY = player.y() - mkcTopPos - 11;
@@ -314,7 +307,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
      */
     private void positionSlots() {
         for (Panel panel : panels) {
-            PanelHost.Placed placed = placements.get(panel.id());
+            OwnHost.Placement placed = placements.get(panel.id());
             int groupOffsetY = 0;
             for (CreatedSlotGroup group : menu.getGroupsFor(panel.id())) {
                 int cols = group.getColumns();
@@ -328,10 +321,14 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
                     Slot slot = menu.slots.get(s);
                     if (placed != null) {
                         // +1: slot.x/y name the 16x16 item box, 1px inside the 18x18 frame.
+                        // The content origin is the placement inset by the padding this
+                        // screen gave the panel when it added it.
+                        int contentX = placed.x() + panel.interiorPadding();
+                        int contentY = placed.y() + panel.interiorPadding();
                         ((SlotPositionAccessor) slot).sk$setX(
-                                placed.contentX() - mkcLeftPos + col * SLOT_SIZE + 1);
+                                contentX - mkcLeftPos + col * SLOT_SIZE + 1);
                         ((SlotPositionAccessor) slot).sk$setY(
-                                placed.contentY() - mkcTopPos + groupOffsetY + row * SLOT_SIZE + extraY + 1);
+                                contentY - mkcTopPos + groupOffsetY + row * SLOT_SIZE + extraY + 1);
                     } else {
                         ((SlotPositionAccessor) slot).sk$setX(-9999);
                         ((SlotPositionAccessor) slot).sk$setY(-9999);
@@ -348,12 +345,12 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
      * The host's decoration hook: a panel's slot frames, drawn after its background
      * and before its elements (18x18 frames around the 16x16 item boxes).
      */
-    private void drawSlotFrames(GuiGraphicsExtractor graphics, PanelHost.Placed placed) {
+    private void drawSlotFrames(GuiGraphicsExtractor graphics, OwnHost.Placement placed) {
         for (CreatedSlotGroup group : menu.getGroupsFor(placed.panel().id())) {
             for (int s = group.getFlatIndexStart(); s < group.getFlatIndexEnd(); s++) {
                 Slot slot = menu.slots.get(s);
                 if (!slot.isActive()) continue;
-                PanelRendering.renderSlotBackground(graphics, leftPos + slot.x - 1, topPos + slot.y - 1);
+                SlotRendering.drawSlotBackground(graphics, leftPos + slot.x - 1, topPos + slot.y - 1, SlotRendering.DEFAULT_SIZE, false);
             }
         }
     }
@@ -393,8 +390,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         computeLayout();
         recenter();
         positionSlots();
-        host.render(graphics, mouseX, mouseY, LayerPlan.Layer.FLOW,
-                ScreenPanelRegistry.pointerPolicy(this, mouseX, mouseY));
+        host.renderFlow(graphics, mouseX, mouseY);
         super.extractContents(graphics, mouseX, mouseY, delta);
     }
 
@@ -599,7 +595,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     @Override
     protected boolean hasClickedOutside(double mouseX, double mouseY,
                                         int leftPos, int topPos) {
-        for (PanelHost.Placed placed : placements.values()) {
+        for (OwnHost.Placement placed : placements.values()) {
             if (placed.contains(mouseX, mouseY)) return false;
         }
         return super.hasClickedOutside(mouseX, mouseY, leftPos, topPos);
@@ -611,7 +607,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
      */
     @Override
     public boolean keyPressed(KeyEvent event) {
-        if (host.keyPressed(event.key(), event.keycode(), event.modifiers(), host.topmostModal() != null)) {
+        if (host.keyPressed(event.key(), event.keycode(), event.modifiers())) {
             return true;
         }
         KeyAction action = keyRegistry.get(event.key());
@@ -631,8 +627,8 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         // another element takes the click.
         host.notifyOutsideClick(event.x(), event.y());
 
-        boolean modal = host.topmostModal() != null;
-        if (host.mouseClicked(event.x(), event.y(), event.button(), modal)) {
+        boolean modal = host.hasModal();
+        if (host.mouseClicked(event.x(), event.y(), event.button())) {
             return true;
         }
         // A modal of this screen's own claims everything.
@@ -707,7 +703,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY,
                                   double scrollX, double scrollY) {
-        if (host.mouseScrolled(mouseX, mouseY, scrollX, scrollY, host.topmostModal() != null)) {
+        if (host.mouseScrolled(mouseX, mouseY, scrollX, scrollY)) {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);

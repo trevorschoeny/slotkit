@@ -13,7 +13,7 @@ import com.trevlar.menukit.api.element.PanelElement;
 import com.trevlar.menukit.api.element.RenderContext;
 import com.trevlar.menukit.api.element.SlotRendering;
 
-import com.trevlar.menukit.mixin.AbstractContainerScreenAccessor;
+import com.trevlar.slotkit.mixin.AbstractContainerScreenAccessor;
 import com.trevlar.slotkit.mixin.SlotPositionAccessor;
 import com.trevlar.slotkit.api.window.Address;
 

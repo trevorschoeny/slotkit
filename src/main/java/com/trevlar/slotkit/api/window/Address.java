@@ -46,15 +46,14 @@ import java.util.Objects;
  *
  * <h2>Minting one</h2>
  *
- * One public minter per kind:
  * <ul>
  *   <li>a created slot: {@link #createdSlot(SlotGroupId.Created, int)}, from the
  *       group's id ({@code ContainerPanel.groupId}, {@code CreatedSlots.groupId},
  *       {@code SlotGroupId.created}) and the slot's index in the group;</li>
- *   <li>a panel: {@link #panel(String)}; a panel element:
- *       {@link #panelElement(String, String)};</li>
  *   <li>a vanilla slot: from the live slot, where an operation or veto has it.</li>
  * </ul>
+ * Panel and panel-element addresses are no longer minted (MenuKit names its panels
+ * by {@code Panel.id()}), but {@link #parse} still reads the text 6.x saved for them.
  * The four value-level factories below the public ones are the library's
  * plumbing and are {@code @ApiStatus.Internal}.
  *
@@ -93,16 +92,6 @@ public record Address(OwnerRef owner, Token token, KindTag kind) {
     public static Address createdSlot(SlotGroupId.Created group, int index) {
         return createdSlot(PanelAddressing.PANEL_FAMILY, OwnerScope.primary(),
                 PanelAddressing.regKey(group.panelId()), group.groupId() + CREATED_SEP + index);
-    }
-
-    /** A panel, by the id it was built with. */
-    public static Address panel(String panelId) {
-        return PanelAddressing.ofPanel(panelId);
-    }
-
-    /** An element of a panel, by the panel's id and the element's declaration id. */
-    public static Address panelElement(String panelId, String elementDeclId) {
-        return PanelAddressing.ofElement(panelId, elementDeclId);
     }
 
     // A created slot's declaration id is groupId<NUL>index: a NUL never appears in

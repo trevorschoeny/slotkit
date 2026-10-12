@@ -1,12 +1,11 @@
-// MenuKit: Containers, the slot extension for MenuKit. Adds custom container
-// menus, per-slot state, slot-group regions, custom payloads, server-coupled
-// mixins and the contract verification harness. Universal (`environment: "*"`),
-// since client and server both take part in slot state and verification.
+// SlotKit: slots for Fabric mods, built on MenuKit (formerly MenuKit: Containers).
+// Two tiers in one jar: a client tier that finds and acts on slots in any menu on any
+// server (slot groups, operations, vetoes), and a client-and-server tier that builds
+// real slots (created slots, custom menus, storage, per-slot state). Universal
+// (`environment: "*"`), since a server with SlotKit enforces the same rules.
 //
-// MenuKit is the UI library and MenuKit: Containers adds slots to it. Mods that
-// build custom container menus depend on this artifact. Mods that only need
-// HUD, widgets or layouts depend on `:menukit` alone. The dependency is one-way:
-// this project depends on :menukit, never the reverse.
+// Depends on :menukit through its public API only (verifyOneWay below), never the
+// reverse.
 
 plugins {
     // The Loom plugin id is namespaced from 1.15 on, and 1.17 is the line for
@@ -16,10 +15,10 @@ plugins {
     id 'com.modrinth.minotaur' version '2.+'
 }
 
-version = property('menukit_version')
+version = property('slotkit_version')
 group   = 'com.trevlar'
 
-base.archivesName = 'menukit-containers'
+base.archivesName = 'slotkit'
 
 // Stamp the real mod version into fabric.mod.json at build time. The manifest
 // used to hardcode "1.0.0": bumping the Gradle version renamed the jar, but the
@@ -57,9 +56,9 @@ dependencies {
     implementation "net.fabricmc:fabric-loader:${property('loader_version')}"
     implementation "net.fabricmc.fabric-api:fabric-api:${property('fabric_version')}"
 
-    // One-way dependency: Containers depends on MenuKit, and MenuKit never
-    // depends on this artifact. `api` rather than `implementation`, so a mod
-    // depending on :menukit-containers gets :menukit at compile time too and
+    // One-way dependency: SlotKit depends on MenuKit, and MenuKit never
+    // depends on SlotKit. `api` rather than `implementation`, so a mod
+    // depending on :slotkit gets :menukit at compile time too and
     // reaches both through one project dependency. Needs the `java-library`
     // plugin above for the `api` configuration. On 26.x there is no remap
     // layer and no `namedElements` variant, so a plain project dependency is
@@ -72,7 +71,7 @@ dependencies {
     compileOnly 'org.jetbrains:annotations:24.1.0'
 
     // Grave-mod compat adapters. Optional: these compile against the grave mods'
-    // capture APIs, but Containers hard-depends on neither. Each adapter class
+    // capture APIs, but SlotKit hard-depends on neither. Each adapter class
     // loads only behind a FabricLoader isModLoaded(...) guard, and the plain
     // drop-handling fallback applies when the mod is absent.
     // Universal Graves 3.12.0+26.2 is its 26.2 release. The old 1.21.11 jar is
@@ -90,7 +89,7 @@ loom {
     // sides, and the compiler refuses a main class that reaches a client one.
     splitEnvironmentSourceSets()
     mods {
-        'menukit-containers' {
+        'slotkit' {
             sourceSet sourceSets.main
             sourceSet sourceSets.client
         }
@@ -117,30 +116,41 @@ dependencies {
 }
 
 jar {
-    from('../LICENSE') { rename { "${it}_${project.name}" } }
+    from('LICENSE') { rename { "${it}_${project.name}" } }
 }
 
 // ── Modrinth Publishing ────────────────────────────────────────────────
-// MKC Modrinth project created Phase 17 (2026-05-15); project ID xQUBXV8I.
-// Declares MenuKit as a required dependency per §0062 (MKC depends on MK).
+// SlotKit takes over MenuKit: Containers' Modrinth project (xQUBXV8I), renamed. Only
+// Lead publishes. Declares MenuKit as a required dependency.
 modrinth {
     token = System.getenv("MODRINTH_TOKEN")
     projectId = "xQUBXV8I"
-    versionNumber = property('menukit_version')
-    versionName = "MenuKit: Containers ${property('menukit_version')}"
+    versionNumber = property('slotkit_version')
+    versionName = "SlotKit ${property('slotkit_version')}"
     versionType = "release"
     // ci-cd.md stage 5: the player-facing changelog lives in changelog.md, one entry,
-    // overwritten each release (git keeps the history). Hardcoding it here went stale.
+    // overwritten each release (git keeps the history).
     changelog = file('changelog.md').text
-    // ci-cd.md stage 7: the README is the public description; `modrinthSyncBody` pushes it.
+    // The public description comes from Notion through Lead's sync.
     syncBodyFrom = file('MODRINTH.md').text
-    // 26.x: no remap step — `jar` IS the shippable artifact (remapJar is gone).
+    // 26.x: no remap step; `jar` is the shippable artifact.
     uploadFile = jar
     gameVersions = [property('minecraft_version')]
     loaders = ["fabric"]
     dependencies {
         required.project "fabric-api"
         required.project "menukit"
+    }
+}
+
+// No pre-release of SlotKit 1 on Modrinth (spec section 3): a 6.x consumer's ceiling
+// would admit it. A version with a pre-release part (a '-' before the '+') never uploads.
+tasks.named('modrinth') {
+    doFirst {
+        def v = project.version.toString()
+        if (v.split('\\+')[0].contains('-')) {
+            throw new GradleException("SlotKit ${v} is a pre-release; SlotKit never publishes one to Modrinth.")
+        }
     }
 }
 
@@ -161,44 +171,96 @@ tasks.register('verifyJarVersion') {
 }
 build.dependsOn verifyJarVersion
 
-// Javadoc for the published API reference. It covers only the api packages;
-// everything else is internal and stays out of the generated site.
-// doclint keeps broken {@link}s as errors, since a stale link is a doc bug.
-// `missing` and `html` are off because getter @return tags and heading levels
-// are noise, not defects.
+// Javadoc for the published API reference: SlotKit's api packages only. MenuKit's
+// reference is MenuKit's own; links into it resolve through the classpath.
 javadoc {
-    // One reference for both artifacts. This task also takes the :menukit sources,
-    // so links from MenuKit types to Containers types resolve. Published to Pages.
-    source += project(':menukit').sourceSets.main.allJava
-    classpath += project(':menukit').sourceSets.main.compileClasspath
-    // The reference is the public API: the api packages of both source sets.
     source += sourceSets.client.allJava
     classpath += sourceSets.client.compileClasspath + sourceSets.main.output + sourceSets.client.output
-    include 'com/trevlar/menukit/api/**', 'com/trevlar/menukit/containers/api/**'
-    source += project(':menukit').sourceSets.client.allJava
-    classpath += project(':menukit').sourceSets.client.compileClasspath + project(':menukit').sourceSets.main.output + project(':menukit').sourceSets.client.output
+    include 'com/trevlar/slotkit/api/**'
     options.addBooleanOption('Xdoclint:all,-missing,-html,-accessibility', true)
     options.tags = ['implNote:a:Implementation note:', 'implSpec:a:Implementation requirements:', 'apiNote:a:API note:']
     options.encoding = 'UTF-8'
-    options.windowTitle = "MenuKit ${project.version}"
+    options.windowTitle = "SlotKit ${project.version}"
 }
 
-// Containers and MenuKit are one release off one version property, so
-// Containers pins MenuKit exactly rather than to a range. The literal ${version} below is
-// expanded by processResources to that same version, keeping one source of truth. An exact
-// Fabric predicate ignores build metadata, so a +26.3 rebuild of the pair still matches.
-tasks.register('verifyMenuKitRange') {
+// One Kit range per library (spec 4.1): the declared MenuKit range must be
+// ">=<major>.<minor>.0 <<major+1>.0.0" of menukit_version, the floor at the
+// major.minor this build compiles against.
+tasks.register('verifyKitRanges') {
     def src = file('src/main/resources/fabric.mod.json')
+    def menukit = project.property('menukit_version').toString()
     inputs.file src
+    inputs.property 'menukit', menukit
     doLast {
-        def declared = (new groovy.json.JsonSlurper().parse(src).depends ?: [:])['menukit']?.toString()
-        if (declared != '${version}') {
-            throw new GradleException(
-                "fabric.mod.json: 'menukit' is '${declared}', expected the literal '\${version}'. " +
-                "Containers ships in lockstep with MenuKit off one version property and pins it " +
-                "exactly. See guidelines/ci-cd.md, 'MenuKit version pinning'.")
+        def depends = new groovy.json.JsonSlurper().parse(src).depends ?: [:]
+        def (major, minor) = menukit.split('\\+')[0].split('\\.')
+        def expected = ">=${major}.${minor}.0 <${(major as int) + 1}.0.0"
+        def declared = depends['menukit']?.toString()
+        if (declared != expected) {
+            throw new GradleException("fabric.mod.json: 'menukit' is '${declared}', expected '${expected}' (menukit_version ${menukit}).")
         }
-        println "verifyMenuKitRange: menukit pinned exactly (lockstep with MenuKit)"
+        if (depends.containsKey('menukit-containers')) {
+            throw new GradleException("fabric.mod.json depends on 'menukit-containers': Containers is SlotKit now.")
+        }
+        println "verifyKitRanges: menukit ${declared}"
     }
 }
-build.dependsOn verifyMenuKitRange
+build.dependsOn verifyKitRanges
+
+// One way only (decision 2): SlotKit reaches MenuKit through its public API alone.
+// Two halves: no source names a MenuKit package outside com.trevlar.menukit.api, and
+// no compiled SlotKit class references a MenuKit class or member marked
+// @ApiStatus.Internal (read from MenuKit's class files with ASM, since a few such
+// members sit in api packages for MenuKit's own wiring).
+tasks.register('verifyOneWay') {
+    dependsOn 'classes', 'clientClasses', ':menukit:classes', ':menukit:clientClasses'
+    def sources = fileTree('src') { include '**/*.java' }
+    def ours = files(sourceSets.main.output.classesDirs, sourceSets.client.output.classesDirs)
+    def theirs = files(project(':menukit').sourceSets.main.output.classesDirs,
+                       project(':menukit').sourceSets.client.output.classesDirs)
+    inputs.files(sources, ours)
+    doLast {
+        def bad = []
+        sources.files.each { f ->
+            def rel = projectDir.toPath().relativize(f.toPath())
+            f.readLines().eachWithIndex { line, i ->
+                (line.replaceAll('//.*', '') =~ /com\.trevlar\.menukit\.(\w+)/).each { m ->
+                    if (m[1] != 'api') bad << "${rel}:${i + 1}: ${m[0]}"
+                }
+            }
+        }
+        // MenuKit's internal marks: whole classes, and members as owner.name.
+        def INTERNAL = 'Lorg/jetbrains/annotations/ApiStatus$Internal;'
+        def internal = [] as Set
+        theirs.asFileTree.matching { include '**/*.class' }.each { cf ->
+            def cn = new org.objectweb.asm.tree.ClassNode()
+            new org.objectweb.asm.ClassReader(cf.bytes).accept(cn, 0)
+            def marked = { node -> (node.invisibleAnnotations ?: []).any { it.desc == INTERNAL } }
+            if (marked(cn)) internal << cn.name
+            cn.methods.each { if (marked(it)) internal << "${cn.name}.${it.name}" }
+            cn.fields.each { if (marked(it)) internal << "${cn.name}.${it.name}" }
+        }
+        ours.asFileTree.matching { include '**/*.class' }.each { cf ->
+            def cn = new org.objectweb.asm.tree.ClassNode()
+            new org.objectweb.asm.ClassReader(cf.bytes).accept(cn, 0)
+            cn.methods.each { m ->
+                m.instructions.each { insn ->
+                    def owner = null, name = null
+                    if (insn instanceof org.objectweb.asm.tree.MethodInsnNode || insn instanceof org.objectweb.asm.tree.FieldInsnNode) {
+                        owner = insn.owner; name = insn.name
+                    } else if (insn instanceof org.objectweb.asm.tree.TypeInsnNode) {
+                        owner = insn.desc
+                    }
+                    if (owner == null || !owner.startsWith('com/trevlar/menukit/')) return
+                    if (!owner.startsWith('com/trevlar/menukit/api/')) bad << "${cn.name}: ${owner}"
+                    else if (internal.contains(owner) || (name && internal.contains("${owner}.${name}"))) {
+                        bad << "${cn.name}.${m.name}: @ApiStatus.Internal ${owner}${name ? '.' + name : ''}"
+                    }
+                }
+            }
+        }
+        if (bad) throw new GradleException("SlotKit reaches into MenuKit's internals:\n  " + bad.unique().join('\n  '))
+        println "verifyOneWay: SlotKit uses only MenuKit's public API (${internal.size()} internal marks checked)"
+    }
+}
+check.dependsOn verifyOneWay

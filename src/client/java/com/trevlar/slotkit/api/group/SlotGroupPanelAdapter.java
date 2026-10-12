@@ -1,24 +1,30 @@
 package com.trevlar.slotkit.api.group;
 
-import org.jetbrains.annotations.ApiStatus;
-
-import com.trevlar.slotkit.api.group.SlotGroupId;
-import com.trevlar.menukit.inject.PanelHost;
-import com.trevlar.menukit.inject.ScreenPanelRegistry;
+import com.trevlar.menukit.api.Declarations;
+import com.trevlar.menukit.api.panel.Anchor;
+import com.trevlar.menukit.api.panel.AnchorPanelAdapter;
 import com.trevlar.menukit.api.panel.Panel;
 import com.trevlar.menukit.api.panel.PanelStyle;
-import com.trevlar.slotkit.api.group.SlotGroupCategory;
-import com.trevlar.menukit.api.Declarations;
+import com.trevlar.menukit.api.panel.Reference;
+import com.trevlar.slotkit.mixin.AbstractContainerScreenAccessor;
+
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.inventory.Slot;
 
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Anchors a {@link Panel} to a slot group's box on container screens: a toolbar
- * above the player inventory, a readout beside the hotbar. Each targeted group on
- * the open screen gets its own slot-group host, whose reference rectangle is
- * that group's box this frame.
+ * above the player inventory, a readout beside the hotbar. Built on MenuKit's anchor
+ * context: each targeted group is one {@link Anchor} whose box is that group's
+ * slots on the open screen this frame, so panels on one group share a host and stack.
  *
  * <pre>{@code
  * Panel toolbar = Panel.builder("mymod:toolbar")
@@ -51,12 +57,14 @@ import java.util.List;
 public final class SlotGroupPanelAdapter {
 
     /** Default content padding for styled panels. */
-    public static final int DEFAULT_PADDING = ScreenPanelAdapter.DEFAULT_PADDING;
+    public static final int DEFAULT_PADDING = AnchorPanelAdapter.DEFAULT_PADDING;
 
-    private final Panel panel;
-    private final int padding;
-    private final String modId;
-    private final int seq;
+    // One anchor per group id: MenuKit refuses a second Anchor.of with the same id,
+    // and panels on one anchor share its host, which is what stacks them. Declared
+    // on first use, always before the freeze (adapters are declarations too).
+    private static final Map<SlotGroupId, Anchor> ANCHORS = new ConcurrentHashMap<>();
+
+    private final AnchorPanelAdapter anchored;
 
     /** Declared target groups; null until targeting is declared. */
     private @Nullable List<SlotGroupId> targets = null;
@@ -79,19 +87,13 @@ public final class SlotGroupPanelAdapter {
      * @throws IllegalStateException    after MenuKit's declarations froze
      */
     public SlotGroupPanelAdapter(Panel panel, int padding) {
-        Declarations.requireOpen("SlotGroupPanelAdapter(" + panel.id() + ")");
-        PanelHost.requireSupported(PanelHost.Kind.SLOT_GROUP, panel, panel.getPosition());
-        this.panel = panel;
-        this.padding = padding;
-        this.modId = PanelHost.captureCallerModId();
-        this.seq = PanelHost.nextSeq();
-        ScreenPanelRegistry.declare(this);
+        this.anchored = new AnchorPanelAdapter(panel, padding);
     }
 
     /** Anchors to each category's vanilla group. Call exactly once. */
     public SlotGroupPanelAdapter on(SlotGroupCategory... categories) {
         if (categories.length == 0) {
-            throw new IllegalArgumentException("SlotGroupPanelAdapter for panel '" + panel.id()
+            throw new IllegalArgumentException("SlotGroupPanelAdapter for panel '" + getPanel().id()
                     + "': .on() requires at least one category.");
         }
         SlotGroupId[] ids = new SlotGroupId[categories.length];
@@ -100,20 +102,23 @@ public final class SlotGroupPanelAdapter {
     }
 
     /**
-     * Anchors to specific slot groups, including ones MenuKit: Containers created
-     * (whose identity is their {@code (panelId, groupId)}). Call exactly once.
+     * Anchors to specific slot groups, including created ones (whose identity is
+     * their {@code (panelId, groupId)}). Call exactly once.
      */
     public SlotGroupPanelAdapter onGroup(SlotGroupId... groups) {
-        Declarations.requireOpen("SlotGroupPanelAdapter(" + panel.id() + ") targeting");
+        Declarations.requireOpen("SlotGroupPanelAdapter(" + getPanel().id() + ") targeting");
         if (targets != null) {
-            throw new IllegalStateException("SlotGroupPanelAdapter for panel '" + panel.id()
+            throw new IllegalStateException("SlotGroupPanelAdapter for panel '" + getPanel().id()
                     + "' already declared targeting. Call .on(...) exactly once.");
         }
         if (groups.length == 0) {
-            throw new IllegalArgumentException("SlotGroupPanelAdapter for panel '" + panel.id()
+            throw new IllegalArgumentException("SlotGroupPanelAdapter for panel '" + getPanel().id()
                     + "': .onGroup() requires at least one group.");
         }
         this.targets = List.of(groups);
+        Anchor[] anchors = new Anchor[groups.length];
+        for (int i = 0; i < groups.length; i++) anchors[i] = anchorFor(groups[i]);
+        anchored.on(anchors);
         return this;
     }
 
@@ -122,15 +127,14 @@ public final class SlotGroupPanelAdapter {
      * MenuKit's declarations froze; gate at runtime with {@link Panel#visibleWhen}.
      */
     public void unregister() {
-        Declarations.requireOpen("SlotGroupPanelAdapter(" + panel.id() + ").unregister()");
-        ScreenPanelRegistry.withdraw(this);
+        anchored.unregister();
     }
 
     /** The panel this adapter declares. */
-    public Panel getPanel() { return panel; }
+    public Panel getPanel() { return anchored.getPanel(); }
 
     /** The content padding inside the panel's edge. */
-    public int getPadding() { return padding; }
+    public int getPadding() { return anchored.getPadding(); }
 
     /** The declared target groups, or {@code null} before targeting. */
     public @Nullable List<SlotGroupId> getTargets() { return targets; }
@@ -143,9 +147,40 @@ public final class SlotGroupPanelAdapter {
         return targets != null && targets.contains(group);
     }
 
-    @ApiStatus.Internal
-    public String modId() { return modId; }
+    /** The anchor for a group: one per id, declared on first use. */
+    private static Anchor anchorFor(SlotGroupId group) {
+        return ANCHORS.computeIfAbsent(group, g -> Anchor.of(anchorId(g), screen -> box(screen, g)));
+    }
 
-    @ApiStatus.Internal
-    public int seq() { return seq; }
+    /** An anchor id per group, readable in a log: {@code slotkit:group/<sanitised group id>}. */
+    private static Identifier anchorId(SlotGroupId group) {
+        String path = group.asString().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_./-]", "_");
+        return Identifier.fromNamespaceAndPath("slotkit", "group/" + path);
+    }
+
+    /**
+     * One slot group's box: the rectangle around its slots this frame (re-resolved every
+     * time, since creative tab switches and dynamic menus change {@code menu.slots}), or
+     * {@code null} when the group is not on this screen right now. Each group gets its
+     * own box: a created group declaring a vanilla category never stretches that
+     * category's box.
+     */
+    private static @Nullable Reference box(Screen screen, SlotGroupId id) {
+        if (!(screen instanceof AbstractContainerScreen<?> acs)) return null;
+        for (ResolvedSlotGroup group : SlotGroupCategories.groups(acs.getMenu())) {
+            if (!group.id().equals(id) || group.slots().isEmpty()) continue;
+            int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
+            int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
+            for (Slot slot : group.slots()) {
+                minX = Math.min(minX, slot.x);
+                minY = Math.min(minY, slot.y);
+                maxX = Math.max(maxX, slot.x + 16);
+                maxY = Math.max(maxY, slot.y + 16);
+            }
+            AbstractContainerScreenAccessor acc = (AbstractContainerScreenAccessor) acs;
+            return new Reference(acc.sk$getLeftPos() + minX, acc.sk$getTopPos() + minY,
+                    maxX - minX, maxY - minY);
+        }
+        return null;
+    }
 }

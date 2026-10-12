@@ -9,11 +9,10 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
  *
  * <h2>Menu-independent and menu-bound</h2>
  *
- * A panel, a panel element and a created slot have one address everywhere they
- * appear (rooted at a constant family by id), so their handles need no menu and
- * are reached statically through {@link #panel} and {@link #element}. A standalone
- * screen with panels but no {@code AbstractContainerMenu} addresses its panels the
- * same way.
+ * A created slot has one address everywhere it appears (nested under its panel's
+ * id), so its handle needs no menu and is reached statically through
+ * {@link #slot(Address)}. A panel's own visibility and opacity are the panel's
+ * ({@code Panel.visibleWhen}, {@code opaque}), not the window's.
  *
  * <p>Only a vanilla slot is identified by its position in a live menu, so
  * addressing one by index needs that menu: {@link #view(AbstractContainerMenu)}
@@ -23,17 +22,7 @@ public final class Window {
 
     private Window() {}
 
-    /** A handle on the panel with id {@code panelId} (its own visibility and opacity). */
-    public static PanelHandle panel(String panelId) {
-        return new PanelHandle(PanelAddressing.ofPanel(panelId));
-    }
-
-    /** A handle on element {@code elementDeclId} within panel {@code panelId}. */
-    public static ElementHandle element(String panelId, String elementDeclId) {
-        return new ElementHandle(PanelAddressing.ofElement(panelId, elementDeclId));
-    }
-
-    /** A handle on anything already named by an {@link Address} (slot, element or panel). */
+    /** A handle on a slot already named by an {@link Address} (vanilla or created). */
     public static SlotHandle slot(Address address) {
         return new SlotHandle(address);
     }

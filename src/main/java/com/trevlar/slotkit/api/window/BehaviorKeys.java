@@ -7,8 +7,7 @@ import net.minecraft.resources.Identifier;
  * engine is generic, so a mod adds a behaviour by declaring a key of its own.
  *
  * <ul>
- *   <li>Client tier: {@link #VISIBILITY}, {@link #OPACITY}, and the observed
- *       reactions.</li>
+ *   <li>Client tier: the observed reactions.</li>
  *   <li>Server tier, the slot author's rules: {@link #GATING} (what a slot accepts
  *       and releases, and how many), {@link #BINDING} (Curse of Binding on any
  *       slot), and the eleven {@linkplain SlotOperations operations}. Containers
@@ -22,23 +21,6 @@ public final class BehaviorKeys {
     private static Identifier id(String path) {
         return Identifier.fromNamespaceAndPath("menukit", path);
     }
-
-    /**
-     * Whether an addressable thing is shown: a client-side {@link VisibilityRule},
-     * evaluated each frame, so one key covers both a fixed hide and a reveal on
-     * hover. Client tier, every kind. Default {@link VisibilityRule#VISIBLE}.
-     * Resolved and evaluated on the client only (see VisibilityRule).
-     */
-    public static final BehaviorKey<VisibilityRule> VISIBILITY = BehaviorKey.of(
-            id("visibility"), VisibilityRule.class, VisibilityRule.VISIBLE, Tier.CLIENT,
-            KindTag.VANILLA_SLOT, KindTag.CREATED_SLOT, KindTag.PANEL_ELEMENT, KindTag.PANEL);
-
-    /**
-     * Whether a panel is opaque to input, taking clicks over its bounds. Client
-     * tier, panels only. Default {@link TriBool#TRUE}: panels are opaque.
-     */
-    public static final BehaviorKey<TriBool> OPACITY = BehaviorKey.of(
-            id("opacity"), TriBool.class, TriBool.TRUE, Tier.CLIENT, KindTag.PANEL);
 
     // The slot author's rules: server tier, every slot kind.
 
