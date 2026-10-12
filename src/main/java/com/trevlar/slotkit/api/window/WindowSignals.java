@@ -20,7 +20,7 @@ import org.jspecify.annotations.Nullable;
  * {@code isSelected(addr)}, where {@code addr} is a panel or created-slot address it
  * minted by id. It does not ask which vanilla index is hovered: addressing by
  * identity makes a rule work the same in creative and survival, since a created
- * slot has one address in both. {@code MenuKitClient} captures hover each client
+ * slot has one address in both. {@code SlotKitClient} captures hover each client
  * tick and selection on a screen click, clears the selection on close, and maps
  * both through the shared addressing, so a hovered created slot reports its
  * created address.
@@ -41,8 +41,8 @@ public final class WindowSignals {
     private static volatile @Nullable String selectedName;
 
     /**
-     * Updates the hovered slot (MenuKitClient, each client tick). Null clears it.
-     * Only MenuKit's client tick writes the signals, from raw slots on the live
+     * Updates the hovered slot (SlotKitClient, each client tick). Null clears it.
+     * Only SlotKit's client tick writes the signals, from raw slots on the live
      * screen. Consumers read them through {@link #isHovered}, {@link #hoveredName}
      * and the rest.
      */
@@ -54,7 +54,7 @@ public final class WindowSignals {
     }
 
     /**
-     * Records the last-clicked slot (MenuKitClient, on a screen click). Consumers
+     * Records the last-clicked slot (SlotKitClient, on a screen click). Consumers
      * read the selection through {@link #isSelected} and {@link #selectedName}.
      */
     @ApiStatus.Internal
@@ -66,8 +66,8 @@ public final class WindowSignals {
     }
 
     /**
-     * Clears the selection (MenuKitClient, when a container screen closes). Only
-     * MenuKit calls it; consumers never reset the selection themselves.
+     * Clears the selection (SlotKitClient, when a container screen closes). Only
+     * SlotKit calls it; consumers never reset the selection themselves.
      */
     @ApiStatus.Internal
     public static void clearSelection() {

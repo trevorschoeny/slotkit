@@ -84,7 +84,7 @@ public record SlotRef(Container container, int containerSlot, @Nullable Slot slo
                 VanillaAddressing.addressOf(container, containerSlot).orElse(null));
     }
 
-    // A menu's slot list is fixed at construction (Containers appends its created
+    // A menu's slot list is fixed at construction (SlotKit appends its created
     // slots there too), so its category map is computed once per menu instance and
     // read for every slot a shift-click walks. Weak keys: a menu lives as long as
     // its screen. Nothing invalidates it; if a menu ever gains slots after it

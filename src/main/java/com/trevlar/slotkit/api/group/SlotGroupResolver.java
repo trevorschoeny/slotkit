@@ -18,7 +18,7 @@ import java.util.Map;
  * registers resolvers for its own menu classes with
  * {@link SlotGroupCategories#register}.
  *
- * <p>MenuKit's screen registry turns the returned index arrays into slot-group
+ * <p>{@code SlotGroupPanelAdapter} turns the returned index arrays into slot-group
  * bounding boxes each frame. Each slot should appear in exactly one category's
  * array: one category has many slots, and a slot has one category.
  *

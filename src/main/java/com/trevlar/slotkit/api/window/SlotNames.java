@@ -22,9 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *   <li><b>Per-address overrides</b> ({@link #override}): a name registered against
  *       a specific {@link Address}. SlotKit names its created slots
  *       this way when it creates them (group label and ordinal), and any consumer
- *       can name a custom slot. MenuKit never sees the created slot's type; the
- *       name is keyed by the address the consumer mints.</li>
- *   <li><b>Vanilla names</b>, computed from the live slot's role. MenuKit already
+ *       can name a custom slot.</li>
+ *   <li><b>Vanilla names</b>, computed from the live slot's role. SlotKit already
  *       categorizes every vanilla slot through {@link SlotGroupCategories} (the 22
  *       vanilla menus); naming is a table from each {@link SlotGroupCategory} to a
  *       {@link Spec} (a numbered label, or a list of single names), formatted with
@@ -40,8 +39,8 @@ import java.util.concurrent.ConcurrentHashMap;
  * category, which would change the category every panel-targeting consumer relies
  * on.
  *
- * <p>Works with MenuKit alone: without Containers the override map is empty and
- * vanilla names come from MenuKit's own resolvers. Lookups run on the client
+ * <p>Vanilla names need nothing from the server, so they work on any server.
+ * Lookups run on the client
  * thread; the override map is concurrent because a created slot's name may be
  * registered from another thread while the menu is built.
  */

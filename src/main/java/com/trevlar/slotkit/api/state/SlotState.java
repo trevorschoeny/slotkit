@@ -202,7 +202,7 @@ public final class SlotState {
     private static <T> void writeFromClient(SlotStateChannel<T> channel, Slot slot, @Nullable Player viewer, T value) {
         // On when both sides have the channel, off otherwise: a write the server can't
         // hold is neither sent nor shown, so the cache never shows a value the server
-        // never stored (spec 2.4.5 item 5).
+        // never stored.
         if (!com.trevlar.slotkit.api.Presence.serverHasChannel(channel.id())) return;
         SlotStateClientCache.write(channel, slot.container, slot.getContainerSlot(), value);
         if (viewer == null) return;

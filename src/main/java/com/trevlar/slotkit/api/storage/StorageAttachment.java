@@ -215,7 +215,7 @@ public abstract class StorageAttachment<O, C> {
     /**
      * Wraps a {@link CustomAttachmentSpec} as a {@code StorageAttachment}. For owner
      * types the built-in factories don't cover, and for consumers whose save and load
-     * don't go through a MenuKit handler.
+     * don't go through a {@code CustomContainerMenu}.
      *
      * <p>This is the non-player path: the returned {@code StorageAttachment} has no
      * {@code dropsOnDeath}, because death handling is player-only. For a

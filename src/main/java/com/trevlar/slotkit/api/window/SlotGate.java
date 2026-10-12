@@ -5,7 +5,7 @@ import net.minecraft.world.item.ItemStack;
 
 /**
  * What a slot accepts and releases, and how much of an item it holds: the value of
- * {@link BehaviorKeys#GATING}, the slot author's rule. MenuKit resolves a gate for
+ * {@link BehaviorKeys#GATING}, the slot author's rule. SlotKit resolves a gate for
  * any slot, vanilla or created, by its {@link Address} and applies it once at each
  * vanilla method that moves items: the slot's own {@code mayPlace}, {@code mayPickup}
  * and {@code getMaxStackSize} (which every click, shift-click and automation path

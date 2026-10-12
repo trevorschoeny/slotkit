@@ -34,7 +34,7 @@ public record SlotGroupCategory(String namespace, String path) {
 
     // Every vanilla 26.2 category. Each costs little to ship, while a consumer
     // finding one missing later would be costly to migrate. Each has a resolver
-    // registered in MenuKitClient.
+    // registered at SlotKit's init.
 
     // Player-scoped
 
@@ -156,7 +156,7 @@ public record SlotGroupCategory(String namespace, String path) {
             new SlotGroupCategory("menukit", "mount_storage");
 
     /**
-     * Every category MenuKit ships for vanilla's own slot groups. MenuKit declares
+     * Every category SlotKit ships for vanilla's own slot groups. SlotKit declares
      * these into the registry at init, so {@code SlotGroupCategories.all()} lists
      * them alongside any a mod mints.
      */

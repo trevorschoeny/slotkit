@@ -6,7 +6,7 @@ package com.trevlar.slotkit.api.window;
  *
  * <ul>
  *   <li>{@link #CLIENT}, presentation behavior with no game authority (read,
- *       decorate, hover, visibility, panel properties). Resolves with MenuKit alone.</li>
+ *       decorate, hover, visibility, panel properties). Resolves on any server.</li>
  *   <li>{@link #SERVER}, authoritative behavior (what a slot accepts/releases,
  *       persistence, server reactions). Held in the server tier, which is
  *       always present, and resolved above the client tier.</li>

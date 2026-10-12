@@ -7,13 +7,13 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * Adapts a MenuKit {@link Storage} to vanilla's {@link Container} interface. Needed
+ * Adapts a {@link Storage} to vanilla's {@link Container} interface. Needed
  * when building slots, because {@link net.minecraft.world.inventory.Slot}'s
- * constructor takes a Container while MenuKit consumers declare storage through the
+ * constructor takes a Container while consumers declare storage through the
  * narrower {@link Storage} interface.
  *
  * <p>{@link com.trevlar.slotkit.api.menu.CustomContainerMenu} uses it for
- * MenuKit's own handlers. Consumers adding slots to vanilla handlers also wrap a
+ * its own slots. Consumers adding slots to vanilla handlers also wrap a
  * Storage in this adapter when calling {@code addSlot} with a
  * {@link net.minecraft.world.inventory.Slot}.
  */

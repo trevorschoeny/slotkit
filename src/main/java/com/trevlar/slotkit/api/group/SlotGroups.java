@@ -44,7 +44,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <h2>Where declarations come from</h2>
  *
  * <ul>
- *   <li><b>Vanilla</b>: MenuKit declares one group per vanilla category at init
+ *   <li><b>Vanilla</b>: SlotKit declares one group per vanilla category at init
  *       ({@code SlotGroupId.category(category)}), the groups its resolvers produce. A
  *       mod that registers a resolver for its own menu declares its categories'
  *       groups the same way, with {@link #declare}.</li>
@@ -215,7 +215,7 @@ public final class SlotGroups {
     }
 
     /**
-     * A group declared as a menu is built ({@code CreatedSlots.onto}): an index MenuKit
+     * A group declared as a menu is built ({@code CreatedSlots.onto}): an index SlotKit
      * fills, idempotent, so it stays legal after declarations freeze.
      */
     @org.jetbrains.annotations.ApiStatus.Internal
@@ -269,7 +269,7 @@ public final class SlotGroups {
 
     // Reading
 
-    /** Every declared group: vanilla's in MenuKit's category order, then the rest by id text. */
+    /** Every declared group: vanilla's in {@link SlotGroupCategory#vanilla()} order, then the rest by id text. */
     public static List<SlotGroupId> all() {
         List<SlotGroupId> out = new ArrayList<>(DECLARED.keySet());
         out.sort(ORDER);
@@ -312,7 +312,7 @@ public final class SlotGroups {
 
     /**
      * The player-facing list: every lone group, and every set once in place of its
-     * groups. Vanilla groups first in MenuKit's category order, then the rest by key.
+     * groups. Vanilla groups first in {@link SlotGroupCategory#vanilla()} order, then the rest by key.
      */
     public static synchronized List<Entry> listing() {
         long gen = generation;
@@ -408,7 +408,7 @@ public final class SlotGroups {
 
     private static final List<SlotGroupCategory> VANILLA_ORDER = SlotGroupCategory.vanilla();
 
-    /** Vanilla groups by MenuKit's category order (player slots first); everything else after. */
+    /** Vanilla groups in {@link SlotGroupCategory#vanilla()} order (player slots first); everything else after. */
     private static int rank(SlotGroupId id) {
         if (id instanceof SlotGroupId.Category v) {
             int i = VANILLA_ORDER.indexOf(v.category());

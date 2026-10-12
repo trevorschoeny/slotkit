@@ -12,8 +12,8 @@ import com.trevlar.slotkit.api.window.PersistentContainerKey;
  * {@link SlotStateChannel} API works on that slot just as it does on vanilla
  * containers.
  *
- * <p>It is a separate interface in Containers, extending {@link Storage}, so that
- * MenuKit's {@link Storage} stays minimal. Consumers who want their custom-storage
+ * <p>It is a separate interface, extending {@link Storage}, so that
+ * {@link Storage} stays minimal. Consumers who want their custom-storage
  * slots to keep slot state implement {@code KeyedStorage} instead of {@link Storage}.
  *
  * <p>{@link com.trevlar.slotkit.window.ContainerIdentity} sees that the slot's

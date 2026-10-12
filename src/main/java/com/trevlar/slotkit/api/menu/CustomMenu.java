@@ -79,7 +79,7 @@ import java.util.function.Predicate;
  * {@code register()} runs in common init on either side. It builds and registers the
  * {@link MenuType}, and records the handle by id so the server can resolve an open
  * request. Everything the client adds (the screen class, how each panel looks, the
- * open request) belongs to {@code ClientMenu}, in Containers' client source set, so
+ * open request) belongs to {@code ClientMenu}, in SlotKit's client source set, so
  * this class names no client type.
  *
  * <h3>Who may open it, and for how long</h3>

@@ -21,7 +21,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * resolved in the server tier; a CLIENT key (visibility, opacity, observed
  * reactions) in the client tier. The two tiers are one data structure walked by
  * one algorithm; they differ only in which levels they have. Until 6.0.0 the
- * server tier was a second copy of this class in Containers.
+ * server tier was a second copy of this class in MenuKit: Containers.
  *
  * <h2>The cascade</h2>
  *

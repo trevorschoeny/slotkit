@@ -7,7 +7,7 @@ import java.util.function.IntFunction;
 
 /**
  * Storage backed by a read function and a write function, so a consumer can
- * bring any external data source into MenuKit's {@link Storage} interface.
+ * bring any external data source into the {@link Storage} interface.
  *
  * <p>Implements plain {@link Storage}, not {@code PersistentStorage}: saving is
  * up to the external source.

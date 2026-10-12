@@ -24,8 +24,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The registry of {@link SlotGroupResolver}s, one primary per menu class. Shaped
- * like {@code MenuChrome}: exact-class lookup, one primary resolver per class,
- * MenuKit's resolvers for vanilla classes, and mods registering their own classes
+ * like MenuKit's {@code MenuChrome}: exact-class lookup, one primary resolver per class,
+ * SlotKit's resolvers for vanilla classes, and mods registering their own classes
  * through {@link #register}.
  *
  * <p>A mod that adds slots to a vanilla menu and wants its slot group targeted by
@@ -45,7 +45,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Every created slot group declares a {@link SlotGroupCategory} on its spec, and
  * those groups are reported on whatever menu they sit. So {@link #of} and
  * {@link #categoriesBySlot} name created and vanilla slots alike, using only
- * MenuKit types. This is how one mod finds another's slots without knowing what
+ * SlotKit types. This is how one mod finds another's slots without knowing what
  * kind they are.
  *
  * <h3>Primary vs. extensions</h3>
@@ -90,7 +90,7 @@ public final class SlotGroupCategories {
      * registration for the same class throws: which mod won would depend on load
      * order. A second mod adds groups with {@link #extend} instead.
      *
-     * <p>Called at mod init. MenuKit registers its vanilla resolvers from its own
+     * <p>Called at mod init. SlotKit registers its vanilla resolvers from its own
      * initializer; mods register from their {@code ModInitializer}.
      *
      * @param menuClass the concrete menu class (typically the same class
@@ -120,7 +120,7 @@ public final class SlotGroupCategories {
      *
      * <p>For a mod that adds a slot to a vanilla menu (a {@code FurnaceMenu}, say)
      * and wants its slot group targeted by slot-group panels under a category of
-     * its own. MenuKit's primary resolver for the vanilla menu is already
+     * its own. SlotKit's primary resolver for the vanilla menu is already
      * registered and cannot be replaced, so {@code extend} adds to it.
      *
      * <p>An extension adds categories and never redefines one. A category the
@@ -148,8 +148,8 @@ public final class SlotGroupCategories {
      * Publishes {@code category} to the registry so another mod can find it through
      * {@link #all()} without a menu open. Idempotent.
      *
-     * <p>MenuKit declares its own vanilla constants at init, and SlotKit
-     * declares a created group's category when the group registers, so a consumer
+     * <p>SlotKit declares the vanilla constants at init, and a created group's
+     * category when the group registers, so a consumer
      * that mints a category only calls this when it wants the category listed before
      * anything is registered against it.
      */
@@ -164,7 +164,7 @@ public final class SlotGroupCategories {
     }
 
     /**
-     * Every category the registry knows: MenuKit's vanilla constants, every category
+     * Every category the registry knows: the vanilla constants, every category
      * a created slot group declared, and anything a mod {@link #declare}d. Sorted by
      * namespace then path so the listing is stable.
      *

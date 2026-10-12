@@ -34,8 +34,8 @@ import org.jspecify.annotations.Nullable;
  * </ul>
  *
  * <p>A mod that mixes into {@code Slot.mayPlace} to add a global filter sees its
- * filter run on MenuKit slots through the {@code super.mayPlace} call, and the most
- * restrictive answer wins. A mod iterating slots sees inert MenuKit slots as empty,
+ * filter run on created slots through the {@code super.mayPlace} call, and the most
+ * restrictive answer wins. A mod iterating slots sees inert created slots as empty,
  * which is a valid state for any slot.
  *
  * <p>Hierarchy: Screen, then Panel, then CreatedSlotGroup, then CreatedSlot.
@@ -127,12 +127,12 @@ public class CreatedSlot extends Slot {
         return !panel.isShown();
     }
 
-    // Each override calls super so other mods' mixins into Slot still run. MenuKit
+    // Each override calls super so other mods' mixins into Slot still run. SlotKit
     // adds to vanilla behaviour and never replaces it.
 
     /**
      * Whether this stack can be placed here. An inert slot refuses. Otherwise this is
-     * vanilla's own answer, which MenuKit's slot gate ({@code SKSlotGateMixin}) has
+     * vanilla's own answer, which SlotKit's slot gate ({@code SKSlotGateMixin}) has
      * already checked against this slot's address. Calls super, so a mixin on
      * {@code Slot.mayPlace} still runs.
      */
@@ -142,7 +142,7 @@ public class CreatedSlot extends Slot {
         return super.mayPlace(stack);
     }
 
-    /** Whether items can be taken. Inert refuses; the slot gate and Curse of Binding are checked in MenuKit's mixin. */
+    /** Whether items can be taken. Inert refuses; the slot gate and Curse of Binding are checked in SlotKit's mixin. */
     @Override
     public boolean mayPickup(Player player) {
         if (isInert()) return false;
@@ -172,8 +172,8 @@ public class CreatedSlot extends Slot {
      * the real items, and consumer code that owns the panel can read it directly.
      *
      * <p>Inert means hidden from the world for both interaction and reading. Both
-     * are needed for the library's inertness guarantee (see the Inertness and
-     * SyncSafety probes in {@code /mkverify all}).
+     * are needed for the library's inertness guarantee, which SlotKit's validator
+     * tests.
      */
     @Override
     public ItemStack getItem() {

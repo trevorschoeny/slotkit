@@ -156,7 +156,7 @@ public final class CreatedSlots {
      * What {@code register()} created: the {@link MenuPanel} and {@link CreatedSlotGroup},
      * plus the slot-index range appended to the menu, for consumers that walk the
      * slots directly. Empty (no slots, {@code flatStart == flatEnd}) on a client
-     * whose server does not run Containers.
+     * whose server does not run SlotKit.
      *
      * <p>{@code register()} adds only the synced slot data. To make the slots draw and
      * take input, show them from the client: a panel of {@code SlotElement}s, or
@@ -202,7 +202,7 @@ public final class CreatedSlots {
         public Builder group(String id) { this.groupId = id; return this; }
 
         /**
-         * What the group is, in MenuKit core's registry terms. Required; see
+         * What the group is, in the slot group registry's terms. Required; see
          * {@link SlotSpec#at(String, SlotGroupCategory)} for why there is no default.
          * The group is listed under it in
          * {@code SlotGroupCategories.of(menu)} on every menu it sits on.
@@ -324,11 +324,9 @@ public final class CreatedSlots {
             int flatEnd = menu.slots.size();
             group.setFlatIndexRange(flatStart, flatEnd);
 
-            // Display names, client only: the server never reads them, and this keeps
-            // MenuKit's display types off the server path. Keyed by the same address
-            // the window uses to resolve a created slot, so WindowSignals.hoveredName()
-            // matches. MenuKit never sees CreatedSlot; CreatedSlotAdapter maps
-            // (panel, group, index) to an Address.
+            // Display names, client only: the server never reads them. Keyed by the
+            // same address the window uses to resolve a created slot (CreatedSlotAdapter
+            // maps panel, group and index to it), so WindowSignals.hoveredName() matches.
             if (player.level().isClientSide()) {
                 String label = displayLabel != null ? displayLabel : capitalize(groupId);
                 int size = storage.size();

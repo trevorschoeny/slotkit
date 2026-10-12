@@ -9,7 +9,7 @@ import org.jspecify.annotations.Nullable;
  * The context a {@link SlotGate} decision runs in: who is acting.
  *
  * <p>A deep seam (a hopper transfer, vanilla's {@code moveItemStackTo}) has no player
- * in scope. MenuKit captures the acting player at the click boundary
+ * in scope. SlotKit captures the acting player at the click boundary
  * ({@link ActingPlayer}), on both sides, so a nested decision can see it.
  * Automation leaves it {@code null}.
  */

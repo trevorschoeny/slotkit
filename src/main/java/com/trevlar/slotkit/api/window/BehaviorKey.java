@@ -16,7 +16,7 @@ import java.util.Objects;
  * @param libraryDefault the bottom of the cascade, a neutral value that matches
  *                       vanilla, returned when nothing overrides. It is why
  *                       {@code resolve} never returns null.
- * @param tier          {@link Tier#CLIENT} (works with MenuKit alone) or
+ * @param tier          {@link Tier#CLIENT} (works on any server) or
  *                       {@link Tier#SERVER} (needs SlotKit on the server).
  * @param appliesTo     which {@link KindTag}s this behavior is valid on, checked
  *                       at the call boundary (a slot verb is unreachable on a

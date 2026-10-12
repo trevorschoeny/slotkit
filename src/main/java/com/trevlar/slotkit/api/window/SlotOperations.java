@@ -63,10 +63,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * declares its own key, {@link #define(BehaviorKey) defines} it here so other mods
  * can discover it, ships a name and a description for it (below), asks
  * {@link #allows} in its own code before acting, and sends any clicks it performs
- * under {@link #as}. MenuKit needs no change for a new
+ * under {@link #as}. SlotKit needs no change for a new
  * operation to exist. Vanilla's own operations are {@link BehaviorKeys#VANILLA_OPERATIONS},
  * split one key per thing a player can do to a slot, and enforced at vanilla's seams
- * by MenuKit itself.
+ * by SlotKit itself.
  *
  * <h2>Name and description</h2>
  *
@@ -98,12 +98,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * applies to; every group a mod adds applies automatically, unless the operation
  * opts out of it by id or by {@link SlotGroupSet}. An operation defined without
  * saying applies to every group, so nothing defined before this existed changes.
- * MenuKit declares vanilla's own operations from what vanilla does: nothing puts
+ * SlotKit declares vanilla's own operations from what vanilla does: nothing puts
  * into an output slot, the crafter's result can't be touched at all, double-click
  * collect skips the results vanilla's menus exclude, and a world pickup lands only
  * in the hotbar, the main inventory and the offhand.
  *
- * <p>This is a declaration, not a rule MenuKit enforces: vanilla's seams already act
+ * <p>This is a declaration, not a rule SlotKit enforces: vanilla's seams already act
  * only where vanilla does, and a mod's own operation acts where its code does. It is
  * what a consumer reads to know where an operation <em>can</em> reach.
  *
@@ -593,9 +593,9 @@ public final class SlotOperations {
         return allowsGesture(SlotRef.of(menu, slot, player), gesture);
     }
 
-    // A menu slot is addressed through the installed addressing rule (kind-aware once
-    // Containers is present). An off-menu slot needs a container identity MenuKit alone
-    // cannot mint, so it falls to the key's default and the vetoes decide (docs/limits.md).
+    // A menu slot is addressed through the installed addressing rule. An off-menu slot
+    // has an address only when its container has an identity; without one it falls to
+    // the key's default and the vetoes decide.
     private static boolean cascade(SlotRef ref, BehaviorKey<TriBool> operation) {
         Address address = ref.address();
         if (address == null) return operation.libraryDefault().asBoolean(); // no identity to declare on

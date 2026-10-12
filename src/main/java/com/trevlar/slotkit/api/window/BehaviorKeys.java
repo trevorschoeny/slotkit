@@ -26,7 +26,7 @@ public final class BehaviorKeys {
 
     /**
      * What a slot accepts and releases, and its per-item stack cap: a
-     * {@link SlotGate}. Default {@link SlotGate#OPEN}, exactly vanilla. MenuKit
+     * {@link SlotGate}. Default {@link SlotGate#OPEN}, exactly vanilla. SlotKit
      * enforces it once at each vanilla method that moves items.
      */
     public static final BehaviorKey<SlotGate> GATING = BehaviorKey.of(
@@ -48,8 +48,8 @@ public final class BehaviorKeys {
 
     /**
      * Fires on the client when synced slot contents grow. UI feedback only (a flash,
-     * a sound, a badge), with no authority. Client tier, so it works with MenuKit
-     * alone, and it fires for created slots too, whose contents sync the same way.
+     * a sound, a badge), with no authority. Client tier, so it works on any server,
+     * and it fires for created slots too, whose contents sync the same way.
      * Default {@link ReactiveHook#NONE}.
      */
     public static final BehaviorKey<ReactiveHook> ON_INSERT_OBSERVED = BehaviorKey.of(

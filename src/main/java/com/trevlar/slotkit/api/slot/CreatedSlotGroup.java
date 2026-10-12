@@ -31,7 +31,7 @@ import java.util.function.BiConsumer;
 public class CreatedSlotGroup {
 
     private final String id;
-    // What this group is, in MenuKit core's registry terms. Required, so another
+    // What this group is, in the slot group registry's terms. Required, so another
     // mod can find these slots by name (SlotGroupCategories) and decide what to do
     // with them, and a group never silently looks like plain storage to a search
     // over the player's menu. The category says what the slots are; what a gesture

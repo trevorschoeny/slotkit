@@ -18,7 +18,7 @@ import java.util.UUID;
  * (pockets or equipment slots, say) with per-slot state. It wraps a content
  * {@link Storage} (usually bound from a {@link StorageAttachment}) and tags it with a
  * {@link PersistentContainerKey.Modded} key whose payload names the owning player.
- * MenuKit's {@code ContainerIdentity} routes the registered slot to this key, and the
+ * {@code ContainerIdentity} routes the registered slot to this key, and the
  * server resolves it to a bag on the player keyed by resolver id, so different slots
  * and different mods never collide.
  *

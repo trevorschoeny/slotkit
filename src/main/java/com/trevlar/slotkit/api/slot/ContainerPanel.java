@@ -308,7 +308,7 @@ public final class ContainerPanel {
      * {@code Window.slot(address(panelId, groupId, i)).set(KEY, value)} wins because
      * it is more specific, not because it was declared last.
      */
-    @SuppressWarnings("removal") // QUICK_MOVE stays declared for 5.0.0 readers until 6.0.0
+    @SuppressWarnings("removal")
     private static void armInlineBehavior(String containerPanelId, SlotSpec spec) {
         SlotGate gate = spec.gateValue();
         TriBool binding = spec.bindingValue();
@@ -331,8 +331,8 @@ public final class ContainerPanel {
         // colliding at the per-address level and whichever mod's init ran last
         // winning. Above the group sits the category (PRECEDENCE_CATEGORY).
         GroupKey group = GroupKey.of(groupId(containerPanelId, spec.groupId()));   // the group's own identity
-        // The slot rules and operations are MenuKit keys, which MenuKit enforces in
-        // vanilla's code for every kind of slot. Mending is enforced by Containers.
+        // SlotKit enforces the slot rules and operations in vanilla's code for every
+        // kind of slot, and Mending at the XP orb.
         if (gate != null)          WindowEngine.setGroup(group, BehaviorKeys.GATING, Decl.set(gate));
         if (binding != null)       WindowEngine.setGroup(group, BehaviorKeys.BINDING, Decl.set(binding));
         if (mending != null)       WindowEngine.setGroup(group, BehaviorKeys.MENDING, Decl.set(mending));

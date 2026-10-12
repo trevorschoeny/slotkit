@@ -14,14 +14,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <p>A consumer like Inventory Max may want to mend any item in the inventory.
  * Without this hook it would need its own {@code ExperienceOrb} mixin, and the two
  * would compete for the same per-orb repair, spending the XP twice. A {@link Provider}
- * registered here puts those items in the same pool Containers already builds, so one
+ * registered here puts those items in the same pool SlotKit already builds, so one
  * orb still repairs one item.
  *
- * <p>Containers never decides to mend the vanilla inventory on its own; it only
+ * <p>SlotKit never decides to mend the vanilla inventory on its own; it only
  * mends what a consumer hands it. Which items (gated behind a broad-mending toggle,
  * say) is decided entirely in the consumer's {@link Provider}.
  *
- * <p>Containers applies vanilla's check itself (damaged and carrying the
+ * <p>SlotKit applies vanilla's check itself (damaged and carrying the
  * {@code REPAIR_WITH_XP} effect), so a provider may hand over a whole inventory
  * unfiltered. If a candidate is chosen, its {@link Candidate#stack()} is repaired in
  * place with vanilla's math, and then {@link Candidate#onRepaired()} is called. That
