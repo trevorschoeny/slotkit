@@ -426,10 +426,20 @@ public final class Handshake {
      * slots and both sides keep the same slot count.
      */
     public static boolean buildsCreatedSlots(boolean clientSide, String slotPanelId) {
-        if (!clientSide) return true;
-        ServerRecord s = server;
-        if (s == null || !s.slotKit()) return false;
+        return !clientSide || clientBuilds(server, ModSides::of, slotPanelId);
+    }
+
+    /**
+     * The client's half of {@link #buildsCreatedSlots}, pure.
+     *
+     * @param server what the server said ({@code null}: not connected)
+     * @param sides  what a local mod declares, {@code null} for no block
+     */
+    public static boolean clientBuilds(@Nullable ServerRecord server,
+                                       java.util.function.Function<String, ModSides.@Nullable Need> sides,
+                                       String slotPanelId) {
+        if (server == null || !server.slotKit()) return false;
         String owner = ModSides.namespaceOf(slotPanelId);
-        return owner == null || ModSides.of(owner) == null || s.has(owner);
+        return owner == null || sides.apply(owner) == null || server.has(owner);
     }
 }

@@ -549,7 +549,7 @@ public final class SlotOperations {
                 if (veto.denies(ref, group, operation)) return false;
             } catch (RuntimeException e) {
                 BROKEN.add(veto);
-                LOGGER.error("[MenuKit] a slot operation veto threw and is disabled from here on: {}", veto, e);
+                LOGGER.error("[SlotKit] a slot operation veto threw and is disabled from here on: {}", veto, e);
             }
         }
         return true;

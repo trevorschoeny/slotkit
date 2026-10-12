@@ -108,21 +108,34 @@ public final class ModSides {
      * @throws IllegalStateException naming the id and the line to add
      */
     public static void requireBuildsSlots(String what, String id) {
+        String error = definitionError(what, id, FabricLoader.getInstance()::isModLoaded, ModSides::of);
+        if (error != null) throw new IllegalStateException(error);
+    }
+
+    /**
+     * The definition check as a pure function: the message to throw, or {@code null}
+     * when {@code id} may build slots.
+     *
+     * @param loaded whether a mod id is loaded
+     * @param sides  what a loaded mod declares, {@code null} for no block
+     */
+    public static @Nullable String definitionError(String what, String id, java.util.function.Predicate<String> loaded,
+                                                   java.util.function.Function<String, @Nullable Need> sides) {
         String namespace = namespaceOf(id);
         String line = "\"custom\": { \"slotkit\": { \"bothSides\": \"required\" } }";
         if (namespace == null) {
-            throw new IllegalStateException(what + " '" + id + "': an id that builds slots is namespaced by "
-                    + "the id of the mod that defines it ('mymod:" + id + "').");
+            return what + " '" + id + "': an id that builds slots is namespaced by the id of the mod "
+                    + "that defines it ('mymod:" + id + "').";
         }
-        if (!FabricLoader.getInstance().isModLoaded(namespace)) {
-            throw new IllegalStateException(what + " '" + id + "': its namespace '" + namespace + "' is not a "
-                    + "loaded mod's id. An id that builds slots is namespaced by the id of the mod that "
-                    + "defines it, and that mod declares " + line + " in its fabric.mod.json.");
+        if (!loaded.test(namespace)) {
+            return what + " '" + id + "': its namespace '" + namespace + "' is not a loaded mod's id. An "
+                    + "id that builds slots is namespaced by the id of the mod that defines it, and that "
+                    + "mod declares " + line + " in its fabric.mod.json.";
         }
-        if (of(namespace) != Need.REQUIRED) {
-            throw new IllegalStateException(what + " '" + id + "' builds slots, so SlotKit is needed on both "
-                    + "sides wherever '" + namespace + "' is installed. Add to " + namespace
-                    + "'s fabric.mod.json: " + line);
+        if (sides.apply(namespace) != Need.REQUIRED) {
+            return what + " '" + id + "' builds slots, so SlotKit is needed on both sides wherever '"
+                    + namespace + "' is installed. Add to " + namespace + "'s fabric.mod.json: " + line;
         }
+        return null;
     }
 }
