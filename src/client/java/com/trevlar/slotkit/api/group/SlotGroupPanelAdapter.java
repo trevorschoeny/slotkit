@@ -6,6 +6,7 @@ import com.trevlar.menukit.api.panel.AnchorPanelAdapter;
 import com.trevlar.menukit.api.panel.Panel;
 import com.trevlar.menukit.api.panel.PanelStyle;
 import com.trevlar.menukit.api.panel.Reference;
+import com.trevlar.menukit.api.panel.WrapsPanelAdapter;
 import com.trevlar.slotkit.mixin.AbstractContainerScreenAccessor;
 
 import net.minecraft.client.gui.screens.Screen;
@@ -54,6 +55,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Construction, targeting and {@link #unregister()} throw once MenuKit's
  * declarations freeze at client start. Gate at runtime with {@link Panel#visibleWhen}.
  */
+@WrapsPanelAdapter
 public final class SlotGroupPanelAdapter {
 
     /** Default content padding for styled panels. */
