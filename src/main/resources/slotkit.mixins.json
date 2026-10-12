@@ -8,6 +8,8 @@
     "CompoundContainerAccessor",
     "SKBlockDropMixin",
     "SKClickContextMixin",
+    "SKComponentPatchLegacyMixin",
+    "SKComponentTypeAccessor",
     "SKCreativeSetSlotMixin",
     "SKDispenserGateMixin",
     "SKEnderChestOwnerMixin",
@@ -21,7 +23,7 @@
     "SKPlayerInitMenuProjectionMixin",
     "SKPlayerListRespawnMixin",
     "SKPlayerOpenMenuMixin",
-    "SKShulkerBoxPortableStateMixin",
+    "SKPortableSlotStateMixin",
     "SKSlotGateMixin",
     "SlotPositionAccessor"
   ],
