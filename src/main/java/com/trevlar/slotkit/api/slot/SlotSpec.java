@@ -290,7 +290,8 @@ public final class SlotSpec {
     public String groupId()       { return groupId; }
     @ApiStatus.Internal
     public SlotGroupCategory category() { return category; }
-    int count()            { return count; }
+    @ApiStatus.Internal
+    public int count()     { return count; }
     // SlotFlowElement owns slot positions. These are only the starting layout
     // ParitySlotRegistry hands to CreatedSlots, which the SlotElement replaces every
     // frame, so it never shows: origin (0,0), one row (columns = count).

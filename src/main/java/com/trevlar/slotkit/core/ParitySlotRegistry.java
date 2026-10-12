@@ -87,6 +87,16 @@ public final class ParitySlotRegistry {
         RECIPES.addAll(sorted);
     }
 
+    /**
+     * Every recipe's slot panel id and slot count, sorted: what the handshake carries
+     * so a server can refuse a client whose copy of a required mod builds other slots.
+     */
+    public static java.util.SortedMap<String, Integer> slotCounts() {
+        java.util.SortedMap<String, Integer> counts = new java.util.TreeMap<>();
+        for (Entry e : RECIPES) counts.put(e.slotPanelId(), e.spec().count());
+        return counts;
+    }
+
     /** Whether no parity recipe is registered, so the build hooks can skip work. */
     public static boolean isEmpty() {
         return RECIPES.isEmpty();

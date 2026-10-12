@@ -294,9 +294,10 @@ public final class CreatedSlots {
                     || reveal == null                 // no predicate: always shown
                     || reveal.getAsBoolean());         // client side: follow the predicate
 
-            // A client whose server does not run Containers builds no created
-            // slots, so its menus keep the server's slot count instead of desyncing.
-            if (!com.trevlar.slotkit.network.Handshake.buildsCreatedSlots(player.level().isClientSide())) {
+            // A client builds a panel's slots only when its server will too: the server
+            // runs SlotKit, and the panel's mod when it declares a slotkit block. Its
+            // menus otherwise keep the server's slot count instead of desyncing.
+            if (!com.trevlar.slotkit.network.Handshake.buildsCreatedSlots(player.level().isClientSide(), panelId)) {
                 int at = menu.slots.size();
                 return new RegisteredSlots(panel, group, at, at, List.of());
             }

@@ -53,7 +53,11 @@ public final class SlotStateHooks {
 
     public static void registerServer() {
         ServerPlayNetworking.registerGlobalReceiver(SlotStateUpdateC2SPayload.TYPE,
-                (payload, ctx) -> ctx.server().execute(() -> handleWrite(payload, ctx.player())));
+                (payload, ctx) -> {
+                    // Heard only from a client whose handshake recorded SlotKit.
+                    if (!com.trevlar.slotkit.network.Handshake.hears(ctx.player())) return;
+                    ctx.server().execute(() -> handleWrite(payload, ctx.player()));
+                });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 server.execute(() -> sendPlayerJoinSnapshot(handler.getPlayer())));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
@@ -68,7 +72,7 @@ public final class SlotStateHooks {
         if (menu == null) return;
         List<SlotStateSnapshotS2CPayload.Entry> entries = buildEntries(menu, player, null);
         if (!entries.isEmpty()) {
-            ServerPlayNetworking.send(player, new SlotStateSnapshotS2CPayload(menu.containerId, entries));
+            com.trevlar.slotkit.network.Handshake.send(player, new SlotStateSnapshotS2CPayload(menu.containerId, entries));
         }
     }
 
@@ -85,7 +89,7 @@ public final class SlotStateHooks {
                     // Player-scoped created slots (pockets, equipment) resolve to Modded keys.
                     || key instanceof PersistentContainerKey.Modded);
         if (!entries.isEmpty()) {
-            ServerPlayNetworking.send(player, new SlotStateSnapshotS2CPayload(menu.containerId, entries));
+            com.trevlar.slotkit.network.Handshake.send(player, new SlotStateSnapshotS2CPayload(menu.containerId, entries));
         }
     }
 
@@ -196,7 +200,7 @@ public final class SlotStateHooks {
             LOGGER.warn("[SlotState] channel {} could not encode a value for the wire: {}", channel.id(), e.toString());
             return;
         }
-        ServerPlayNetworking.send(viewer, new SlotStateUpdateS2CPayload(containerId, menuSlotIndex, channel.id(), bytes));
+        com.trevlar.slotkit.network.Handshake.send(viewer, new SlotStateUpdateS2CPayload(containerId, menuSlotIndex, channel.id(), bytes));
     }
 
     /**

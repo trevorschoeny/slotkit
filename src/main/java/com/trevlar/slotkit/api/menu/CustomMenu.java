@@ -163,6 +163,7 @@ public final class CustomMenu {
      *                       on both for sync
      */
     public static Builder define(Identifier id, HandlerFactory handlerFactory) {
+        com.trevlar.slotkit.network.ModSides.requireBuildsSlots("CustomMenu", id.toString());
         return new Builder(id, handlerFactory);
     }
 

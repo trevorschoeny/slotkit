@@ -2,7 +2,6 @@ package com.trevlar.slotkit.api.menu;
 
 import com.trevlar.menukit.api.panel.Panel;
 import com.trevlar.slotkit.network.OpenMenuC2SPayload;
-import com.trevlar.slotkit.network.Handshake;
 import com.trevlar.menukit.api.Declarations;
 
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
@@ -98,11 +97,12 @@ public final class ClientMenu {
     /**
      * Asks the server to open this menu for the local player. The server opens it only
      * when the menu declares {@code validWhen} and it holds for this player. Nothing is
-     * sent to a server without Containers.
+     * sent to a server without SlotKit and the menu's mod; one line is logged instead.
      */
     public void requestOpen() {
-        if (!Handshake.serverHasContainers()) {
-            LOGGER.debug("[SlotKit] not asking to open {}: the server does not run Containers", menu.id());
+        if (!com.trevlar.slotkit.api.Presence.serverHas(menu.id().getNamespace())) {
+            LOGGER.info("[SlotKit] not asking to open {}: the server does not run {}", menu.id(),
+                    com.trevlar.slotkit.api.Presence.serverHasSlotKit() ? menu.id().getNamespace() : "SlotKit");
             return;
         }
         ClientPlayNetworking.send(new OpenMenuC2SPayload(menu.id()));

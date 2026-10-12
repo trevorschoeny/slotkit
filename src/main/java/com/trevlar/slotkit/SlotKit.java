@@ -55,11 +55,15 @@ public class SlotKit implements ModInitializer {
                 com.trevlar.slotkit.network.OpenMenuC2SPayload.STREAM_CODEC);
         net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(
                 com.trevlar.slotkit.network.OpenMenuC2SPayload.TYPE,
-                (payload, context) -> context.server().execute(() ->
-                        com.trevlar.slotkit.api.menu.CustomMenu.handleOpenRequest(
-                                context.player(), payload.menuId())));
+                (payload, context) -> {
+                    if (!com.trevlar.slotkit.network.Handshake.hears(context.player())) return;
+                    context.server().execute(() ->
+                            com.trevlar.slotkit.api.menu.CustomMenu.handleOpenRequest(
+                                    context.player(), payload.menuId()));
+                });
 
-        // A joining client must have Containers. Checked in the configuration phase.
+        // The negotiation, in the configuration phase: refuse a client only for a mod
+        // that needs SlotKit on both sides, and record what every client has.
         com.trevlar.slotkit.network.Handshake.register();
 
         // Grave-mod compat is optional: a capture adapter registers only when its

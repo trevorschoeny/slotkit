@@ -104,6 +104,7 @@ public final class ContainerPanel {
 
     /** Starts registering a container-parity panel with the given id. */
     public static Builder define(String panelId) {
+        com.trevlar.slotkit.network.ModSides.requireBuildsSlots("ContainerPanel", panelId);
         return new Builder(panelId);
     }
 

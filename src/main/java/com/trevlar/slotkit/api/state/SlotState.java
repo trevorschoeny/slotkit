@@ -195,13 +195,17 @@ public final class SlotState {
 
     /**
      * A client's write: shown at once from the local cache, and sent to the server,
-     * which checks it and sends back its own value if it refuses. Sent only when the
-     * server runs Containers, and only for a slot of the menu the player has open,
-     * which the write names.
+     * which checks it and sends back its own value if it refuses. Only when the
+     * server registers the channel, and only for a slot of the menu the player has
+     * open, which the write names.
      */
     private static <T> void writeFromClient(SlotStateChannel<T> channel, Slot slot, @Nullable Player viewer, T value) {
+        // On when both sides have the channel, off otherwise: a write the server can't
+        // hold is neither sent nor shown, so the cache never shows a value the server
+        // never stored (spec 2.4.5 item 5).
+        if (!com.trevlar.slotkit.api.Presence.serverHasChannel(channel.id())) return;
         SlotStateClientCache.write(channel, slot.container, slot.getContainerSlot(), value);
-        if (viewer == null || !com.trevlar.slotkit.network.Handshake.serverHasContainers()) return;
+        if (viewer == null) return;
         // The menu the server has open. The creative picker is client-only and has the
         // inventory menu's id; the server sees the inventory menu there.
         net.minecraft.world.inventory.AbstractContainerMenu open = viewer.containerMenu;
