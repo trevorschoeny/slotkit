@@ -34,7 +34,7 @@ import java.util.Map;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * The {@link SlotGroupResolver}s MenuKit ships for every vanilla 26.2
+ * The {@link SlotGroupResolver}s SlotKit ships for every vanilla 26.2
  * {@link AbstractContainerMenu} whose slots map to named categories.
  *
  * <p>Slot-index ranges were checked against vanilla's
@@ -56,7 +56,7 @@ public final class VanillaSlotGroupResolvers {
     private VanillaSlotGroupResolvers() {}
 
     /**
-     * Called once from {@code MenuKit.init}, on both sides. Registers a resolver for
+     * Called once from {@code SlotKit.init}, on both sides. Registers a resolver for
      * each vanilla menu class that exists on a server, so a vanilla slot has its
      * category there too: the operations cascade, {@code AppliesTo} and
      * {@code SlotGroups.of} resolve on the server that enforces them. (Until 6.0.0

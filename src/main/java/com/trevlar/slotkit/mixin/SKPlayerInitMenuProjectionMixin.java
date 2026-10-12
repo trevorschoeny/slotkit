@@ -31,7 +31,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <p>Does nothing for a menu with no registered projection source. The player's own
  * {@code InventoryMenu} gets its slots from {@code SKInventoryMenuMixin} and is
  * never registered here. Server side only ({@code ServerPlayer}); the matching client
- * hook is in the Containers client initializer.
+ * hook is in {@code SlotKitClient}.
  */
 @ApiStatus.Internal
 @Mixin(ServerPlayer.class)

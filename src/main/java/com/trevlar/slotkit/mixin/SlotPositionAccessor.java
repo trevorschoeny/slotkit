@@ -11,8 +11,9 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  * {@code public final int}; this accessor drops the {@code final} so slots can be
  * moved at runtime.
  *
- * <p>MKCreativeMixin uses it to fix MKSlot positions on the creative inventory
- * tab, where vanilla's selectTab wraps them in SlotWrapper with wrong coordinates.
+ * <p>{@code SlotElement} uses it to write a created slot's position (or its creative
+ * {@code SlotWrapper}'s) each frame, and {@code CustomContainerScreen} to lay out its
+ * own slots.
  */
 @ApiStatus.Internal
 @Mixin(Slot.class)

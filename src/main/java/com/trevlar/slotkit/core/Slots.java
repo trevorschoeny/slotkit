@@ -17,14 +17,14 @@ import org.jetbrains.annotations.ApiStatus;
  * index. So any code reading a slot's identity off {@code menu.slots} gets the
  * wrong answer on creative unless it unwraps first, whether it asks "which
  * player-inventory slot is this?" (anchoring a panel to the hotbar, say) or "is
- * this one of my slots?" (MenuKit-Containers). {@link #target} is that unwrap,
+ * this one of my slots?" (created slots). {@link #target} is that unwrap,
  * shared by both:
  *
  * <ul>
  *   <li>{@link VanillaSlotResolver} reads {@code target.container} +
  *       {@code target.getContainerSlot()} to find a vanilla player-inventory
  *       slot's on-screen position;</li>
- *   <li>MenuKit-Containers' {@code CreatedSlotAccess.asMKCSlot} tests whether
+ *   <li>{@code CreatedSlotAccess.asMKCSlot} tests whether
  *       {@code target} is a registered slot.</li>
  * </ul>
  *
@@ -57,10 +57,10 @@ public final class Slots {
     }
 
     // The creative wrapper is a client class, so the client installs the unwrap
-    // (MenuKitClient); on a server there are no wrappers and a slot is its own target.
+    // (SlotKitClient); on a server there are no wrappers and a slot is its own target.
     private static volatile java.util.function.UnaryOperator<Slot> unwrap = java.util.function.UnaryOperator.identity();
 
-    /** MenuKitClient installs the creative-wrapper unwrap at client init. */
+    /** SlotKitClient installs the creative-wrapper unwrap at client init. */
     public static void installUnwrap(java.util.function.UnaryOperator<Slot> impl) {
         com.trevlar.menukit.api.Declarations.requireOpen("Slots.installUnwrap");
         unwrap = java.util.Objects.requireNonNull(impl, "impl");

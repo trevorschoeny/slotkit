@@ -1,4 +1,4 @@
-# The Amethyst in-code renames, after amethyst-imports.sed (imports alone do not carry these).
+# The in-code renames, after amethyst-imports.sed (imports alone do not carry these).
 # Run with sed -E, only on the files that use Containers' types: a mod may have a class
 # of its own named SlotGroup (Inventory Plus does), which must not be renamed. After the
 # import map, those are the files importing from com.trevlar.slotkit.api.slot:

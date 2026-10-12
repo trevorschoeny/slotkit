@@ -11,9 +11,9 @@ import org.jetbrains.annotations.ApiStatus;
 import java.util.List;
 
 /**
- * Reports the created slot groups present on any menu. MenuKit-Containers
- * installs the one implementation at init. With MenuKit alone there are no created
- * slots and nothing is installed.
+ * Reports the created slot groups present on any menu. The one implementation is
+ * {@link CreatedSlotCategories#resolve}, which {@code SlotGroupCategories} calls
+ * directly.
  *
  * <p>Distinct from {@link SlotGroupResolver}, which answers per menu class and
  * per category, because a created group is neither. It sits on whatever menu the

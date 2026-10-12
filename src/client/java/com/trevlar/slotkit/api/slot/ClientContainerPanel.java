@@ -26,7 +26,7 @@ import java.util.function.Supplier;
  * }</pre>
  *
  * A container panel with neither needs no call here: its slots are presented on every
- * container screen. Containers builds each panel (chrome, then the slots as a
+ * container screen. SlotKit builds each panel (chrome, then the slots as a
  * {@link SlotFlowElement}) and wires its adapter at client start, after every client
  * initializer has run.
  */
@@ -72,7 +72,7 @@ public final class ClientContainerPanel {
     /**
      * Builds each registered container panel (chrome, then its slots flowing and
      * wrapping to the panel's width) and wires a {@link ScreenPanelAdapter} scoped by its
-     * parity. Called by Containers at client start, before declarations freeze.
+     * parity. Called by {@code SlotKitClient} at client start, before declarations freeze.
      */
     @ApiStatus.Internal
     public static void wireAll() {

@@ -15,7 +15,7 @@ import java.util.function.Predicate;
 
 /**
  * The server's check on a slot-state write a client sent, as one pure function so its
- * order can be tested without a server ({@code :validator-mkc:trustCheck}).
+ * order can be tested without a server (the validator's {@code trustCheck} task).
  *
  * <p>In order, each step refusing what fails it:
  * <ol>

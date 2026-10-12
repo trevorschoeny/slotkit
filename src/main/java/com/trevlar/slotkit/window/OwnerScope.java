@@ -22,7 +22,7 @@ import java.util.Objects;
  *   <li>{@link Sub}: a menu backed by more than one container (a double chest,
  *       furnace segments). The id is the stable per-backing key from composite
  *       resolution ({@code ResolvedSlot.key()}), turned into a string where
- *       MenuKit: Containers mints the address.</li>
+ *       the address is minted.</li>
  * </ul>
  *
  * <h2>Open to new scopes</h2>

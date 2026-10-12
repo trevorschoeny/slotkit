@@ -18,14 +18,11 @@ import java.util.Objects;
  * client's slot observers use it ({@link ObservedReactions}, {@link WindowSignals}),
  * and so do the operation seams and vetoes, which run on the server too
  * ({@link SlotOperations}, {@link SlotRef}); the class name is older than that.
- * With MenuKit alone it addresses vanilla slots only ({@link VanillaAddressing}).
- * MenuKit: Containers installs the kind-aware {@code SlotAddresses.of}, so a created
- * slot resolves to its created address. With one rule installed in one place, two
- * observers can never disagree on a slot's address.
+ * It applies the kind-aware rule ({@code SlotAddresses.RULE}): a created slot resolves
+ * to its created address, a vanilla slot through {@link VanillaAddressing}. With one
+ * rule in one place, two observers can never disagree on a slot's address.
  *
- * <p>Both ends are inside the library: Containers {@link #install}s its rule and
- * MenuKit's observers call {@link #addressOf}. Consumers address slots by
- * {@link Address} and never call this.
+ * <p>Consumers address slots by {@link Address} and never call this.
  */
 @ApiStatus.Internal
 public final class ClientSlotAddressing {
@@ -52,7 +49,7 @@ public final class ClientSlotAddressing {
     // slot to its vanilla one. Both sides, since the operation seams run on the server.
     private static final SlotAddressFn fn = com.trevlar.slotkit.core.SlotAddresses.RULE;
 
-    /** The {@link Address} of {@code slot} in {@code menu} under the installed rule. */
+    /** The {@link Address} of {@code slot} in {@code menu} under the rule. */
     public static Address addressOf(AbstractContainerMenu menu, Slot slot) {
         return fn.addressOf(menu, slot);
     }

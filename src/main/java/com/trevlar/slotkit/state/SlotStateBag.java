@@ -85,7 +85,7 @@ public final class SlotStateBag {
         }
     }
 
-    /** Removes every entry under the given channel id. Used by /mkverify cleanup. */
+    /** Removes every entry under the given channel id. */
     public void clearChannel(Identifier channelId) {
         backing.remove(channelId.toString());
     }

@@ -19,9 +19,8 @@ import org.jetbrains.annotations.ApiStatus;
  * When {@link ContainerIdentity} resolves the slot's container, the address is
  * menu-independent: {@link #CONTAINER_FAMILY}, {@code sub(scopeId)} and the
  * container-relative index. The same physical slot then has one address whether
- * reached through its menu, by a hopper or after a reopen, with or without
- * Containers loaded. An unidentifiable container (crafting grid, horse
- * storage) falls back to a menu-based address: the menu's family and the flat menu
+ * reached through its menu, by a hopper or after a reopen. An unidentifiable
+ * container (crafting grid, horse storage) falls back to a menu-based address: the menu's family and the flat menu
  * index.
  */
 public final class VanillaAddressing {

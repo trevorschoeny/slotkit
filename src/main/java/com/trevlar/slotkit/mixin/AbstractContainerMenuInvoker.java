@@ -18,7 +18,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
  * <p>Access only: it exposes an existing vanilla method, injects no behaviour,
  * registers no hook and owns no code path. The slot is added by whoever calls the
  * helper; this invoker only lets the helper reach a {@code protected} method from
- * outside the menu's class hierarchy. Same pattern as MenuKit's
+ * outside the menu's class hierarchy. Same pattern as
  * {@code SlotPositionAccessor} ({@code @Accessor} on vanilla {@code Slot}).
  *
  * <p>Applies on both sides, since the vanilla menu is built on client and server

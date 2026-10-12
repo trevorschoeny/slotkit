@@ -52,9 +52,9 @@ import java.util.Objects;
  * at the {@code x/y} written here, through the same {@code extractSlot} call it uses
  * for a vanilla slot, and its {@code getHoveredSlot} finds it the same way. So a
  * third party's slot hook, or any mod reading {@code slot.x/y}, treats a created slot
- * and a vanilla slot the same, because there is no separate MenuKit slot pass for
- * them to differ in. {@code CustomContainerScreen} has always worked this way on
- * MenuKit's own screens.
+ * and a vanilla slot the same, because SlotKit has no separate slot pass for them
+ * to differ in. {@code CustomContainerScreen} has always worked this way on its own
+ * screens.
  *
  * <h3>Looked up each frame, not held</h3>
  *

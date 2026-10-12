@@ -29,8 +29,7 @@ import org.jspecify.annotations.Nullable;
  * acting ({@link #ownerOf}). Automation (a hopper) never touches a menu, and stays
  * {@code null}.
  *
- * <p>This was Containers' {@code GatingContext} thread-local in 5.0.0. It lives here
- * so MenuKit's operation seams can see the player without Containers installed.
+ * <p>In 5.0.0 this was MenuKit: Containers' {@code GatingContext} thread-local.
  */
 @ApiStatus.Internal
 public final class ActingPlayer {

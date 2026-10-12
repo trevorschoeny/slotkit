@@ -37,8 +37,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * respawn, dimension change) on both sides. {@link ParitySlotRegistry#applyTo} walks
  * the same registry in the same order on both sides and binds the same per-player
  * storage, so server and client build a byte-identical slot block before the first
- * content sync. Does nothing when no parity recipe is registered (MenuKit alone, or a
- * consumer that doesn't use parity).
+ * content sync. Does nothing when no parity recipe is registered (no installed mod uses
+ * container parity).
  */
 @Mixin(InventoryMenu.class)
 public abstract class SKInventoryMenuMixin {

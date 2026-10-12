@@ -52,9 +52,8 @@ public final class SlotStateRegistry {
         return CHANNELS.values();
     }
 
-    // Container resolvers. Container identity has lived in MenuKit
-    // (ContainerIdentity) since 6.0.0; these delegate so slot state and addressing
-    // agree on every key.
+    // Container resolvers. These delegate to ContainerIdentity, so slot state and
+    // addressing agree on every key.
 
     public static <T extends BlockEntity> void registerBlockEntityResolver(
             Class<T> clazz, Function<T, PersistentContainerKey> resolver) {

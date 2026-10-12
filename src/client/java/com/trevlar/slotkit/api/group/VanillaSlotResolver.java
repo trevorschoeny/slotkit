@@ -13,7 +13,7 @@ import java.util.Optional;
 
 /**
  * Finds where a <b>player-inventory slot</b> is on whatever screen is open. You
- * name player-inventory slot N and get back its rectangle; MenuKit handles the slot
+ * name player-inventory slot N and get back its rectangle; SlotKit handles the slot
  * loop and creative's {@code SlotWrapper}, so you write no per-screen geometry.
  *
  * <p>Panel anchoring ({@link SlotGroupCategories}, {@link SlotGroupPanelAdapter})

@@ -38,7 +38,7 @@ import org.jspecify.annotations.Nullable;
  * <p>When nobody has declared any server behaviour, every method returns at once and
  * vanilla interaction pays nothing: the slots nobody touches stay exactly vanilla.
  *
- * <p>Every caller is a MenuKit seam. Consumers declare a gate with
+ * <p>Every caller is a SlotKit seam. Consumers declare a gate with
  * {@code Window.slot(address).gate(...)} and never call these.
  */
 @ApiStatus.Internal

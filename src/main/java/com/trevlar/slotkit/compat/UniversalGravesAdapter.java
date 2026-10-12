@@ -17,7 +17,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.List;
 
 /**
- * Universal Graves adapter. Puts the contents of Containers' player slots into a
+ * Universal Graves adapter. Puts the contents of SlotKit's player slots into a
  * Universal Graves grave and restores them on collect, for every death-droppable
  * player content slot, through {@link PlayerSlotCapture}.
  *

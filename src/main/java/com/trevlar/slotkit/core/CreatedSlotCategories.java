@@ -23,20 +23,19 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Publishes every created slot group into MenuKit core's slot-group registry, so other
- * mods find created slots the same way they find vanilla ones.
+ * Publishes every created slot group into the slot-group registry, so other mods
+ * find created slots the same way they find vanilla ones.
  *
- * <p>One universal {@link SlotGroupResolver}, installed once at init through
- * {@link SlotGroupCategories#extendEvery}. For whatever menu is being resolved, it
- * walks {@code menu.slots} and reports each {@link CreatedSlot} under its group's
- * {@link com.trevlar.slotkit.api.group.SlotGroupCategory}. {@link CreatedSlotAccess}
- * unwraps the creative wrapper, so the reported index is the in-menu one. Groups on
+ * <p>{@link SlotGroupCategories} calls {@link #resolve} for whatever menu it is
+ * resolving. It walks {@code menu.slots} and reports each {@link CreatedSlot} under
+ * its group's {@link com.trevlar.slotkit.api.group.SlotGroupCategory}.
+ * {@link CreatedSlotAccess} unwraps the creative wrapper, so the reported index is the in-menu one. Groups on
  * the player's inventory menu, projected onto a chest or wrapped on the creative tab
  * all resolve wherever they sit. An inert group's slots are skipped, since a hidden
  * thing is invisible to every observer.
  *
  * <p>Consumers never call this. They declare the category on the spec and read the
- * registry with MenuKit types only.
+ * registry through the public API only.
  */
 @ApiStatus.Internal
 public final class CreatedSlotCategories {

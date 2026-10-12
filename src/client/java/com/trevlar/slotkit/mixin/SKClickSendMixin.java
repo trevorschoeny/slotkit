@@ -21,7 +21,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <ul>
  *   <li><b>Refuse before sending.</b> A click whose own slot refuses the operation
  *       it names is dropped here: no local prediction, no packet. Without this a
- *       refusal on a server that does not run MenuKit would only be a prediction;
+ *       refusal on a server that does not run SlotKit would only be a prediction;
  *       the server would move the items and the client would snap to match.</li>
  *   <li><b>Carry the tag.</b> A click sent inside {@code SlotOperations.as(...)}
  *       records its tag just before the packet goes, so the integrated server can

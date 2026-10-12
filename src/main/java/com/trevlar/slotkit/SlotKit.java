@@ -12,9 +12,9 @@ import org.slf4j.LoggerFactory;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Containers' common initializer, on both sides: slot-state attachments, the
- * network payloads, the presence check and the created-slot ports. Its client half
- * is {@code SlotKitClient}. The consumer surface is the {@code api} packages,
+ * SlotKit's common initializer, on both sides: the vanilla slot vocabulary, slot-state
+ * attachments, the network payloads, the handshake and grave-mod compat. Its client
+ * half is {@code SlotKitClient}. The consumer surface is the {@code api} packages,
  * and this class is not part of it.
  */
 @ApiStatus.Internal

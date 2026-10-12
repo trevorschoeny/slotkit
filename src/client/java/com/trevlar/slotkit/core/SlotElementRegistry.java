@@ -7,7 +7,7 @@ import java.util.IdentityHashMap;
 import java.util.Set;
 
 /**
- * The {@link SlotElement}s currently attached to an open screen. MenuKit's screen hook
+ * The {@link SlotElement}s currently attached to an open screen. SlotKit's screen hook
  * uses it to resolve hover and click for slots hosted in panels.
  *
  * <p>The {@code getHoveredSlot} interception goes through {@link CreatedSlotScreenHook},

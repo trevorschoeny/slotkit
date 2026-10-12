@@ -143,8 +143,8 @@ modrinth {
     }
 }
 
-// No pre-release of SlotKit 1 on Modrinth (spec section 3): a 6.x consumer's ceiling
-// would admit it. A version with a pre-release part (a '-' before the '+') never uploads.
+// No pre-release of SlotKit 1 is ever published: a 6.x consumer's ceiling would
+// admit it. A version with a pre-release part (a '-' before the '+') never uploads.
 tasks.named('modrinth') {
     doFirst {
         def v = project.version.toString()
@@ -183,7 +183,7 @@ javadoc {
     options.windowTitle = "SlotKit ${project.version}"
 }
 
-// One Kit range per library (spec 4.1): the declared MenuKit range must be
+// One Kit range per library: the declared MenuKit range must be
 // ">=<major>.<minor>.0 <<major+1>.0.0" of menukit_version, the floor at the
 // major.minor this build compiles against.
 tasks.register('verifyKitRanges') {
@@ -207,7 +207,7 @@ tasks.register('verifyKitRanges') {
 }
 build.dependsOn verifyKitRanges
 
-// One way only (decision 2): SlotKit reaches MenuKit through its public API alone.
+// One way only: SlotKit reaches MenuKit through its public API alone.
 // Two halves: no source names a MenuKit package outside com.trevlar.menukit.api, and
 // no compiled SlotKit class references a MenuKit class or member marked
 // @ApiStatus.Internal (read from MenuKit's class files with ASM, since a few such

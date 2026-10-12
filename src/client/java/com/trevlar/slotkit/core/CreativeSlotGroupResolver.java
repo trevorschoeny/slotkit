@@ -18,7 +18,7 @@ public final class CreativeSlotGroupResolver {
 
     private CreativeSlotGroupResolver() {}
 
-    /** Called once from {@code MenuKitClient}. */
+    /** Called once from {@code SlotKitClient}. */
     public static void registerClient() {
         register();
     }

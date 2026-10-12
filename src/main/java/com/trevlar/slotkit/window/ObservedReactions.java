@@ -18,7 +18,7 @@ import java.util.WeakHashMap;
 /**
  * Fires {@code ON_INSERT_OBSERVED} and {@code ON_TAKE_OBSERVED} on the client when
  * a slot's synced contents change. UI feedback only (a flash, a sound, a badge),
- * with no authority, and it works with MenuKit alone.
+ * with no authority, and it needs nothing from the server.
  *
  * <h2>How it works</h2>
  *
@@ -32,8 +32,8 @@ import java.util.WeakHashMap;
  * <h2>Kind-aware addressing</h2>
  *
  * A changed slot is addressed through {@link ClientSlotAddressing}, the shared rule
- * (vanilla slots with MenuKit alone; with Containers, created slots resolve to their
- * created address). So the reaction resolves at the address a consumer set it on,
+ * (a created slot resolves to its created address, a vanilla slot to its vanilla
+ * one). So the reaction resolves at the address a consumer set it on,
  * the same one {@link WindowSignals} reports for hover and click.
  *
  * <p>Client thread only. A slot with no observed reaction resolves to

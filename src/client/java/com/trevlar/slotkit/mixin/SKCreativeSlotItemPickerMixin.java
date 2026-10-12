@@ -39,8 +39,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * tab, vanilla saves the base (these wrappers included) and rebuilds from
  * {@code inventoryMenu}; leaving it, vanilla restores what it saved. So the slot is
  * represented by vanilla's parked wrapper on the inventory tab and by this one on
- * every other tab, never both at once, and the dispatcher draws exactly one copy at
- * {@code renderX/renderY} throughout.
+ * every other tab, never both at once, and exactly one copy is drawn throughout.
  *
  * <p>{@code SKCreativeSlotClickRouteMixin} reroutes placement clicks on these
  * wrappers to the inventory-tab path, since the base set's click path is client-only

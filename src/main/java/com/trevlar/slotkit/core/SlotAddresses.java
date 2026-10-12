@@ -13,8 +13,8 @@ import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 
 /**
- * Containers' kind-aware slot addressing rule, installed into MenuKit at common
- * init. A created slot ({@link CreatedSlot}, or the creative wrapper around one)
+ * The kind-aware slot addressing rule, which {@link ClientSlotAddressing} applies.
+ * A created slot ({@link CreatedSlot}, or the creative wrapper around one)
  * resolves to its menu-independent created address. A vanilla slot resolves to its
  * container identity, or else its menu address. The client's observers, the
  * operation seams, the vetoes and the slot-level gate all use this one rule, so a

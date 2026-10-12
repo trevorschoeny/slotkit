@@ -16,19 +16,19 @@ import org.jspecify.annotations.Nullable;
  * survival inventory (raw {@code CreatedSlot}s in the menu) and the creative screen
  * (each slot wrapped in a {@code SlotWrapper}).
  *
- * <p>Uses MenuKit's generic {@link Slots#target} unwrap, the same one
+ * <p>Uses the generic {@link Slots#target} unwrap, the same one
  * {@link com.trevlar.slotkit.api.group.VanillaSlotResolver} uses for vanilla slots, so
- * there is one unwrap path for everything. This only adds the Containers question:
+ * there is one unwrap path for everything. This only adds the created-slot question:
  * is the unwrapped target a created slot?
  *
  * <p>Runs on both sides. The creative {@code SlotWrapper} is a client type, but
- * {@link Slots#target} tests an interface in MenuKit's own jar and never loads that
- * client class. On the server no slot is a wrapper, so it returns the slot unchanged.
+ * {@link Slots#target} applies an unwrap the client installs and never loads that
+ * client class itself. On the server no slot is a wrapper, so it returns the slot unchanged.
  * The window's server enforcement ({@link SlotAddresses}, {@link SlotGating}) calls
  * this on the logical server to detect a created slot, and the render and input
  * helpers call it on the client.
  *
- * <p>Internal. Consumers never hand MenuKit a raw vanilla {@code Slot}; they address
+ * <p>Internal. Consumers never hand SlotKit a raw vanilla {@code Slot}; they address
  * created slots by their {@link com.trevlar.slotkit.api.window.Address}.
  */
 @ApiStatus.Internal

@@ -24,13 +24,13 @@ import net.minecraft.world.item.ItemStack;
  * {@link com.trevlar.slotkit.core.Slots#target}, finds the slot on every tab.
  * Vanilla's {@code SlotWrapper} is package-private and can't be constructed here, so
  * this copies its delegation and implements the same {@link SlotWrapperAccessor}
- * unwrap MenuKit applies to vanilla's wrapper. That way {@code Slots.target} and
+ * unwrap SlotKit applies to vanilla's wrapper. That way {@code Slots.target} and
  * {@code CreatedSlotAccess.asMKCSlot} resolve it to the slot with no special case.
  *
  * <h3>Parked, like the inventory-tab wrappers</h3>
  *
- * Built off-screen (the screen dispatcher draws the slot at its live
- * {@code renderX/renderY} instead), and {@code SKCreativeSlotClickRouteMixin}
+ * Built off-screen (the {@code SlotElement} showing the slot writes its real
+ * {@code x/y} each frame), and {@code SKCreativeSlotClickRouteMixin}
  * reroutes its placement clicks to the inventory-tab path. The delegation below keeps
  * vanilla's own reads and writes (item, may-place, take and so on) correct for
  * anything that touches the wrapper directly.
@@ -44,7 +44,7 @@ public final class CreativeSlotWrapper extends Slot implements SlotWrapperAccess
 
     /**
      * @param target the registered slot on {@code player.inventoryMenu} this stands in for
-     * @param x      parked screen x (the dispatcher draws the slot at {@code renderX} instead)
+     * @param x      parked screen x (the slot's {@code SlotElement} moves it each frame)
      * @param y      parked screen y
      */
     public CreativeSlotWrapper(CreatedSlot target, int x, int y) {

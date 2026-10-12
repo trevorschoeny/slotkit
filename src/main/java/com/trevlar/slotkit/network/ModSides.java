@@ -98,7 +98,7 @@ public final class ModSides {
     }
 
     /**
-     * The definition check (spec 2.4.1): a panel or menu that builds slots must come
+     * The definition check: a panel or menu that builds slots must come
      * from a loaded mod that declares {@code bothSides: required}, named by the id's
      * namespace. This is what keeps a server with only {@code preferred} mods safe for
      * vanilla clients: such a server never changes a menu's slot count.

@@ -24,7 +24,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * claimed for the length of the decision.
  *
  * <p>On a refusal the client's view of its menu is resent. A client running
- * MenuKit never predicted the drop, but one without it did, and would otherwise
+ * SlotKit never predicted the drop, but one without it did, and would otherwise
  * show the item gone until something else resynced it.
  */
 @Mixin(ServerGamePacketListenerImpl.class)

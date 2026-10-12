@@ -23,7 +23,7 @@ import java.util.Map;
 /**
  * Slot state that travels with an item: a portable block entity's per-player bag,
  * carried on the item it drops as (a shulker box with its marks), under one key in
- * vanilla's {@code minecraft:custom_data} (decision 8 of the Amethyst spec).
+ * vanilla's {@code minecraft:custom_data}.
  *
  * <h3>Why custom_data and not a component of our own</h3>
  * Fabric API refuses, before SlotKit's handshake, any client that cannot match a
@@ -53,7 +53,7 @@ import java.util.Map;
  *       box was placed do not come back ({@code SKPortableSlotStateMixin}).</li>
  * </ol>
  *
- * <p>The key is saved text and never changes (Invariants).
+ * <p>The key is saved text and never changes.
  */
 @ApiStatus.Internal
 public final class PortableSlotState {

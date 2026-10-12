@@ -20,7 +20,8 @@ import java.util.Map;
  * Tells Fabric API's missing-content check that {@code menukit:portable_slot_state} is
  * retired, not missing. Containers 6.x registered it as a data component type, so every
  * world that ran 6.x lists it in {@code data/fabric/registry_entries.dat}. SlotKit
- * registers no component (decision 8) and renames the old one as it reads
+ * registers no component (a synced registry entry would refuse vanilla clients before
+ * the handshake runs) and renames the old one as it reads
  * ({@code SKComponentPatchLegacyMixin}), so nothing is lost, but without this the client
  * shows "Missing content detected!" on opening such a world. The one job a data fixer
  * would do, like the rename. Permanent, for the same reason.

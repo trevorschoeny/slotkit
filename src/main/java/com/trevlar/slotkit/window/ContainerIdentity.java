@@ -31,15 +31,14 @@ import java.util.function.Function;
  * a chest slot's {@link Address} the same whether it is reached through its menu,
  * by a hopper, or after a reopen.
  *
- * <p>Lives in MenuKit, on both sides. Until 6.0.0 Containers installed it
- * through a port, so a vanilla slot's address changed depending on whether
- * Containers was loaded.
+ * <p>Runs on both sides. (Until 6.0.0 MenuKit: Containers installed it through a
+ * port, so a vanilla slot's address changed depending on whether Containers was
+ * loaded.)
  *
  * <h3>Resolution order</h3>
  *
  * <ol>
- *   <li>Extensions: containers a library recognises as its own. Containers
- *       registers one for its key-carrying storages.</li>
+ *   <li>A storage that carries its own key ({@code KeyedStorage}).</li>
  *   <li>The player's inventory.</li>
  *   <li>A block entity: a registered resolver for its class, else its position.
  *       (Until 6.0.0 a registered block-entity resolver was never reached: the

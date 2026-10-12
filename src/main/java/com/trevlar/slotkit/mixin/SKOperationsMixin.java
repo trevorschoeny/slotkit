@@ -23,7 +23,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 /**
- * MenuKit's one seam at each menu-level vanilla method. Each asks the
+ * SlotKit's one seam at each menu-level vanilla method. Each asks the
  * cascade, the gate and the vetoes once per slot; a click a mod simulates under
  * {@code SlotOperations.as(...)} is judged by the operation it serves:
  *

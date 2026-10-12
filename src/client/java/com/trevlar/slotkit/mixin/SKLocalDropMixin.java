@@ -16,7 +16,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * 26.3 the drop key goes through {@code MultiPlayerGameMode.dropItem}, which
  * removes the item from the selected slot as a prediction and sends the action,
  * so the refusal has to come first: refused here, nothing is removed and
- * nothing is sent, and it holds on a server that does not run MenuKit.
+ * nothing is sent, and it holds on a server that does not run SlotKit.
  * Cancelling also skips the arm swing, as for an empty hand.
  */
 @Mixin(MultiPlayerGameMode.class)

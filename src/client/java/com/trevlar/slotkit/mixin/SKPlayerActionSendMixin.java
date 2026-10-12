@@ -28,7 +28,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <ul>
  *   <li><b>F is refused here.</b> Vanilla predicts nothing for an offhand swap,
  *       so not sending it is the whole refusal.</li>
- *   <li><b>Drops are not.</b> They are refused in {@code LocalPlayer.drop}
+ *   <li><b>Drops are not.</b> They are refused in {@code MultiPlayerGameMode.dropItem}
  *       ({@link SKLocalDropMixin}), before vanilla's local removal; by the time
  *       the packet is sent that prediction has happened, and refusing only the
  *       packet would leave the client showing an item gone that the server kept.</li>

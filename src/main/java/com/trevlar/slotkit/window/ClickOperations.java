@@ -19,7 +19,7 @@ import org.jetbrains.annotations.ApiStatus;
  * them is refused. One classifier, two callers: vanilla's {@code doClick} (both
  * sides) and the client's send boundary, {@code MultiPlayerGameMode.handleContainerInput},
  * which refuses to send a click its own slot refuses. The second is what makes a
- * refusal hold on a server that does not run MenuKit: the click never leaves.
+ * refusal hold on a server that does not run SlotKit: the click never leaves.
  *
  * <p>What a click names, from the click and the state it lands on:
  * <ul>
@@ -35,7 +35,7 @@ import org.jetbrains.annotations.ApiStatus;
  * </ul>
  * Double-click collect is judged per swept slot at {@code canTakeItemForPickAll},
  * and creative clone touches nothing. A click the menu runs itself instead of
- * vanilla's ({@link OwnClick}: a Containers right-click handler) moves nothing, so
+ * vanilla's (a custom menu's right-click handler) moves nothing, so
  * it names no operation.
  */
 @ApiStatus.Internal
@@ -52,7 +52,7 @@ public final class ClickOperations {
                 && custom.rightClickHandler(slotId, button, input) != null;
     }
 
-    /** Whether the click MenuKit is about to run or send is refused on the slot(s) it names. */
+    /** Whether the click SlotKit is about to run or send is refused on the slot(s) it names. */
     public static boolean refuses(AbstractContainerMenu menu, int slotId, int button, ContainerInput input,
                                   Player player) {
         if (slotId < 0 || slotId >= menu.slots.size()) return false; // outside the menu: no slot to judge

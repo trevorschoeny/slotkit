@@ -6,7 +6,7 @@ import net.minecraft.world.inventory.Slot;
 import org.jetbrains.annotations.ApiStatus;
 
 /**
- * Tells the {@code MKHasClickedOutside*Mixin} family whether a click lands on an
+ * Tells the {@code SKHasClickedOutside*Mixin} family whether a click lands on an
  * active slot, so the {@link AbstractContainerScreen},
  * {@link net.minecraft.client.gui.screens.inventory.AbstractRecipeBookScreen} and
  * {@link net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen}
@@ -33,11 +33,9 @@ public final class ClickOutsideHelper {
             AbstractContainerScreen<?> self,
             double mouseX, double mouseY,
             int leftPos, int topPos) {
-        // Registered slots: a registered slot keeps its vanilla Slot.x/y parked
-        // off-screen and is shown at a separate runtime position, so the Slot.x/y
-        // scan below can never see it. Ask the same resolution getHoveredSlot uses,
-        // which knows the runtime position and unwraps the creative wrapper. If it
-        // claims a slot or an in-panel point, the click is on the menu.
+        // Registered slots: ask the same resolution getHoveredSlot uses, which knows
+        // which panels show them and unwraps the creative wrapper. If it claims a slot
+        // or an in-panel point, the click is on the menu.
         if (CreatedSlotScreenHook.INSTANCE.resolveHover(self, mouseX, mouseY).handled()) {
             return true;
         }

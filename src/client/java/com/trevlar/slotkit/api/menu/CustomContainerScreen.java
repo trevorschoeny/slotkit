@@ -90,7 +90,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     private @Nullable CreatedSlot previouslyHoveredMkSlot = null;
 
     /**
-     * The CreatedSlot under the mouse, or null if it isn't over a MenuKit slot. A HUD
+     * The CreatedSlot under the mouse, or null if it isn't over one. A HUD
      * overlay, for example, can read this each frame without subscribing to events.
      */
     public @Nullable CreatedSlot hoveredCreatedSlot() {
@@ -487,7 +487,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     // events across all screens, use Fabric's event API.
 
     /**
-     * Listener for events inside a MenuKit screen. Every method does nothing by
+     * Listener for events inside this screen. Every method does nothing by
      * default, so override only what you need.
      *
      * <p>The callbacks pass a {@link CreatedSlot}, the library's handle for a created
@@ -563,7 +563,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     // gets the drag and end callbacks.
 
     /**
-     * A custom drag behaviour for MenuKit slots. The screen sends drag events to the
+     * A custom drag behaviour for created slots. The screen sends drag events to the
      * active mode, and only one mode is active at a time.
      */
     public interface DragMode {

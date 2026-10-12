@@ -37,7 +37,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 /**
- * The negotiation (spec 2.4): who may join, and what each side knows about the other.
+ * The negotiation: who may join, and what each side knows about the other.
  *
  * <p>Created slots change a menu's slot count on both sides, so a client that builds
  * different slots from its server is disconnected by a slot-count mismatch, with an
@@ -49,7 +49,7 @@ import java.util.function.Consumer;
  *
  * <ol>
  *   <li>On {@code CONFIGURE}, a client that cannot receive {@link Hello} (vanilla,
- *       Fabric without SlotKit, old Containers) is judged as having no SlotKit.</li>
+ *       Fabric without SlotKit, MenuKit: Containers 6.x) is judged as having no SlotKit.</li>
  *   <li>Otherwise a configuration task sends the {@link Hello}: the protocol, every
  *       server mod with a {@code slotkit} block and whether it is required, every
  *       slot-state channel, and every created slot panel with its slot count. The
@@ -206,7 +206,7 @@ public final class Handshake {
     }
 
     /**
-     * The server's judgement of one joining client (spec 2.4.2's table), pure.
+     * The server's judgement of one joining client, as a pure function.
      *
      * @param server the server's own view
      * @param reply  the client's reply, or {@code null} when it cannot hear the hello
@@ -290,7 +290,7 @@ public final class Handshake {
     }
 
     /**
-     * Sends a SlotKit play payload to a player whose client has SlotKit (spec 2.4.5 item 1).
+     * Sends a SlotKit play payload to a player whose client has SlotKit.
      * Everything SlotKit's server sends goes through here, so a vanilla player is never
      * sent anything it has no receiver for.
      */
@@ -299,7 +299,7 @@ public final class Handshake {
     }
 
     /**
-     * Whether a SlotKit play payload from {@code player} is heard (spec 2.4.5 item 2): only
+     * Whether a SlotKit play payload from {@code player} is heard: only
      * from a client whose handshake recorded SlotKit. A modified client that skips the
      * reply gains nothing.
      */
@@ -419,8 +419,8 @@ public final class Handshake {
     }
 
     /**
-     * Whether a menu on this side builds the created slots of panel {@code slotPanelId}
-     * (spec 7.2 item 1). A server always does. A client does when its server runs
+     * Whether a menu on this side builds the created slots of panel {@code slotPanelId}.
+     * A server always does. A client does when its server runs
      * SlotKit and, for a panel whose namespace is a mod with a {@code slotkit} block,
      * that mod too, so a client with a required mod its server lacks builds none of its
      * slots and both sides keep the same slot count.

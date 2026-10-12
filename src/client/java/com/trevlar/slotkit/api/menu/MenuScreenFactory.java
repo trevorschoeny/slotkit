@@ -13,7 +13,7 @@ import net.minecraft.world.entity.player.Inventory;
  * <p>Client only. It builds a GUI object and is called only from
  * {@code ClientMenu.registerScreens()} on the client (run from
  * {@code SlotKitClient.onInitializeClient}), never on a dedicated server. It
- * lives in Containers' client source set, so common code cannot name it.
+ * lives in SlotKit's client source set, so common code cannot name it.
  */
 @FunctionalInterface
 public interface MenuScreenFactory {

@@ -26,15 +26,15 @@ import org.spongepowered.asm.mixin.Shadow;
  * <h3>Correct the answer, don't pre-empt it</h3>
  *
  * Both methods are wrapped, not cancelled at HEAD. The original runs first, with
- * every other mod's injections in it, and MenuKit looks only at the slot it chose.
+ * every other mod's injections in it, and SlotKit looks only at the slot it chose.
  * If that slot is allowed, the answer stands untouched; only a refused slot makes
- * MenuKit re-scan in vanilla's order for the next one it allows. A HEAD cancel here
+ * SlotKit re-scan in vanilla's order for the next one it allows. A HEAD cancel here
  * would race other mods' HEAD cancels, and whichever mixin applied first would
  * silently switch the other off. That shipped as a pre-release bug once.
  *
  * <p>There is no menu here: the ref carries the inventory, the index and its owner,
  * so the slot resolves from its own declaration or the key's default, then the
- * vetoes ({@code docs/limits.md}).
+ * vetoes.
  *
  * <p>The re-scan copies vanilla 26.2's order (selected, offhand, then the list). If
  * a Minecraft update changes that order, change it here too.

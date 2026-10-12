@@ -9,7 +9,7 @@ import java.util.Objects;
 import java.util.StringJoiner;
 
 /**
- * The one text form MenuKit's saved identities share ({@code SlotGroupId},
+ * The one text form SlotKit's saved identities share ({@code SlotGroupId},
  * {@code SlotGroupSet}, {@link Address}): fields joined by {@code |}, each field
  * escaped so no id a mod chooses can split it ({@code %} as {@code %25}, {@code |}
  * as {@code %7C}, NUL as {@code %00}).

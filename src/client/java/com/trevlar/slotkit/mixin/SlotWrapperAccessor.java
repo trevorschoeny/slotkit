@@ -16,11 +16,10 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  * that wants the real slot's identity (container and container index) or its
  * registered type has to unwrap.
  *
- * <p>This is the only unwrap point. It lives in MenuKit rather than
- * MenuKit-Containers because a panel anchored to a vanilla slot needs it as much
- * as slot code does. {@link com.trevlar.slotkit.core.Slots#target(Slot)} wraps
- * this accessor, and MenuKit-Containers' {@code CreatedSlotAccess.asMKCSlot} goes
- * through the same path. Both are {@code @ApiStatus.Internal}: consumers address
+ * <p>This is the only unwrap point, so a panel anchored to a vanilla slot and slot
+ * code unwrap the same way. {@link com.trevlar.slotkit.core.Slots#target(Slot)}
+ * wraps this accessor, and {@code CreatedSlotAccess.asMKCSlot} goes through the same
+ * path. Both are {@code @ApiStatus.Internal}: consumers address
  * slots by {@code Address}, not by unwrapping raw {@code Slot}s.
  *
  * <p>Targets the inner class by binary name because it is not public.
