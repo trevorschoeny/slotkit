@@ -21,7 +21,7 @@ mixin ever slips past it.
 import glob, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-WORKSPACE = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
+WORKSPACE = os.path.abspath(os.path.join(HERE, "..", ".."))
 JAVAP = os.environ.get("JAVAP", "/opt/homebrew/opt/openjdk@25/bin/javap")
 
 
@@ -64,7 +64,9 @@ def declared(jar, cls):
             continue
         decl = lines[i - 1].strip().rstrip(";")
         desc = m.group(1)
-        if "(" in decl:  # method or constructor
+        if decl == "static {}":  # the static initializer
+            methods.setdefault("<clinit>", []).append(desc)
+        elif "(" in decl:  # method or constructor
             name = re.sub(r"\(.*", "", decl).split()[-1]
             if name == cls.split(".")[-1].split("$")[-1] or name == cls.replace("$", "."):
                 name = "<init>"
