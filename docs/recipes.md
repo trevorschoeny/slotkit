@@ -128,7 +128,7 @@ Needs: SlotKit on both sides, and `bothSides: required`. Define at common init.
 
 ```java
 public static final CustomMenu CUSTOM = CustomMenu
-        .define(Identifier.fromNamespaceAndPath(MOD_ID, "custom_menu"), ContainersSnippets::buildHandler)
+        .define(Identifier.fromNamespaceAndPath(MOD_ID, "custom_menu"), MyMod::buildHandler)
         .title(Component.literal("My Custom Menu"))
         .validWhen(player -> player.isAlive())   // who may open it, and for how long
         .register();

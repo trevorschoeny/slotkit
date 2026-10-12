@@ -46,21 +46,20 @@ import java.util.function.Supplier;
  * {@code SlotSpec} into the real slots (every menu, both sides) and the
  * {@link SlotElement}s that show them (client).
  *
- * <h3>Behaviour methods are shorthand for setting it by address</h3>
+ * <h3>Behaviour methods set it once for the whole group</h3>
  *
- * Gating, shift-click, collect, drag-fill, binding and mending are set in the window
- * engine by the slot's {@link com.trevlar.slotkit.api.window.Address}. That is where
- * slot behaviour lives, the same for a vanilla slot and a created slot. The methods
- * here ({@link #gate}, {@link #accepts}, {@link #binding}, {@link #mending},
+ * Gating, shift-click, collect, drag-fill, binding and mending live in the window
+ * engine, the same for a vanilla slot and a created slot. The methods here
+ * ({@link #gate}, {@link #accepts}, {@link #binding}, {@link #mending},
  * {@link #shiftClickOut}, {@link #shiftClickIn}, {@link #collect}, {@link #dragFill})
  * don't add a second place to store behaviour. They record what the consumer asked
- * for, and {@link ContainerPanel.Builder#register()} sets it in the engine by address
- * for every index in the group, exactly
- * {@code Window.slot(ContainerPanel.address(panelId, groupId, i)).set(KEY, value)},
- * the call a consumer could make by hand. The gain is convenience: behaviour is
- * declared next to the slot group, with no separate step to forget, and the consumer
- * never computes an address or writes a per-slot loop. Setting behaviour by address
- * still works as before.
+ * for, and {@link ContainerPanel.Builder#register()} sets it in the engine once, on
+ * the group's own key ({@code GroupKey.of(ContainerPanel.groupId(panelId, groupId))}),
+ * one level above any single slot. Behaviour is declared next to the slot group, with
+ * no separate step to forget and no per-slot loop. To give one slot something else,
+ * set it on that slot's address,
+ * {@code Window.slot(Address.createdSlot(ContainerPanel.groupId(panelId, groupId), i))};
+ * the slot's own value wins because it is more specific.
  *
  * <h3>Storage is a factory, not bound storage</h3>
  *
@@ -85,8 +84,8 @@ public final class SlotSpec {
     private @Nullable String label = null;               // display name; null => capitalized groupId
     private @Nullable Supplier<Component> tooltip = null; // hover tooltip on each slot in the group; null => none
 
-    // The behaviour the consumer declared, which register() sets in the engine by
-    // each slot's Address. null leaves the engine default (gating OPEN, shift-click
+    // The behaviour the consumer declared, which register() sets in the engine on the
+    // group's key. null leaves the engine default (gating OPEN, shift-click
     // both ways, binding and mending FALSE), so an undeclared slot is plain vanilla.
     private @Nullable SlotGate gate = null;
     private @Nullable TriBool binding = null;
@@ -185,13 +184,11 @@ public final class SlotSpec {
     }
 
     // Behaviour methods. Each records a value that ContainerPanel.Builder.register()
-    // sets in the engine by the slot's Address for every index in this group; see the
-    // class doc.
+    // sets in the engine once for this group; see the class doc.
 
     /**
      * Sets a {@link SlotGate}: what every slot in this group accepts, releases and caps
-     * at. Shorthand for {@code Window.slot(addr).set(BehaviorKeys.GATING, gate)} on
-     * each index. Unset, it is {@link SlotGate#OPEN}, plain vanilla.
+     * at, set once for the group. Unset, it is {@link SlotGate#OPEN}, plain vanilla.
      */
     public SlotSpec gate(SlotGate gate) {
         this.gate = gate;

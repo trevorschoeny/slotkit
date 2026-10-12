@@ -110,7 +110,7 @@ public record SlotStateChannel<T>(
      *   <li>PRIVATE (the default): each viewer has their own value, keyed by UUID.</li>
      *   <li>SHARED: one value per slot for all players, synced to every viewer, and
      *       written from a client only by those its {@link CanWrite} allows (nobody
-     *       unless declared). For features that span players, like Inventory Max's
+     *       unless declared). For features that span players, like Inventory Plus's
      *       container locks: one player locks slot 5 and every player sees it
      *       locked.</li>
      * </ul>

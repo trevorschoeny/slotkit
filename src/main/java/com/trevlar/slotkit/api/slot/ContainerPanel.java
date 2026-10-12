@@ -305,10 +305,9 @@ public final class ContainerPanel {
      *
      * <p>Set for the group, not per address: a {@code SlotSpec} is a group, so a
      * consumer that overrides one slot with
-     * {@code Window.slot(address(panelId, groupId, i)).set(KEY, value)} wins because
+     * {@code Window.slot(Address.createdSlot(groupId(panelId, groupId), i)).set(KEY, value)} wins because
      * it is more specific, not because it was declared last.
      */
-    @SuppressWarnings("removal")
     private static void armInlineBehavior(String containerPanelId, SlotSpec spec) {
         SlotGate gate = spec.gateValue();
         TriBool binding = spec.bindingValue();

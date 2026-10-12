@@ -54,8 +54,8 @@ import java.util.Objects;
  * </ul>
  * Panel and panel-element addresses are no longer minted (MenuKit names its panels
  * by {@code Panel.id()}), but {@link #parse} still reads the text 6.x saved for them.
- * The four value-level factories below the public ones are the library's
- * plumbing and are {@code @ApiStatus.Internal}.
+ * The value-level factories below the public ones are the library's plumbing and
+ * are {@code @ApiStatus.Internal}.
  *
  * <h2>Saving one</h2>
  *
@@ -68,9 +68,8 @@ import java.util.Objects;
  * Where the value-level factories get their parts: the creative tab from
  * {@code OwnerScope.tab(BuiltInRegistries.CREATIVE_MODE_TAB.getKey(selectedTab))}
  * (client tier); a created slot's {@code DeclToken} from its
- * {@code (groupId, localIndex)} registration coordinate; a panel element's
- * {@code DeclToken} from {@code PanelElement.declId()} or its list position; a
- * composite container's backing from {@code OwnerScope.sub(...)}.
+ * {@code (groupId, localIndex)} registration coordinate; a composite container's
+ * backing from {@code OwnerScope.sub(...)}.
  *
  * <p>An {@code OwnerScope.Tab} scope is client tier only, since the active tab
  * lives on the screen, never the menu. The value itself has no notion of tier and
@@ -98,8 +97,7 @@ public record Address(OwnerRef owner, Token token, KindTag kind) {
     // a mod's id, so no group id can end in something that looks like an index.
     private static final String CREATED_SEP = String.valueOf((char) 0);
 
-    // The value-level factories for the four shapes, for the library's own use.
-
+    // The value-level factories, for the library's own use.
 
     /** A vanilla slot at a menu-space index. */
     @ApiStatus.Internal
@@ -111,22 +109,7 @@ public record Address(OwnerRef owner, Token token, KindTag kind) {
     @ApiStatus.Internal
     public static Address createdSlot(ScreenFamilyKey family, OwnerScope scope,
                                       Identifier panelRegKey, String declId) {
-        // Differs from panelElement(...) only by the KindTag; keep them in sync.
         return new Address(panelOwner(family, scope, panelRegKey), Token.decl(declId), KindTag.CREATED_SLOT);
-    }
-
-    /** A non-slot panel element, owned by its panel, identified by a declaration id. */
-    @ApiStatus.Internal
-    public static Address panelElement(ScreenFamilyKey family, OwnerScope scope,
-                                       Identifier panelRegKey, String declId) {
-        // Differs from createdSlot(...) only by the KindTag; keep them in sync.
-        return new Address(panelOwner(family, scope, panelRegKey), Token.decl(declId), KindTag.PANEL_ELEMENT);
-    }
-
-    /** A panel itself, for its own properties. */
-    @ApiStatus.Internal
-    public static Address panel(ScreenFamilyKey family, OwnerScope scope, Identifier panelRegKey) {
-        return new Address(OwnerRef.root(family, scope), Token.reg(panelRegKey), KindTag.PANEL);
     }
 
     /** The owner a panel's children share: nested under the panel, within its family and scope. */

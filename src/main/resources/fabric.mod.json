@@ -7,7 +7,7 @@
   "description": "Slots for Fabric mods: find and act on slots in any menu, and build real slots that persist and sync. Built on MenuKit.",
   "authors": ["trevorschoeny"],
   "contact": {
-    "homepage": "https://modrinth.com/mod/xQUBXV8I",
+    "homepage": "https://modrinth.com/mod/slotkit",
     "sources": "https://github.com/trevorschoeny/slotkit"
   },
   "license": "MIT",

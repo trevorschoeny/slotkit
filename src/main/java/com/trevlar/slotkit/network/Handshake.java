@@ -85,7 +85,7 @@ public final class Handshake {
         return Identifier.fromNamespaceAndPath("slotkit", "v" + PROTOCOL + "/" + path);
     }
 
-    static final String SLOTKIT_PAGE = "https://modrinth.com/mod/xQUBXV8I";
+    static final String SLOTKIT_PAGE = "https://modrinth.com/mod/slotkit";
 
     // The two payloads: protocol first, then fields appended, never reordered.
 
