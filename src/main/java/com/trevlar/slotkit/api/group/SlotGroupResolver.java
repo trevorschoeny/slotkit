@@ -14,7 +14,7 @@ import java.util.Map;
  * ({@link SlotGroupCategories#of}), so a consumer never holds a raw vanilla
  * {@code Slot}.
  *
- * <p>The vanilla resolvers ship in {@link com.trevlar.menukit.MenuKitClient}. A mod
+ * <p>The vanilla resolvers ship with SlotKit (registered at its init). A mod
  * registers resolvers for its own menu classes with
  * {@link SlotGroupCategories#register}.
  *

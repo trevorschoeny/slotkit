@@ -50,8 +50,8 @@ import java.util.Set;
  * <h3>How it is wired</h3>
  *
  * MenuKit's {@code AbstractContainerScreen} mixins ({@code getHoveredSlot},
- * {@code mouseClicked}) call the {@link com.trevlar.menukit.inject.SlotScreenHook}
- * dispatch, which Containers fills with {@link CreatedSlotScreenHook}. That hook calls
+ * {@code mouseClicked}) call the {@link com.trevlar.menukit.api.host.SlotScreenHook}
+ * dispatch, which SlotKit fills with {@link CreatedSlotScreenHook}. That hook calls
  * {@link #resolveHoveredSlot} with the panel ids that currently host a
  * {@code SlotElement}. The {@code getHoveredSlot} hook makes the registered slot win
  * hover, tooltip and the click target (vanilla sends the click to whatever
