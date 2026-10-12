@@ -76,7 +76,7 @@ public final class SlotGroupCategories {
             = new HashMap<>();
 
     // Resolvers that run on every menu class, after the class-specific ones. They
-    // are for created slots: MenuKit-Containers adds them to any menu the player
+    // are for created slots: SlotKit adds them to any menu the player
     // opens, so their categories can't be keyed by menu class. Their contributions
     // merge into a category already present instead of being dropped (a created
     // group declared PLAYER_INVENTORY is player inventory), and the vanilla slots
@@ -148,7 +148,7 @@ public final class SlotGroupCategories {
      * Publishes {@code category} to the registry so another mod can find it through
      * {@link #all()} without a menu open. Idempotent.
      *
-     * <p>MenuKit declares its own vanilla constants at init, and MenuKit-Containers
+     * <p>MenuKit declares its own vanilla constants at init, and SlotKit
      * declares a created group's category when the group registers, so a consumer
      * that mints a category only calls this when it wants the category listed before
      * anything is registered against it.

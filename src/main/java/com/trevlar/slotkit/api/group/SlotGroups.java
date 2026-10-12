@@ -48,7 +48,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *       ({@code SlotGroupId.category(category)}), the groups its resolvers produce. A
  *       mod that registers a resolver for its own menu declares its categories'
  *       groups the same way, with {@link #declare}.</li>
- *   <li><b>Created</b>: MenuKit-Containers declares each group as it registers. A
+ *   <li><b>Created</b>: SlotKit declares each group as it registers. A
  *       container-panel group ({@code ContainerPanel.define(...).register()})
  *       registers at init, so it is listed from the title screen. A group built with
  *       a menu ({@code CreatedSlots.onto(menu, player)}) registers when that menu is

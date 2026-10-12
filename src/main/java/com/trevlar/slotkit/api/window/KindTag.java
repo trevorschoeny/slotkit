@@ -20,7 +20,7 @@ package com.trevlar.slotkit.api.window;
 public enum KindTag {
     /** A vanilla {@code net.minecraft.world.inventory.Slot} the consumer did not create. */
     VANILLA_SLOT,
-    /** A slot created through MenuKit: Containers (a real synced slot in menu space). */
+    /** A slot created through SlotKit (a real synced slot in menu space). */
     CREATED_SLOT,
     /** A non-slot panel element (button, label, decoration). */
     PANEL_ELEMENT,

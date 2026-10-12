@@ -155,7 +155,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * wrapped counts as the gesture it looks like, a manual click included.
  *
  * <p><b>Init-time reads are the one exception to "declare anywhere".</b> Every
- * built-in operation is SERVER tier, and MenuKit-Containers installs the server
+ * built-in operation is SERVER tier, and SlotKit installs the server
  * tier from its own initializer. Fabric does not order entrypoints between mods,
  * so a consumer whose init runs first will see {@code resolve} answer the key's
  * library default, and a declaration it makes there is buffered until the tier

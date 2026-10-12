@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <h2>Two sources, in priority order</h2>
  * <ol>
  *   <li><b>Per-address overrides</b> ({@link #override}): a name registered against
- *       a specific {@link Address}. MenuKit: Containers names its created slots
+ *       a specific {@link Address}. SlotKit names its created slots
  *       this way when it creates them (group label and ordinal), and any consumer
  *       can name a custom slot. MenuKit never sees the created slot's type; the
  *       name is keyed by the address the consumer mints.</li>

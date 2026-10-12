@@ -65,7 +65,7 @@ public sealed interface SlotGroupId {
         }
     }
 
-    /** A group created through MenuKit-Containers, named by its declaration. */
+    /** A group created through SlotKit, named by its declaration. */
     record Created(String panelId, String groupId) implements SlotGroupId {
         public Created {
             Objects.requireNonNull(panelId, "panelId");
