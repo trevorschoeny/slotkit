@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "slotkit",
+  "version": "${version}",
+  "name": "SlotKit",
+  "icon": "icon.png",
+  "description": "Slots for Fabric mods: find and act on slots in any menu, and build real slots that persist and sync. Built on MenuKit.",
+  "authors": ["trevorschoeny"],
+  "contact": {
+    "homepage": "https://modrinth.com/mod/xQUBXV8I",
+    "sources": "https://github.com/trevorschoeny/slotkit"
+  },
+  "license": "MIT",
+  "environment": "*",
+  "entrypoints": {
+    "main": ["com.trevlar.slotkit.SlotKit"],
+    "client": ["com.trevlar.slotkit.SlotKitClient"]
+  },
+  "mixins": ["slotkit.mixins.json"],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "fabric-api": "*",
+    "minecraft": "~26.3",
+    "menukit": ">=7.0.0 <8.0.0"
+  },
+  "breaks": {
+    "menukit-containers": "*",
+    "inventorymax": "*"
+  }
+}

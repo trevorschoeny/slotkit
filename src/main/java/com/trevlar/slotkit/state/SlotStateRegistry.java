@@ -1,0 +1,86 @@
+package com.trevlar.slotkit.state;
+
+import com.trevlar.slotkit.window.ContainerIdentity;
+import com.trevlar.slotkit.window.ResolvedSlot;
+
+import com.trevlar.slotkit.api.window.PersistentContainerKey;
+import com.trevlar.slotkit.api.state.SlotStateChannel;
+
+import net.minecraft.resources.Identifier;
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.block.entity.BlockEntity;
+
+import org.jspecify.annotations.Nullable;
+
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+import java.util.function.Function;
+import org.jetbrains.annotations.ApiStatus;
+
+/**
+ * Internal registry for slot-state channels and container resolvers. Not public API;
+ * consumers reach it through {@link com.trevlar.slotkit.api.state.SlotState}.
+ */
+@ApiStatus.Internal
+public final class SlotStateRegistry {
+
+    private SlotStateRegistry() {}
+
+    // Channels
+
+    private static final Map<Identifier, SlotStateChannel<?>> CHANNELS = new LinkedHashMap<>();
+
+    @SuppressWarnings("unchecked")
+    public static <T> @Nullable SlotStateChannel<T> getChannelTyped(Identifier id) {
+        return (SlotStateChannel<T>) CHANNELS.get(id);
+    }
+
+    public static @Nullable SlotStateChannel<?> getChannel(Identifier id) {
+        return CHANNELS.get(id);
+    }
+
+    public static void registerChannel(SlotStateChannel<?> channel) {
+        com.trevlar.menukit.api.Declarations.requireOpen("a slot-state channel " + channel.id());
+        if (CHANNELS.putIfAbsent(channel.id(), channel) != null) {
+            throw new IllegalStateException("A slot-state channel " + channel.id() + " is already registered");
+        }
+    }
+
+    public static Iterable<SlotStateChannel<?>> allChannels() {
+        return CHANNELS.values();
+    }
+
+    // Container resolvers. Container identity has lived in MenuKit
+    // (ContainerIdentity) since 6.0.0; these delegate so slot state and addressing
+    // agree on every key.
+
+    public static <T extends BlockEntity> void registerBlockEntityResolver(
+            Class<T> clazz, Function<T, PersistentContainerKey> resolver) {
+        ContainerIdentity.registerBlockEntityResolver(clazz, resolver);
+    }
+
+    public static <T extends Entity> void registerEntityResolver(
+            Class<T> clazz, Function<T, PersistentContainerKey> resolver) {
+        ContainerIdentity.registerEntityResolver(clazz, resolver);
+    }
+
+    public static <T extends BlockEntity> Optional<PersistentContainerKey> resolveBlockEntity(T be) {
+        return ContainerIdentity.resolveBlockEntity(be);
+    }
+
+    public static <T extends Entity> Optional<PersistentContainerKey> resolveEntity(T entity) {
+        return ContainerIdentity.resolveEntity(entity);
+    }
+
+    /** The persistent key of {@code container}, when it has one. */
+    public static Optional<PersistentContainerKey> resolve(Container container) {
+        return ContainerIdentity.resolve(container);
+    }
+
+    /** One slot of {@code container}: its owner and its index within that owner. */
+    public static Optional<ResolvedSlot> resolve(Container container, int containerSlotIndex) {
+        return ContainerIdentity.resolve(container, containerSlotIndex);
+    }
+}

@@ -1,0 +1,43 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.trevlar.slotkit.mixin",
+  "compatibilityLevel": "JAVA_25",
+  "mixins": [
+    "AbstractContainerMenuInvoker",
+    "CompoundContainerAccessor",
+    "SKBlockDropMixin",
+    "SKClickContextMixin",
+    "SKCreativeSetSlotMixin",
+    "SKDispenserGateMixin",
+    "SKEnderChestOwnerMixin",
+    "SKExperienceOrbMendMixin",
+    "SKHopperGateMixin",
+    "SKInventoryInsertMixin",
+    "SKInventoryMenuMixin",
+    "SKOperationsMixin",
+    "SKPlayerActionMixin",
+    "SKPlayerDeathDropMixin",
+    "SKPlayerInitMenuProjectionMixin",
+    "SKPlayerListRespawnMixin",
+    "SKPlayerOpenMenuMixin",
+    "SKShulkerBoxPortableStateMixin",
+    "SKSlotGateMixin",
+    "SlotPositionAccessor"
+  ],
+  "client": [
+    "SKClickSendMixin",
+    "SKCreativeSlotClickRouteMixin",
+    "SKCreativeSlotItemPickerMixin",
+    "SKCreativeSlotParkMixin",
+    "SKHasClickedOutsideContainerMixin",
+    "SKHasClickedOutsideCreativeMixin",
+    "SKHasClickedOutsideMixin",
+    "SKLocalDropMixin",
+    "SKPlayerActionSendMixin",
+    "SlotWrapperAccessor"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

@@ -1,0 +1,35 @@
+package com.trevlar.slotkit.mixin;
+
+import com.trevlar.slotkit.core.ClickOutsideHelper;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.AbstractRecipeBookScreen;
+import org.jetbrains.annotations.ApiStatus;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+/**
+ * Fixes vanilla's click classification for slots outside the container frame
+ * on {@link AbstractRecipeBookScreen}. This override sits between
+ * {@code AbstractContainerScreen} (the base) and {@code InventoryScreen}
+ * (a leaf), so every screen extending AbstractRecipeBookScreen, InventoryScreen
+ * included, inherits the fix.
+ *
+ * <p>See {@link SKHasClickedOutsideContainerMixin} (base) and
+ * {@link SKHasClickedOutsideCreativeMixin} (creative) for the sibling targets.
+ */
+@ApiStatus.Internal
+@Mixin(AbstractRecipeBookScreen.class)
+public abstract class SKHasClickedOutsideMixin {
+
+    @Inject(method = "hasClickedOutside(DDII)Z", at = @At("HEAD"), cancellable = true)
+    private void sk$exemptSlotPositions(double mouseX, double mouseY,
+                                              int leftPos, int topPos,
+                                              CallbackInfoReturnable<Boolean> cir) {
+        var self = (AbstractContainerScreen<?>) (Object) this;
+        if (ClickOutsideHelper.clickLandsOnActiveSlot(self, mouseX, mouseY, leftPos, topPos)) {
+            cir.setReturnValue(false);
+        }
+    }
+}

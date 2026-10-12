@@ -1,0 +1,43 @@
+package com.trevlar.slotkit.mixin;
+
+import com.trevlar.slotkit.core.ClickOutsideHelper;
+import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import org.jetbrains.annotations.ApiStatus;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+
+/**
+ * Fixes vanilla's click classification for slots outside the container frame
+ * on {@link CreativeModeInventoryScreen}. Creative has its own
+ * {@code hasClickedOutside} override that also considers tab clicks and
+ * stores the result in a private field read later during
+ * {@code slotClicked}'s carry-drop logic. The mixin writes {@code false}
+ * to the field as well as returning it, so later reads agree.
+ *
+ * <p>See {@link SKHasClickedOutsideMixin} (recipe-book) and
+ * {@link SKHasClickedOutsideContainerMixin} (base) for the sibling targets.
+ */
+@ApiStatus.Internal
+@Mixin(CreativeModeInventoryScreen.class)
+public abstract class SKHasClickedOutsideCreativeMixin {
+
+    // Cached by creative's hasClickedOutside override. slotClicked reads it in
+    // the "slot == null" branch to decide whether to drop the carried stack, so
+    // it is forced to false in case an earlier outside click left it true.
+    @Shadow private boolean hasClickedOutside;
+
+    @Inject(method = "hasClickedOutside(DDII)Z", at = @At("HEAD"), cancellable = true)
+    private void sk$exemptSlotPositions(double mouseX, double mouseY,
+                                              int leftPos, int topPos,
+                                              CallbackInfoReturnable<Boolean> cir) {
+        var self = (AbstractContainerScreen<?>) (Object) this;
+        if (ClickOutsideHelper.clickLandsOnActiveSlot(self, mouseX, mouseY, leftPos, topPos)) {
+            this.hasClickedOutside = false;
+            cir.setReturnValue(false);
+        }
+    }
+}
