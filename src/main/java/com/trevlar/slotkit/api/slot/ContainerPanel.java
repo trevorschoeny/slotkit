@@ -334,7 +334,7 @@ public final class ContainerPanel {
         // vanilla's code for every kind of slot. Mending is enforced by Containers.
         if (gate != null)          WindowEngine.setGroup(group, BehaviorKeys.GATING, Decl.set(gate));
         if (binding != null)       WindowEngine.setGroup(group, BehaviorKeys.BINDING, Decl.set(binding));
-        if (mending != null)       WindowEngine.setGroup(group, ContainerKeys.MENDING, Decl.set(mending));
+        if (mending != null)       WindowEngine.setGroup(group, BehaviorKeys.MENDING, Decl.set(mending));
         if (shiftClickOut != null) WindowEngine.setGroup(group, BehaviorKeys.SHIFT_CLICK_OUT, Decl.set(shiftClickOut));
         if (shiftClickIn != null)  WindowEngine.setGroup(group, BehaviorKeys.SHIFT_CLICK_IN, Decl.set(shiftClickIn));
         if (collect != null)       WindowEngine.setGroup(group, BehaviorKeys.COLLECT, Decl.set(collect));

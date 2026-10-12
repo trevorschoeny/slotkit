@@ -59,18 +59,10 @@ public final class ContainerIdentity {
 
     private ContainerIdentity() {}
 
-    private static final List<Function<Container, Optional<PersistentContainerKey>>> EXTENSIONS =
-            new CopyOnWriteArrayList<>();
     private static final Map<Class<? extends BlockEntity>, Function<? extends BlockEntity, PersistentContainerKey>>
             BE_RESOLVERS = new ConcurrentHashMap<>();
     private static final Map<Class<? extends Entity>, Function<? extends Entity, PersistentContainerKey>>
             ENTITY_RESOLVERS = new ConcurrentHashMap<>();
-
-    /** A library's own containers (Containers' key-carrying storages); consulted first. */
-    public static void extend(Function<Container, Optional<PersistentContainerKey>> extension) {
-        com.trevlar.menukit.api.Declarations.requireOpen("ContainerIdentity.extend");
-        EXTENSIONS.add(Objects.requireNonNull(extension, "extension"));
-    }
 
     // A player's ender chest container carries no link to its player, so the player
     // records it as it is built (SKEnderChestOwnerMixin). Weak keys: the container goes
@@ -123,9 +115,11 @@ public final class ContainerIdentity {
     /** The persistent container {@code container} is, when it has one. */
     public static Optional<PersistentContainerKey> resolve(Container container) {
         if (container == null) return Optional.empty();
-        for (Function<Container, Optional<PersistentContainerKey>> extension : EXTENSIONS) {
-            Optional<PersistentContainerKey> own = extension.apply(container);
-            if (own.isPresent()) return own;
+        // A storage that carries its own key is recognised first, so a slot backed by
+        // it is addressed by that key.
+        if (container instanceof com.trevlar.slotkit.api.storage.StorageContainerAdapter adapter
+                && adapter.getStorage() instanceof com.trevlar.slotkit.api.storage.KeyedStorage keyed) {
+            return Optional.of(keyed.storageKey());
         }
         if (container instanceof Inventory inv) {
             return Optional.of(new PersistentContainerKey.PlayerInventory(inv.player.getUUID()));

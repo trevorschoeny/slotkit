@@ -43,25 +43,20 @@ public final class ClickOperations {
 
     private ClickOperations() {}
 
-    /** Whether a menu runs this click itself instead of vanilla's. Containers installs it. */
-    @FunctionalInterface
-    public interface OwnClick {
-        boolean runsItself(AbstractContainerMenu menu, int slotId, int button, ContainerInput input);
-    }
-
-    private static volatile OwnClick ownClick = (menu, slotId, button, input) -> false;
-
-    /** Containers installs which clicks its menus run themselves, from common init. */
-    public static void installOwnClick(OwnClick impl) {
-        com.trevlar.menukit.api.Declarations.requireOpen("ClickOperations.installOwnClick");
-        ownClick = java.util.Objects.requireNonNull(impl, "impl");
+    /**
+     * Whether a menu runs this click itself instead of vanilla's: a custom menu runs a
+     * right click on a slot with a handler, so the click names no take or put operation.
+     */
+    private static boolean runsItself(AbstractContainerMenu menu, int slotId, int button, ContainerInput input) {
+        return menu instanceof com.trevlar.slotkit.api.menu.CustomContainerMenu custom
+                && custom.rightClickHandler(slotId, button, input) != null;
     }
 
     /** Whether the click MenuKit is about to run or send is refused on the slot(s) it names. */
     public static boolean refuses(AbstractContainerMenu menu, int slotId, int button, ContainerInput input,
                                   Player player) {
         if (slotId < 0 || slotId >= menu.slots.size()) return false; // outside the menu: no slot to judge
-        if (ownClick.runsItself(menu, slotId, button, input)) return false; // moves nothing vanilla would
+        if (runsItself(menu, slotId, button, input)) return false; // moves nothing vanilla would
         Slot slot = menu.slots.get(slotId);
         return switch (input) {
             case PICKUP -> {

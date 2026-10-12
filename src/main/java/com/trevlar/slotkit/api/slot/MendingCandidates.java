@@ -9,7 +9,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Lets a consumer add extra items to the XP repair pool, beyond the registered slots
- * opted in by address through {@code ContainerKeys.MENDING}.
+ * opted in by address through {@code BehaviorKeys.MENDING}.
  *
  * <p>A consumer like Inventory Max may want to mend any item in the inventory.
  * Without this hook it would need its own {@code ExperienceOrb} mixin, and the two

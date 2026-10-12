@@ -43,11 +43,6 @@ public final class CreatedSlotCategories {
 
     private CreatedSlotCategories() {}
 
-    /** Installs the universal resolver. Called once from common init. */
-    public static void install() {
-        SlotGroupCategories.extendEvery(CreatedSlotCategories::resolve);
-    }
-
     /**
      * Every created group with a live slot on {@code menu}, each reported as its
      * own contribution. Bucketed by {@code (panelId, groupId)}, not by category:
@@ -55,7 +50,7 @@ public final class CreatedSlotCategories {
      * together would hand the anchor layer one bounding box spanning all of them
      * (a past regression). Inert groups are left out.
      */
-    private static List<CreatedGroupResolver.Contribution> resolve(AbstractContainerMenu menu) {
+    public static List<CreatedGroupResolver.Contribution> resolve(AbstractContainerMenu menu) {
         Map<String, GroupAccumulator> byGroup = new LinkedHashMap<>();
         for (int i = 0; i < menu.slots.size(); i++) {
             Slot slot = menu.slots.get(i);

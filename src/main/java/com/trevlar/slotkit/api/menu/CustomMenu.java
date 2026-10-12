@@ -316,17 +316,17 @@ public final class CustomMenu {
     public static boolean handleOpenRequest(ServerPlayer player, Identifier id) {
         CustomMenu handle = BY_ID.get(id);
         if (handle == null) {
-            LOGGER.warn("[MenuKit-Containers] refused an open request from {}: no menu '{}'",
+            LOGGER.warn("[SlotKit] refused an open request from {}: no menu '{}'",
                     player.getName().getString(), id);
             return false;
         }
         if (handle.validWhen == null) {
-            LOGGER.warn("[MenuKit-Containers] refused an open request from {}: menu '{}' declares no "
+            LOGGER.warn("[SlotKit] refused an open request from {}: menu '{}' declares no "
                     + "validWhen, so it opens only from the server", player.getName().getString(), id);
             return false;
         }
         if (!handle.validWhen.test(player)) {
-            LOGGER.debug("[MenuKit-Containers] refused an open request from {}: menu '{}' is not valid for them",
+            LOGGER.debug("[SlotKit] refused an open request from {}: menu '{}' is not valid for them",
                     player.getName().getString(), id);
             return false;
         }

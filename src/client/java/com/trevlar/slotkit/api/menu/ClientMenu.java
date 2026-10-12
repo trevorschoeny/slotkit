@@ -102,7 +102,7 @@ public final class ClientMenu {
      */
     public void requestOpen() {
         if (!Handshake.serverHasContainers()) {
-            LOGGER.debug("[MenuKit-Containers] not asking to open {}: the server does not run Containers", menu.id());
+            LOGGER.debug("[SlotKit] not asking to open {}: the server does not run Containers", menu.id());
             return;
         }
         ClientPlayNetworking.send(new OpenMenuC2SPayload(menu.id()));

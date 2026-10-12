@@ -32,7 +32,7 @@ public final class ClientSlotAddressing {
 
     private ClientSlotAddressing() {}
 
-    /** Maps a live slot to its {@link Address}. Replaced by Containers' kind-aware rule when it is present. */
+    /** Maps a live slot to its {@link Address}. */
     @FunctionalInterface
     public interface SlotAddressFn {
         Address addressOf(AbstractContainerMenu menu, Slot slot);
@@ -40,7 +40,7 @@ public final class ClientSlotAddressing {
         /**
          * The address of a slot reached with no menu in hand (the slot-level gate
          * seam), or {@code null} when its container has no identity. The default
-         * knows vanilla slots; Containers' rule answers a created slot's own address.
+         * knows vanilla slots; the kind-aware rule answers a created slot's own address.
          */
         default @Nullable Address addressOf(Slot slot) {
             Slot target = Slots.target(slot);
@@ -48,13 +48,9 @@ public final class ClientSlotAddressing {
         }
     }
 
-    private static volatile SlotAddressFn fn = VanillaAddressing::addressOf;
-
-    /** Containers installs its kind-aware {@code SlotAddresses.of} here from common init, on both sides. */
-    public static void install(SlotAddressFn impl) {
-        com.trevlar.menukit.api.Declarations.requireOpen("ClientSlotAddressing.install");
-        fn = Objects.requireNonNull(impl, "impl");
-    }
+    // The kind-aware rule: a created slot resolves to its CREATED address, a vanilla
+    // slot to its vanilla one. Both sides, since the operation seams run on the server.
+    private static final SlotAddressFn fn = com.trevlar.slotkit.core.SlotAddresses.RULE;
 
     /** The {@link Address} of {@code slot} in {@code menu} under the installed rule. */
     public static Address addressOf(AbstractContainerMenu menu, Slot slot) {

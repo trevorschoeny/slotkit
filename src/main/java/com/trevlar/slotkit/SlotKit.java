@@ -1,6 +1,12 @@
 package com.trevlar.slotkit;
 
 import net.fabricmc.api.ModInitializer;
+import com.trevlar.slotkit.api.group.SlotGroupCategory;
+import com.trevlar.slotkit.api.group.SlotGroupId;
+import com.trevlar.slotkit.api.group.SlotGroups;
+import com.trevlar.slotkit.api.window.BehaviorKeys;
+import com.trevlar.slotkit.api.window.SlotOperations;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.jetbrains.annotations.ApiStatus;
@@ -14,7 +20,7 @@ import org.jetbrains.annotations.ApiStatus;
 @ApiStatus.Internal
 public class SlotKit implements ModInitializer {
 
-    /** Separate from MenuKit's own logger, so Containers' init lines can be told apart. */
+    /** Separate from MenuKit's own logger, so SlotKit's lines can be told apart. */
     public static final Logger LOGGER = LoggerFactory.getLogger("slotkit");
 
     @Override
@@ -26,34 +32,12 @@ public class SlotKit implements ModInitializer {
      *  server-side hooks. Must run before any consumer code that references
      *  {@code CustomContainerMenu}, {@code SlotState} or {@code StorageAttachment}. */
     public static void init() {
-        LOGGER.info("[MenuKit-Containers] Initialized");
-        // The kind-aware slot address rule, so a created slot resolves to its
-        // CREATED address, and created slot groups published into MenuKit's
-        // slot-group registry. Both sides, because the operation seams, vetoes and
-        // SlotGroups.of run on the server that enforces them. (Before 6.0.0 this was
-        // client-only, so a dedicated server addressed every created slot as a
-        // vanilla one and saw no created groups.)
-        com.trevlar.slotkit.window.ClientSlotAddressing.install(
-                com.trevlar.slotkit.core.SlotAddresses.RULE);
-        // A custom menu runs a right click on a slot with a handler itself, so the
-        // click names no take or put operation, neither at the client's send nor on the server.
-        com.trevlar.slotkit.window.ClickOperations.installOwnClick((menu, slotId, button, input) ->
-                menu instanceof com.trevlar.slotkit.api.menu.CustomContainerMenu custom
-                        && custom.rightClickHandler(slotId, button, input) != null);
-        com.trevlar.slotkit.core.CreatedSlotCategories.install();
-        // SlotGroups.of(SlotRef) answers a created slot's own group. Both sides, since
-        // a veto that reads it runs wherever the operation does.
-        com.trevlar.slotkit.api.group.SlotGroups.installCreatedGroupLookup(slot -> {
-            com.trevlar.slotkit.api.slot.CreatedSlot mk = com.trevlar.slotkit.core.CreatedSlotAccess.asMKCSlot(slot);
-            return mk == null ? null
-                    : com.trevlar.slotkit.api.group.SlotGroupId.created(mk.panelId(), mk.groupId());
-        });
-        // Container identity belongs to MenuKit. A Containers storage that carries its
-        // own key is recognised first, so a slot backed by it is addressed by that key.
-        com.trevlar.slotkit.window.ContainerIdentity.extend(container ->
-                container instanceof com.trevlar.slotkit.api.storage.StorageContainerAdapter adapter
-                        && adapter.getStorage() instanceof com.trevlar.slotkit.api.storage.KeyedStorage keyed
-                        ? java.util.Optional.of(keyed.storageKey()) : java.util.Optional.empty());
+        LOGGER.info("[SlotKit] Initialized");
+        // The shared vocabularies, on both sides: every vanilla slot category, and
+        // the operations vanilla itself ships (MenuKit declared these before 7.0.0). A
+        // consumer reads them through SlotGroupCategories.all() / SlotOperations.all()
+        // and adds its own with SlotGroupCategories.declare(...) / SlotOperations.define(...).
+        declareVanillaVocabulary();
         // Per-slot state. Attachment and payload-type registration both have to run
         // on both sides.
         com.trevlar.slotkit.state.SlotStateAttachments.register();
@@ -78,7 +62,7 @@ public class SlotKit implements ModInitializer {
         com.trevlar.slotkit.network.Handshake.register();
 
         // Grave-mod compat is optional: a capture adapter registers only when its
-        // grave mod is present, and Containers hard-depends on none. The adapter class
+        // grave mod is present, and SlotKit hard-depends on none. The adapter class
         // is referenced only inside the guard, so its grave-mod class references never
         // load when the mod is absent. The fallback (items drop beside the death spot)
         // covers that case. Universal Graves has an adapter. Pneumono's Gravestones
@@ -86,8 +70,46 @@ public class SlotKit implements ModInitializer {
         // the fallback for now.
         if (net.fabricmc.loader.api.FabricLoader.getInstance().isModLoaded("universal-graves")) {
             com.trevlar.slotkit.compat.UniversalGravesAdapter.register();
-            LOGGER.info("[MenuKit-Containers] Universal Graves detected, player-slot grave capture enabled");
+            LOGGER.info("[SlotKit] Universal Graves detected, player-slot grave capture enabled");
         }
     }
 
+    /**
+     * Every vanilla slot group, one per category (the group a vanilla resolver
+     * contributes), so SlotGroups lists them with no menu open; the vanilla menus'
+     * resolvers (a server resolves categories too; creative's picker is the client's);
+     * and the eleven vanilla operations, each with the role it plays on a slot, so a
+     * settings screen can tell what takes items out from what puts them in.
+     *
+     * <p>Where each operation applies, from what vanilla does (26.2): an output slot
+     * takes nothing in, the crafter's result can't be touched at all, double-click
+     * collect skips the results whose menus override canTakeItemForPickAll, and a
+     * pickup lands only in the hotbar, the main inventory and the offhand.
+     */
+    private static void declareVanillaVocabulary() {
+        SlotGroupCategory.vanilla().forEach(c -> SlotGroups.declare(SlotGroupId.category(c), c));
+        com.trevlar.slotkit.core.VanillaSlotGroupResolvers.registerAll();
+        SlotGroupCategory[] outputs = {
+                SlotGroupCategory.CRAFTING_OUTPUT, SlotGroupCategory.CRAFTER_RESULT, SlotGroupCategory.FURNACE_OUTPUT,
+                SlotGroupCategory.ANVIL_OUTPUT, SlotGroupCategory.GRINDSTONE_OUTPUT, SlotGroupCategory.SMITHING_OUTPUT,
+                SlotGroupCategory.LOOM_OUTPUT, SlotGroupCategory.STONECUTTER_OUTPUT,
+                SlotGroupCategory.CARTOGRAPHY_OUTPUT, SlotGroupCategory.MERCHANT_RESULT};
+        var takes = SlotOperations.AppliesTo.vanillaExcept(SlotGroupCategory.CRAFTER_RESULT);
+        var puts = SlotOperations.AppliesTo.vanillaExcept(outputs);
+        SlotOperations.define(BehaviorKeys.CLICK_TAKE, SlotOperations.Role.TAKE, takes);
+        SlotOperations.define(BehaviorKeys.CLICK_PUT, SlotOperations.Role.PUT, puts);
+        SlotOperations.define(BehaviorKeys.SHIFT_CLICK_OUT, SlotOperations.Role.TAKE, takes);
+        SlotOperations.define(BehaviorKeys.SHIFT_CLICK_IN, SlotOperations.Role.PUT, puts);
+        SlotOperations.define(BehaviorKeys.COLLECT, SlotOperations.Role.TAKE, SlotOperations.AppliesTo.vanillaExcept(
+                SlotGroupCategory.CRAFTER_RESULT, SlotGroupCategory.CRAFTING_OUTPUT,
+                SlotGroupCategory.CARTOGRAPHY_OUTPUT, SlotGroupCategory.MERCHANT_RESULT,
+                SlotGroupCategory.SMITHING_OUTPUT, SlotGroupCategory.STONECUTTER_OUTPUT));
+        SlotOperations.define(BehaviorKeys.DRAG_FILL, SlotOperations.Role.PUT, puts);
+        SlotOperations.define(BehaviorKeys.HOTBAR_SWAP, SlotOperations.Role.BOTH, takes);
+        SlotOperations.define(BehaviorKeys.OFFHAND_SWAP, SlotOperations.Role.BOTH, takes);
+        SlotOperations.define(BehaviorKeys.DROP, SlotOperations.Role.TAKE, takes);
+        SlotOperations.define(BehaviorKeys.DROP_STACK, SlotOperations.Role.TAKE, takes);
+        SlotOperations.define(BehaviorKeys.INVENTORY_INSERT, SlotOperations.Role.PUT, SlotOperations.AppliesTo.vanilla(
+                SlotGroupCategory.PLAYER_HOTBAR, SlotGroupCategory.PLAYER_INVENTORY, SlotGroupCategory.PLAYER_OFFHAND));
+    }
 }

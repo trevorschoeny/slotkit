@@ -120,7 +120,7 @@ public final class SlotGroups {
 
     private SlotGroups() {}
 
-    private static final Logger LOGGER = LoggerFactory.getLogger("menukit");
+    private static final Logger LOGGER = LoggerFactory.getLogger("slotkit");
 
     private record Declared(SlotGroupCategory category, @Nullable SlotGroupSet set) {}
 
@@ -167,26 +167,6 @@ public final class SlotGroups {
     // The group a slot is in
 
     /**
-     * The created group a live slot belongs to, or {@code null} for a
-     * slot that is not a created one. MenuKit-Containers installs it at init; with
-     * MenuKit alone there are no created slots.
-     */
-    @FunctionalInterface
-    @ApiStatus.Internal
-    public interface CreatedGroupLookup {
-        @Nullable SlotGroupId groupOf(Slot slot);
-    }
-
-    private static volatile CreatedGroupLookup createdLookup = slot -> null;
-
-    /** MenuKit-Containers installs its created-slot group lookup here at init. */
-    @ApiStatus.Internal
-    public static void installCreatedGroupLookup(CreatedGroupLookup impl) {
-        com.trevlar.menukit.api.Declarations.requireOpen("SlotGroups.installCreatedGroupLookup");
-        createdLookup = Objects.requireNonNull(impl, "impl");
-    }
-
-    /**
      * The slot group {@code ref} is in, or {@code null} when nothing is known: a
      * created slot's own group; a vanilla slot's group on its menu, which is its
      * category's; a player-inventory slot's group by its index when the menu does
@@ -196,8 +176,9 @@ public final class SlotGroups {
     public static @Nullable SlotGroupId of(SlotRef ref) {
         Objects.requireNonNull(ref, "ref");
         if (ref.slot() != null) {
-            SlotGroupId created = createdLookup.groupOf(ref.slot());
-            if (created != null) return created;
+            com.trevlar.slotkit.api.slot.CreatedSlot mk =
+                    com.trevlar.slotkit.core.CreatedSlotAccess.asMKCSlot(ref.slot());
+            if (mk != null) return SlotGroupId.created(mk.panelId(), mk.groupId());
             if (ref.category() != null) return SlotGroupId.category(ref.category());
         }
         if (ref.container() instanceof Inventory) return playerInventoryGroup(ref.containerSlot());

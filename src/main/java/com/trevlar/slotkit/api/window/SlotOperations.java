@@ -167,7 +167,7 @@ public final class SlotOperations {
 
     private SlotOperations() {}
 
-    private static final Logger LOGGER = LoggerFactory.getLogger("menukit");
+    private static final Logger LOGGER = LoggerFactory.getLogger("slotkit");
 
     /**
      * What an operation does to the slot it acts on. A settings screen reads it to

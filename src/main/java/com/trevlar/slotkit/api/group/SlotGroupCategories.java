@@ -42,9 +42,8 @@ import java.util.concurrent.ConcurrentHashMap;
  *
  * <h3>Created slots publish here too</h3>
  *
- * Every MenuKit-Containers slot group declares a {@link SlotGroupCategory} on its
- * spec, and Containers registers one universal resolver ({@link #extendEvery})
- * that reports those groups on whatever menu they sit. So {@link #of} and
+ * Every created slot group declares a {@link SlotGroupCategory} on its spec, and
+ * those groups are reported on whatever menu they sit. So {@link #of} and
  * {@link #categoriesBySlot} name created and vanilla slots alike, using only
  * MenuKit types. This is how one mod finds another's slots without knowing what
  * kind they are.
@@ -60,7 +59,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public final class SlotGroupCategories {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger("menukit");
+    private static final Logger LOGGER = LoggerFactory.getLogger("slotkit");
 
     private SlotGroupCategories() {}
 
@@ -82,7 +81,6 @@ public final class SlotGroupCategories {
     // merge into a category already present instead of being dropped (a created
     // group declared PLAYER_INVENTORY is player inventory), and the vanilla slots
     // of that category stay ahead of it in the list.
-    private static final List<CreatedGroupResolver> UNIVERSAL = new ArrayList<>();
 
     /** Every category anyone has declared. SlotGroupCategory is a record, so a set dedupes it. */
     private static final Set<SlotGroupCategory> DECLARED = ConcurrentHashMap.newKeySet();
@@ -147,24 +145,6 @@ public final class SlotGroupCategories {
     }
 
     /**
-     * Registers a resolver that runs on <b>every</b> menu, after the class-specific
-     * primary and extensions. Its categories merge: one the menu already resolved
-     * gains the resolver's slots appended after the existing ones; a new category is
-     * added. This is how created slots (MenuKit-Containers) publish their groups:
-     * they sit on whatever menu the player opened, so no menu class names them.
-     * Each contribution becomes its own {@link ResolvedSlotGroup}, never folded into
-     * the category it declares, since several created groups can share one category
-     * and they do not share a bounding box. Library use only; consumers declare a
-     * created group's category on its {@code SlotSpec} and never call this.
-     */
-    @ApiStatus.Internal
-    public static void extendEvery(CreatedGroupResolver resolver) {
-        com.trevlar.menukit.api.Declarations.requireOpen("SlotGroupCategories.extendEvery");
-        UNIVERSAL.add(resolver);
-        LOGGER.info("[SlotGroupCategories] universal resolver #{} registered", UNIVERSAL.size());
-    }
-
-    /**
      * Publishes {@code category} to the registry so another mod can find it through
      * {@link #all()} without a menu open. Idempotent.
      *
@@ -223,8 +203,8 @@ public final class SlotGroupCategories {
      * of these; a group has a bounding box and a category does not.
      *
      * <p>Resolution order: the primary resolver for {@code menu.getClass()} (if
-     * any), then each extension in registration order, then every universal
-     * resolver ({@link #extendEvery}). Each vanilla category yields one group; an
+     * any), then each extension in registration order, then the created
+     * groups on the menu. Each vanilla category yields one group; an
      * extension's category that collides is dropped with a warning, as
      * {@link #extend} describes. Each created contribution yields its own group.
      *
@@ -236,7 +216,6 @@ public final class SlotGroupCategories {
         SlotGroupResolver primary = RESOLVERS.get(menuClass);
         List<SlotGroupResolver> extensions = EXTENSIONS.getOrDefault(menuClass, List.of());
 
-        if (primary == null && extensions.isEmpty() && UNIVERSAL.isEmpty()) return List.of();
 
         List<ResolvedSlotGroup> out = new ArrayList<>();
         Set<SlotGroupCategory> claimed = new HashSet<>();
@@ -267,9 +246,9 @@ public final class SlotGroupCategories {
                 addVanillaGroups(menu, kept, out, claimed, true);
             }
         }
-        for (CreatedGroupResolver universal : UNIVERSAL) {
-            addCreatedGroups(menu, universal.resolve(menu), out);
-        }
+        // Created groups sit on whatever menu the player opened, so no menu class names
+        // them: they are reported on every menu, each as its own group.
+        addCreatedGroups(menu, com.trevlar.slotkit.core.CreatedSlotCategories.resolve(menu), out);
         return List.copyOf(out);
     }
 

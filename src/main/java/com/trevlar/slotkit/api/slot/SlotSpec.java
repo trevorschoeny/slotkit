@@ -233,7 +233,7 @@ public final class SlotSpec {
 
     /**
      * Puts every slot in this group in the XP-orb Mending repair pool. Shorthand for
-     * {@code set(ContainerKeys.MENDING, ...)}. Default off.
+     * {@code set(BehaviorKeys.MENDING, ...)}. Default off.
      */
     public SlotSpec mending(boolean enabled) {
         this.mending = enabled ? TriBool.TRUE : TriBool.FALSE;

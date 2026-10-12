@@ -2,7 +2,7 @@ package com.trevlar.slotkit.mixin;
 
 import com.trevlar.slotkit.api.window.WindowEngine;
 import com.trevlar.slotkit.api.slot.MendingCandidates;
-import com.trevlar.slotkit.api.slot.ContainerKeys;
+import com.trevlar.slotkit.api.window.BehaviorKeys;
 import com.trevlar.slotkit.api.slot.CreatedSlot;
 import com.trevlar.slotkit.api.window.Address;
 import com.trevlar.slotkit.window.VanillaAddressing;
@@ -34,7 +34,7 @@ import java.util.function.Predicate;
 /**
  * Widens vanilla's XP-orb repair pool, so a damaged Mending item repairs from XP just
  * like worn armour does when it sits in a registered slot opted in by address through
- * the {@code ContainerKeys.MENDING} key, or comes from a consumer source
+ * the {@code BehaviorKeys.MENDING} key, or comes from a consumer source
  * ({@link MendingCandidates}). Like death drops and binding, this is a vanilla
  * mechanic the library extends to registered slots.
  *
@@ -146,7 +146,7 @@ public class SKExperienceOrbMendMixin {
         // by far the common case, costs nothing extra.
         for (Slot slot : !WindowEngine.hasServerDeclarations() ? List.<Slot>of() : player.inventoryMenu.slots) {
             if (slot instanceof CreatedSlot mk) {
-                if (WindowEngine.resolve(mk.address(), ContainerKeys.MENDING).asBoolean()) {
+                if (WindowEngine.resolve(mk.address(), BehaviorKeys.MENDING).asBoolean()) {
                     ItemStack stack = mk.getItem();
                     if (sk$mendable(stack)) {
                         pool.add(new EnchantedItemInUse(stack, null, player, item -> {}));
@@ -157,7 +157,7 @@ public class SKExperienceOrbMendMixin {
             } else {
                 Address a = VanillaAddressing.addressOf(slot.container, slot.getContainerSlot())
                         .orElse(null);
-                if (a != null && WindowEngine.resolve(a, ContainerKeys.MENDING).asBoolean()) {
+                if (a != null && WindowEngine.resolve(a, BehaviorKeys.MENDING).asBoolean()) {
                     ItemStack stack = slot.getItem();
                     if (sk$mendable(stack)) {
                         pool.add(new EnchantedItemInUse(stack, null, player, item -> {}));

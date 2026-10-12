@@ -10,8 +10,8 @@ import net.minecraft.resources.Identifier;
  *   <li>Client tier: the observed reactions.</li>
  *   <li>Server tier, the slot author's rules: {@link #GATING} (what a slot accepts
  *       and releases, and how many), {@link #BINDING} (Curse of Binding on any
- *       slot), and the eleven {@linkplain SlotOperations operations}. Containers
- *       keeps {@code ContainerKeys.MENDING}, whose seam (the XP orb) is its own.</li>
+ *       slot), the eleven {@linkplain SlotOperations operations}, and
+ *       {@link #MENDING}.</li>
  * </ul>
  */
 public final class BehaviorKeys {
@@ -140,4 +140,14 @@ public final class BehaviorKeys {
     public static final java.util.List<BehaviorKey<TriBool>> VANILLA_OPERATIONS = java.util.List.of(
             CLICK_TAKE, CLICK_PUT, SHIFT_CLICK_OUT, SHIFT_CLICK_IN, COLLECT, DRAG_FILL,
             HOTBAR_SWAP, OFFHAND_SWAP, DROP, DROP_STACK, INVENTORY_INSERT);
+
+    /**
+     * Whether items in this slot take part in XP-orb Mending. An opted-in slot joins
+     * the single, fairly weighted repair pool when an orb is absorbed. Applies to
+     * created and vanilla slots on the player's inventory menu. Server tier: needs
+     * SlotKit on the server, whose orb seam runs it. Default {@link TriBool#FALSE}.
+     */
+    public static final BehaviorKey<TriBool> MENDING = BehaviorKey.of(
+            id("mending"), TriBool.class, TriBool.FALSE, Tier.SERVER,
+            KindTag.CREATED_SLOT, KindTag.VANILLA_SLOT);
 }
