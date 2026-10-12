@@ -29,7 +29,7 @@ dependencies {
 Declare both in `fabric.mod.json`, with both bounds ([why](https://github.com/trevorschoeny/menukit/blob/main/docs/versioning.md)):
 
 ```json
-"depends": { "menukit": ">=6.1.0 <7.0.0", "menukit-containers": ">=6.1.0 <7.0.0" }
+"depends": { "menukit": ">=6.2.0 <7.0.0", "menukit-containers": ">=6.2.0 <7.0.0" }
 ```
 
 ## Example
