@@ -4,8 +4,7 @@ import com.trevlar.slotkit.api.window.WindowEngine;
 import com.trevlar.slotkit.api.slot.MendingCandidates;
 import com.trevlar.slotkit.api.window.BehaviorKeys;
 import com.trevlar.slotkit.api.slot.CreatedSlot;
-import com.trevlar.slotkit.api.window.Address;
-import com.trevlar.slotkit.window.VanillaAddressing;
+import com.trevlar.slotkit.api.window.SlotOperations;
 
 import net.minecraft.core.component.DataComponentType;
 import net.minecraft.server.level.ServerPlayer;
@@ -33,8 +32,8 @@ import java.util.function.Predicate;
 
 /**
  * Widens vanilla's XP-orb repair pool, so a damaged Mending item repairs from XP just
- * like worn armour does when it sits in a registered slot opted in by address through
- * the {@code BehaviorKeys.MENDING} key, or comes from a consumer source
+ * like worn armour does when it sits in a slot opted in through the
+ * {@code BehaviorKeys.MENDING} key (by address, group or category), or comes from a consumer source
  * ({@link MendingCandidates}). Like death drops and binding, this is a vanilla
  * mechanic the library extends to registered slots.
  *
@@ -155,9 +154,10 @@ public class SKExperienceOrbMendMixin {
                     }
                 }
             } else {
-                Address a = VanillaAddressing.addressOf(slot.container, slot.getContainerSlot())
-                        .orElse(null);
-                if (a != null && WindowEngine.resolve(a, BehaviorKeys.MENDING).asBoolean()) {
+                // Asked through allows, which states the slot's group and category on
+                // this menu, so a category declaration (SlotOperations.inherent on
+                // PLAYER_INVENTORY, say) reaches the vanilla slots as well as created ones.
+                if (SlotOperations.allows(player.inventoryMenu, slot, player, BehaviorKeys.MENDING)) {
                     ItemStack stack = slot.getItem();
                     if (sk$mendable(stack)) {
                         pool.add(new EnchantedItemInUse(stack, null, player, item -> {}));
@@ -188,7 +188,9 @@ public class SKExperienceOrbMendMixin {
         // so their commit is null, as for vanilla's own pick.
         for (EquipmentSlot eq : EquipmentSlot.values()) {
             ItemStack equipped = entity.getItemBySlot(eq);
-            if (sk$mendable(equipped)) {
+            // The held item is also a hotbar slot; if that slot opted in it is already
+            // in the pool, and a second entry would weight it twice.
+            if (sk$mendable(equipped) && pool.stream().noneMatch(e -> e.itemStack() == equipped)) {
                 pool.add(new EnchantedItemInUse(equipped, null, player, item -> {}));
                 commits.add(null);
             }
