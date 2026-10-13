@@ -193,18 +193,27 @@ public final class SlotOperations {
      * AppliesTo.EVERY_GROUP                                            // the default
      * AppliesTo.vanilla(PLAYER_HOTBAR, PLAYER_INVENTORY)               // two vanilla groups, and every mod group
      * AppliesTo.vanillaExcept(FURNACE_OUTPUT).except(POCKETS_SET)      // every vanilla group but one; not pockets
+     * AppliesTo.only(PLAYER_HOTBAR, PLAYER_INVENTORY)                  // two vanilla groups, and mod groups declared as one of them
      * </pre>
      *
      * @param vanilla      the vanilla categories whose groups this applies to
      * @param exceptGroups groups a mod added that this does not apply to
      * @param exceptSets   sets of groups a mod added that this does not apply to
+     * @param only         a mod's group applies only when it declared one of the
+     *                     {@code vanilla} categories (see {@link #only}); since 1.1.0
      */
     public record AppliesTo(Set<SlotGroupCategory> vanilla, Set<SlotGroupId> exceptGroups,
-                            Set<SlotGroupSet> exceptSets) {
+                            Set<SlotGroupSet> exceptSets, boolean only) {
 
         /** Every vanilla group and every group a mod adds. What an operation that does not say applies to. */
         public static final AppliesTo EVERY_GROUP =
                 new AppliesTo(Set.copyOf(SlotGroupCategory.vanilla()), Set.of(), Set.of());
+
+        /** The 1.0 form: a mod's own groups apply unless excepted. */
+        public AppliesTo(Set<SlotGroupCategory> vanilla, Set<SlotGroupId> exceptGroups,
+                         Set<SlotGroupSet> exceptSets) {
+            this(vanilla, exceptGroups, exceptSets, false);
+        }
 
         public AppliesTo {
             vanilla = Set.copyOf(vanilla);
@@ -223,6 +232,16 @@ public final class SlotOperations {
             return new AppliesTo(Set.of(categories), Set.of(), Set.of());
         }
 
+        /**
+         * These vanilla groups, and a group a mod added only when its declared category
+         * is one of them. A pocket declared {@code PLAYER_INVENTORY} applies under
+         * {@code only(PLAYER_HOTBAR, PLAYER_INVENTORY)}; an elytra slot in its mod's own
+         * category does not, so neither mod names the other. Since 1.1.0.
+         */
+        public static AppliesTo only(SlotGroupCategory... categories) {
+            return new AppliesTo(Set.of(categories), Set.of(), Set.of(), true);
+        }
+
         /** Every vanilla group but these, and every group a mod adds. */
         public static AppliesTo vanillaExcept(SlotGroupCategory... categories) {
             Set<SlotGroupCategory> in = new java.util.LinkedHashSet<>(SlotGroupCategory.vanilla());
@@ -234,14 +253,14 @@ public final class SlotOperations {
         public AppliesTo except(SlotGroupId... groups) {
             Set<SlotGroupId> out = new java.util.HashSet<>(exceptGroups);
             out.addAll(java.util.Arrays.asList(groups));
-            return new AppliesTo(vanilla, out, exceptSets);
+            return new AppliesTo(vanilla, out, exceptSets, only);
         }
 
         /** The same, but not the groups in these sets. */
         public AppliesTo except(SlotGroupSet... sets) {
             Set<SlotGroupSet> out = new java.util.HashSet<>(exceptSets);
             out.addAll(java.util.Arrays.asList(sets));
-            return new AppliesTo(vanilla, exceptGroups, out);
+            return new AppliesTo(vanilla, exceptGroups, out, only);
         }
 
         /**
@@ -249,7 +268,8 @@ public final class SlotOperations {
          * category. A group a mod added that declared a vanilla category is judged
          * by that category first (a pocket declared {@code PLAYER_INVENTORY} goes
          * where the inventory goes, no further), then by the exceptions. A group in
-         * a category of its mod's own is judged by the exceptions alone. The set is
+         * a category of its mod's own is judged by the exceptions alone, or, under
+         * {@link #only}, never applies. The set is
          * read from what the group declared ({@link SlotGroups#setOf}).
          */
         public boolean test(SlotGroupId group) {
@@ -257,9 +277,9 @@ public final class SlotOperations {
                 return vanilla.contains(v.category());
             }
             SlotGroupCategory declared = SlotGroups.categoryOf(group);
-            if (declared != null && SlotGroupCategory.vanilla().contains(declared) && !vanilla.contains(declared)) {
-                return false;
-            }
+            boolean declaredVanilla = declared != null && SlotGroupCategory.vanilla().contains(declared);
+            if (declaredVanilla && !vanilla.contains(declared)) return false;
+            if (only && !declaredVanilla) return false;   // its own category: only() never names it
             if (exceptGroups.contains(group)) return false;
             SlotGroupSet set = SlotGroups.setOf(group);
             return set == null || !exceptSets.contains(set);
