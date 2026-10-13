@@ -189,9 +189,10 @@ public final class ContainerPanel {
 
         /**
          * Places the panel around a category's vanilla group instead of the menu frame:
-         * {@code .on(PLAYER_OFFHAND).at(PanelPosition.region(OutsideRegion.TOP_ALIGN_LEFT).priority(20), 0)}
+         * {@code .on(PLAYER_OFFHAND).at(PanelPosition.region(OutsideRegion.TOP_CENTER).priority(20), 0)}
          * puts it above the offhand slot. Panels on one group share a host and stack by
-         * region and priority, so several mods can build a column on the same slot
+         * region and priority ({@code TOP_CENTER} stacks upward, lower priority nearer the
+         * group), so several mods can build a column on the same slot
          * without naming each other; only the priorities are agreed. A panel that isn't
          * shown takes no room, and on a screen without the group the panel is skipped.
          *
