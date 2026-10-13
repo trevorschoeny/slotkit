@@ -90,6 +90,17 @@ public final class ContainerPanel {
     // applies the whole ParitySlotRegistry.
     private static volatile boolean projectionSourceRegistered = false;
 
+    // Groups whose spec declared shiftClickIn(true): the shift-click targets on the
+    // player's inventory menu (SKInventoryQuickMoveMixin). Opt-in, so a group that
+    // never said so keeps 1.0's behaviour there.
+    private static final Set<SlotGroupId> SHIFT_CLICK_TARGETS = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
+    /** Whether {@code group} declared {@code SlotSpec.shiftClickIn(true)}. Library use. */
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public static boolean isShiftClickTarget(SlotGroupId group) {
+        return SHIFT_CLICK_TARGETS.contains(group);
+    }
+
     /** One registered container panel. {@code position} is its one placement: a
      *  region around the menu frame (or around {@code anchorGroups}' box when it names
      *  any), a screen spot, an overlay, or a per-frame pixel supplier. */
@@ -377,6 +388,7 @@ public final class ContainerPanel {
         if (mending != null)       WindowEngine.setGroup(group, BehaviorKeys.MENDING, Decl.set(mending));
         if (shiftClickOut != null) WindowEngine.setGroup(group, BehaviorKeys.SHIFT_CLICK_OUT, Decl.set(shiftClickOut));
         if (shiftClickIn != null)  WindowEngine.setGroup(group, BehaviorKeys.SHIFT_CLICK_IN, Decl.set(shiftClickIn));
+        if (shiftClickIn == TriBool.TRUE) SHIFT_CLICK_TARGETS.add(groupId(containerPanelId, spec.groupId()));
         if (collect != null)       WindowEngine.setGroup(group, BehaviorKeys.COLLECT, Decl.set(collect));
         if (dragFill != null)      WindowEngine.setGroup(group, BehaviorKeys.DRAG_FILL, Decl.set(dragFill));
     }

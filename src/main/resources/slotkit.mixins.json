@@ -17,6 +17,7 @@
     "SKHopperGateMixin",
     "SKInventoryInsertMixin",
     "SKInventoryMenuMixin",
+    "SKInventoryQuickMoveMixin",
     "SKOperationsMixin",
     "SKPlayerActionMixin",
     "SKPlayerDeathDropMixin",

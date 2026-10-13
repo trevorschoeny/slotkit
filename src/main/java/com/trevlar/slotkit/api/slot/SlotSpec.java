@@ -254,6 +254,14 @@ public final class SlotSpec {
     /**
      * Whether a shift-click elsewhere may put items in this group, set for the group
      * ({@code BehaviorKeys.SHIFT_CLICK_IN}). Default on.
+     *
+     * <p>{@code shiftClickIn(true)}, said explicitly, also makes the group a
+     * shift-click target in the player's inventory (since 1.1.0). Vanilla's own
+     * routing there never reaches a created slot, so SlotKit tries these groups first:
+     * partial stacks, then empty slots, each slot judged by the group's gate. What
+     * doesn't fit goes where vanilla sends it. {@code .accepts(isElytra).shiftClickIn(true)}
+     * is a whole elytra slot. Out of a created slot, shift-click goes to the main
+     * inventory, then the hotbar, as vanilla does for any slot past the offhand.
      */
     public SlotSpec shiftClickIn(boolean enabled) {
         this.shiftClickIn = enabled ? TriBool.TRUE : TriBool.FALSE;
