@@ -7,6 +7,7 @@ import com.trevlar.menukit.api.panel.PanelPosition;
 import com.trevlar.menukit.api.panel.PanelStyle;
 
 import com.trevlar.menukit.api.panel.ScreenOrigin;
+import com.trevlar.slotkit.api.group.SlotGroupCategory;
 import com.trevlar.slotkit.api.group.SlotGroupId;
 import com.trevlar.slotkit.api.window.Address;
 import com.trevlar.slotkit.api.window.WindowEngine;
@@ -90,9 +91,10 @@ public final class ContainerPanel {
     private static volatile boolean projectionSourceRegistered = false;
 
     /** One registered container panel. {@code position} is its one placement: a
-     *  region around the menu frame, a screen spot, an overlay, or a per-frame pixel
-     *  supplier. */
+     *  region around the menu frame (or around {@code anchorGroups}' box when it names
+     *  any), a screen spot, an overlay, or a per-frame pixel supplier. */
     record Definition(String panelId,
+                              List<SlotGroupId> anchorGroups,
                               PanelPosition position,
                               int padding,
                               PanelStyle style,
@@ -119,6 +121,7 @@ public final class ContainerPanel {
         private int pinnedHeight = -1;                                 // -1 = auto-size to visible content
         private int pinnedWidth = -1;                                  // -1 = auto-size to visible content
         private final List<SlotSpec> slots = new ArrayList<>();
+        private List<SlotGroupId> anchorGroups = List.of();               // empty = the menu frame
 
         Builder(String panelId) {
             this.panelId = panelId;
@@ -171,6 +174,38 @@ public final class ContainerPanel {
          */
         public Builder at(Supplier<ScreenOrigin> origin, int padding) {
             return at(PanelPosition.pixel(origin), padding);
+        }
+
+        /**
+         * Places the panel around a category's vanilla group instead of the menu frame:
+         * {@code .on(PLAYER_OFFHAND).at(PanelPosition.region(OutsideRegion.TOP_ALIGN_LEFT).priority(20), 0)}
+         * puts it above the offhand slot. Panels on one group share a host and stack by
+         * region and priority, so several mods can build a column on the same slot
+         * without naming each other; only the priorities are agreed. A panel that isn't
+         * shown takes no room, and on a screen without the group the panel is skipped.
+         *
+         * <p>The same anchor as {@code SlotGroupPanelAdapter.on(...)}, for a panel
+         * that hosts slots. With an anchor, {@code at(...)} takes a {@code region},
+         * {@code center()} or {@code pixel(...)}; a group has no screen spots. Since
+         * 1.1.0.
+         */
+        public Builder on(SlotGroupCategory... categories) {
+            SlotGroupId[] ids = new SlotGroupId[categories.length];
+            for (int i = 0; i < categories.length; i++) ids[i] = SlotGroupId.category(categories[i]);
+            return onGroup(ids);
+        }
+
+        /**
+         * {@link #on(SlotGroupCategory...)} for specific groups, created ones included
+         * (name them with {@link ContainerPanel#groupId}). With several, the panel
+         * appears once per group present on the screen. Since 1.1.0.
+         */
+        public Builder onGroup(SlotGroupId... groups) {
+            if (groups.length == 0) {
+                throw new IllegalArgumentException("ContainerPanel '" + panelId + "': on(...) needs at least one group");
+            }
+            this.anchorGroups = List.of(groups);
+            return this;
         }
 
         /** Panel background style. Default {@link PanelStyle#NONE}: flush, and the slots draw their own frames. */
@@ -268,6 +303,11 @@ public final class ContainerPanel {
                         + ".at(OutsideRegion, padding), .at(PanelPosition, padding) or "
                         + ".at(pixelOriginSupplier, padding). A container screen has no main() panel.");
             }
+            if (!anchorGroups.isEmpty() && mode == PanelPosition.Mode.SCREEN_ANCHOR) {
+                throw new IllegalStateException(
+                        "ContainerPanel '" + panelId + "': placed on a slot group, so .at(...) takes a "
+                        + "region, center() or pixel(...); a group has no screen spots.");
+            }
 
             // 1. Register each slot's recipe under a derived panel id (container
             //    panel id plus group) that can't collide. Both build hooks read these.
@@ -292,7 +332,7 @@ public final class ContainerPanel {
             ensureProjectionSource();
 
             // 3. Keep it for the client's wiring (ClientContainerPanel, at client start).
-            DEFINITIONS.add(new Definition(panelId, position, padding,
+            DEFINITIONS.add(new Definition(panelId, anchorGroups, position, padding,
                     style, opaque, visibleWhen, pinnedHeight,
                     pinnedWidth, List.copyOf(slots)));
         }

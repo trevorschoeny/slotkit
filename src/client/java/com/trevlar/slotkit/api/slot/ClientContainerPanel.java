@@ -5,6 +5,11 @@ import com.trevlar.menukit.api.element.PanelElement;
 import com.trevlar.menukit.api.panel.ScreenMatcher;
 import com.trevlar.menukit.api.panel.ScreenPanelAdapter;
 import com.trevlar.menukit.api.Declarations;
+import com.trevlar.slotkit.api.group.SlotGroupId;
+import com.trevlar.slotkit.api.group.SlotGroupPanelAdapter;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.Screen;
 
 import org.jetbrains.annotations.ApiStatus;
 
@@ -13,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 
 /**
@@ -102,7 +108,21 @@ public final class ClientContainerPanel {
             if (def.visibleWhen() != null) panel.visibleWhen(def.visibleWhen());
             if (def.pinnedHeight() >= 0) panel.pinnedHeight(def.pinnedHeight());
             if (def.pinnedWidth() >= 0) panel.pinnedWidth(def.pinnedWidth());
-            new ScreenPanelAdapter(panel, def.padding()).onMatching(client.parity);
+            if (def.anchorGroups().isEmpty()) {
+                new ScreenPanelAdapter(panel, def.padding()).onMatching(client.parity);
+                continue;
+            }
+            // On a slot group: the group's anchor hosts it. An anchor has no screen
+            // scope of its own, so the parity scope joins the panel's visibility.
+            ScreenMatcher scope = client.parity;
+            BooleanSupplier own = def.visibleWhen();
+            panel.visibleWhen(() -> {
+                Screen screen = Minecraft.getInstance().gui.screen();
+                return screen != null && scope.matches(screen.getClass())
+                        && (own == null || own.getAsBoolean());
+            });
+            new SlotGroupPanelAdapter(panel, def.padding())
+                    .onGroup(def.anchorGroups().toArray(SlotGroupId[]::new));
         }
     }
 }
