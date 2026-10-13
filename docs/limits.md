@@ -8,7 +8,7 @@ Behaviour that is incomplete in the current release.
 
 | Area | Current behaviour |
 |---|---|
-| Shift-click into a created slot | Not routed on a vanilla menu, since vanilla's `quickMoveStack` does not know the slot. Direct click works. The consumer overrides `quickMoveStack` in its own mixin, or accepts the gap. |
+| Shift-click into a created slot | Routed in the player's inventory for a group that declares `shiftClickIn(true)` (1.1.0). On other vanilla menus the menu's own `quickMoveStack` decides, and a chest, for one, may send a stack into any created slot that allows `SHIFT_CLICK_IN`. A group that must never take a shift-click declares `shiftClickIn(false)`. |
 | Created slot in an overlay panel | Not supported. Overlay panels draw after vanilla's slot pass, so a slot they host is placed one frame late and drawn under the panel. Put created slots in flow panels. |
 | Reactions | `ON_INSERT_OBSERVED` and `ON_TAKE_OBSERVED` fire on the client when a slot's synced contents change. They are UI feedback. No server-side reaction key exists. Server code that must act on a change hooks the slot or menu method that makes it. |
 | Window scope | Every address resolves in the primary scope. Per-tab and per-sub-window scopes are not active. |

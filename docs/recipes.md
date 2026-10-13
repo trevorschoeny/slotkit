@@ -78,7 +78,7 @@ The category is required. It tells other mods what the group is. `SlotGroupCateg
 
 `SlotSpec.accepts(Predicate<ItemStack>)` limits what a slot takes. `SlotSpec.revealWhen(BooleanSupplier)` hides the slots until the supplier returns true. Death, keepInventory, Curse of Vanishing and Curse of Binding behave as they do for vanilla slots. `POCKETS.dropsOnDeath(DropRule.KEEP)` overrides the death rule.
 
-Shift-click into a created slot on a vanilla menu is not routed, since vanilla's `quickMoveStack` does not know it. Direct click works.
+`SlotSpec.shiftClickIn(true)`, said explicitly, makes the group a shift-click target in the player's inventory (since 1.1.0): a shift-clicked stack tries its partial stacks, then its empty slots, before vanilla's routing, and each slot's gate decides. On other vanilla menus the menu's own routing decides where a shift-click lands. Shift-click out of a created slot goes to the main inventory, then the hotbar.
 
 To tell your slots apart on any screen, creative's included:
 
@@ -86,6 +86,25 @@ To tell your slots apart on any screen, creative's included:
 CreatedSlot created = CreatedSlot.of(slot);
 return created != null && created.panelId().equals("mymod:pockets");
 ```
+
+## Put a slot above the offhand
+
+Since 1.1.0. `on(...)` places a container panel around a slot group's box instead of the menu frame. Here the panel sits on the offhand, and the slot takes elytras and catches them on shift-click:
+
+```java
+ContainerPanel.define("mymod:elytra")
+        .on(SlotGroupCategory.PLAYER_OFFHAND)
+        .at(PanelPosition.region(OutsideRegion.TOP_ALIGN_LEFT).priority(20), 0)
+        .addSlot(SlotSpec.at("slot", new SlotGroupCategory("mymod", "elytra"))
+                .storage(player -> ELYTRA.bind(player))
+                .accepts(stack -> stack.is(Items.ELYTRA))
+                .shiftClickIn(true))
+        .register();
+```
+
+Result: one slot right above the offhand on the survival and creative inventories, and no slot on screens without an offhand. Panels on the same group share it and stack by region and priority, so another mod's slot on `PLAYER_OFFHAND` at a different priority goes above or below this one, and a panel that isn't shown leaves no gap. Mods building one column agree on priorities, nothing else. `onGroup(...)` takes specific groups, created ones included (`ContainerPanel.groupId(panel, group)`).
+
+With an anchor, `at(...)` takes a `region`, `center()` or `pixel(...)`. Give the slot a category of your own, not `PLAYER_OFFHAND` or `PLAYER_ARMOR`, which other mods read as vanilla's.
 
 ## Attach a flag to a slot
 
