@@ -13,6 +13,7 @@ import com.trevlar.slotkit.api.storage.Storage;
 import com.trevlar.slotkit.api.window.TriBool;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
@@ -83,6 +84,7 @@ public final class SlotSpec {
     private @Nullable BooleanSupplier revealWhen = null;  // client-side reveal; null => always
     private @Nullable String label = null;               // display name; null => capitalized groupId
     private @Nullable Supplier<Component> tooltip = null; // hover tooltip on each slot in the group; null => none
+    private @Nullable Identifier emptyIcon = null;       // outline sprite on an empty slot; null => none
 
     // The behaviour the consumer declared, which register() sets in the engine on the
     // group's key. null leaves the engine default (gating OPEN, shift-click
@@ -180,6 +182,19 @@ public final class SlotSpec {
     /** {@link #tooltip(Component)} with the text from a supplier. */
     public SlotSpec tooltip(@Nullable Supplier<Component> supplier) {
         this.tooltip = supplier;
+        return this;
+    }
+
+    /**
+     * The outline drawn on each empty slot of this group, as vanilla draws the armour
+     * and offhand outlines: a GUI sprite id, returned from the slot's
+     * {@code getNoItemIcon}, so vanilla draws it in its own slot pass, under any item
+     * and in creative too. {@code Identifier.withDefaultNamespace("container/slot/shield")}
+     * names a vanilla sprite; {@code Identifier.fromNamespaceAndPath("mymod", "container/slot/elytra")}
+     * is a mod's own, at {@code assets/mymod/textures/gui/sprites/container/slot/elytra.png}. Since 1.1.0.
+     */
+    public SlotSpec emptyIcon(Identifier sprite) {
+        this.emptyIcon = sprite;
         return this;
     }
 
@@ -311,6 +326,7 @@ public final class SlotSpec {
     @ApiStatus.Internal
     public @Nullable String label() { return label; }
     @Nullable Supplier<Component> tooltip() { return tooltip; }
+    @Nullable Identifier emptyIcon() { return emptyIcon; }
 
     @ApiStatus.Internal
     public @Nullable Function<Player, Storage> storageFactory() { return storageFactory; }

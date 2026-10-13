@@ -95,6 +95,16 @@ public final class ContainerPanel {
     // never said so keeps 1.0's behaviour there.
     private static final Set<SlotGroupId> SHIFT_CLICK_TARGETS = java.util.concurrent.ConcurrentHashMap.newKeySet();
 
+    // Each group's SlotSpec.emptyIcon, read once by every CreatedSlot it builds.
+    private static final java.util.Map<SlotGroupId, net.minecraft.resources.Identifier> EMPTY_ICONS =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
+    /** The empty-slot outline {@code group} declared, or {@code null}. Library use. */
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public static net.minecraft.resources.@Nullable Identifier emptyIconOf(SlotGroupId group) {
+        return EMPTY_ICONS.get(group);
+    }
+
     /** Whether {@code group} declared {@code SlotSpec.shiftClickIn(true)}. Library use. */
     @org.jetbrains.annotations.ApiStatus.Internal
     public static boolean isShiftClickTarget(SlotGroupId group) {
@@ -373,6 +383,7 @@ public final class ContainerPanel {
         // its slots. This path registers at init, so the group is listed from the
         // title screen.
         com.trevlar.slotkit.api.group.SlotGroups.declare(groupId(containerPanelId, spec.groupId()), spec.category());
+        if (spec.emptyIcon() != null) EMPTY_ICONS.put(groupId(containerPanelId, spec.groupId()), spec.emptyIcon());
         if (gate == null && binding == null && mending == null && shiftClickOut == null
                 && shiftClickIn == null && collect == null && dragFill == null) return;
 

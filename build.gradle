@@ -186,23 +186,75 @@ javadoc {
 // One Kit range per library: the declared MenuKit range must be
 // ">=<major>.<minor>.0 <<major+1>.0.0" of menukit_version, the floor at the
 // major.minor this build compiles against.
+// SlotKit depends on MenuKit alone, so this is the single-kit shape of the same check every
+// other consumer runs (see any consumer's verifyKitRanges for the full rationale). Kept in
+// its own copy because the loop-over-kits shape would be one entry wide for no benefit.
 tasks.register('verifyKitRanges') {
     def src = file('src/main/resources/fabric.mod.json')
-    def menukit = project.property('menukit_version').toString()
+    def menukitVersion = (project.findProperty('menukit_version') ?: '').toString()
     inputs.file src
-    inputs.property 'menukit', menukit
+    inputs.property 'menukit_version', menukitVersion
     doLast {
         def depends = new groovy.json.JsonSlurper().parse(src).depends ?: [:]
-        def (major, minor) = menukit.split('\\+')[0].split('\\.')
-        def expected = ">=${major}.${minor}.0 <${(major as int) + 1}.0.0"
-        def declared = depends['menukit']?.toString()
-        if (declared != expected) {
-            throw new GradleException("fabric.mod.json: 'menukit' is '${declared}', expected '${expected}' (menukit_version ${menukit}).")
-        }
         if (depends.containsKey('menukit-containers')) {
-            throw new GradleException("fabric.mod.json depends on 'menukit-containers': Containers is SlotKit now.")
+            throw new GradleException(
+                "fabric.mod.json: depends on 'menukit-containers'. Containers is SlotKit now; " +
+                "depend on 'slotkit' instead. See guidelines/ci-cd.md, 'MenuKit version pinning'.")
         }
-        println "verifyKitRanges: menukit ${declared}"
+        def declared = depends['menukit']?.toString()
+        if (declared == null) return
+        if (menukitVersion.isEmpty()) {
+            throw new GradleException(
+                "fabric.mod.json: depends on 'menukit', but no menukit_version property is set.")
+        }
+        if (declared.contains(',')) {
+            throw new GradleException(
+                "fabric.mod.json: 'menukit' is '${declared}'. Fabric accepts a comma here and the " +
+                "predicate then matches no version at all. Separate the bounds with a space.")
+        }
+        def parts = menukitVersion.replaceAll(/\+.*$/, '').tokenize('.')
+        def major = Integer.parseInt(parts[0])
+        def minor = Integer.parseInt(parts[1])
+        def ceiling = "<${major + 1}.0.0"
+        def expected = ">=${major}.${minor}.0 ${ceiling}".toString()
+        if (declared != expected) {
+            // ci-cd.md's rule 2: a stale floor (our major, our minor or older, our ceiling)
+            // on a repo untouched since its last published tag keeps its published range.
+            def m = (declared =~ /^>=(\d+)\.(\d+)\.0 (<\d+\.0\.0)$/)
+            def staleFloorOnly = m.matches() &&
+                (m.group(1) as int) == major &&
+                (m.group(2) as int) <= minor &&
+                m.group(3) == ceiling
+            def untouched = false
+            if (staleFloorOnly) {
+                def tag = "v${project.version}"
+                def run = { List<String> cmd ->
+                    def proc = cmd.execute(null, projectDir)
+                    proc.waitFor()
+                    [exit: proc.exitValue(), out: proc.inputStream.text.trim()]
+                }
+                def tagRef = run(['git', 'rev-parse', '-q', '--verify', "refs/tags/${tag}"])
+                def dirty = run(['git', 'status', '--porcelain'])
+                def ahead = run(['git', 'rev-list', '--count', "${tag}..HEAD"])
+                untouched = tagRef.exit == 0 && dirty.out.isEmpty() &&
+                    ahead.exit == 0 && ahead.out == '0'
+            }
+            if (staleFloorOnly && untouched) {
+                println "verifyKitRanges: menukit keeps its published range '${declared}' " +
+                    "(v${project.version} is untouched; built against menukit ${menukitVersion})"
+            } else {
+                def why = staleFloorOnly
+                    ? "This mod has changed since v${project.version}, so a stale floor no " +
+                      "longer applies: it must catch up like any other change."
+                    : "This mod is built against menukit ${menukitVersion}, so it floors at " +
+                      "that major.minor and stops below the next major."
+                throw new GradleException(
+                    "fabric.mod.json: 'menukit' is '${declared}', expected '${expected}'. ${why} " +
+                    "See guidelines/ci-cd.md, 'MenuKit version pinning'.")
+            }
+        } else {
+            println "verifyKitRanges: menukit '${expected}' (built against ${menukitVersion})"
+        }
     }
 }
 build.dependsOn verifyKitRanges

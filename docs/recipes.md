@@ -98,11 +98,14 @@ ContainerPanel.define("mymod:elytra")
         .addSlot(SlotSpec.at("slot", new SlotGroupCategory("mymod", "elytra"))
                 .storage(player -> ELYTRA.bind(player))
                 .accepts(stack -> stack.is(Items.ELYTRA))
+                .emptyIcon(Identifier.fromNamespaceAndPath("mymod", "container/slot/elytra"))
                 .shiftClickIn(true))
         .register();
 ```
 
 Result: one slot right above the offhand on the survival and creative inventories, and no slot on screens without an offhand. Panels on the same group share it and stack by region and priority. `TOP_CENTER` stacks upward and a lower priority sits nearer the group, so another mod's slot on `PLAYER_OFFHAND` at priority 10 goes between this one and the offhand, and a panel that isn't shown leaves no gap. (`TOP_ALIGN_LEFT` would stack them in a row to the right.) Mods building one column agree on priorities, nothing else. `onGroup(...)` takes specific groups, created ones included (`ContainerPanel.groupId(panel, group)`).
+
+`emptyIcon` is the outline an empty slot shows, drawn by vanilla the way it draws the armour outlines. It takes a GUI sprite id; a mod's own sprite lives at `assets/<ns>/textures/gui/sprites/<path>.png`.
 
 With an anchor, `at(...)` takes a `region`, `center()` or `pixel(...)`. Give the slot a category of your own, not `PLAYER_OFFHAND` or `PLAYER_ARMOR`, which other mods read as vanilla's.
 

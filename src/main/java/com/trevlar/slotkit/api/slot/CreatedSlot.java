@@ -77,6 +77,17 @@ public class CreatedSlot extends Slot {
         this.panelId = panel.id();
         this.groupId = groupId;
         this.localIndex = localIndex;
+        // Declared at init, before any menu exists, so read once here.
+        this.emptyIcon = ContainerPanel.emptyIconOf(com.trevlar.slotkit.api.group.SlotGroupId.created(panelId, groupId));
+    }
+
+    // The group's SlotSpec.emptyIcon, or null for vanilla's (none).
+    private final net.minecraft.resources.@Nullable Identifier emptyIcon;
+
+    /** The group's {@code SlotSpec.emptyIcon} outline when declared, drawn by vanilla on an empty slot. */
+    @Override
+    public net.minecraft.resources.Identifier getNoItemIcon() {
+        return emptyIcon != null ? emptyIcon : super.getNoItemIcon();
     }
 
     /**
