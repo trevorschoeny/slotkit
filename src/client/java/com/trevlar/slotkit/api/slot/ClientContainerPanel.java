@@ -1,6 +1,7 @@
 package com.trevlar.slotkit.api.slot;
 
 import com.trevlar.menukit.api.panel.Panel;
+import com.trevlar.menukit.api.panel.PanelPosition;
 import com.trevlar.menukit.api.element.PanelElement;
 import com.trevlar.menukit.api.panel.ScreenMatcher;
 import com.trevlar.menukit.api.panel.ScreenPanelAdapter;
@@ -99,10 +100,20 @@ public final class ClientContainerPanel {
             }
             if (!slots.isEmpty()) elements.add(SlotFlowElement.builder().addAll(slots).build());
 
+            // A slot panel on a slot group sits flush on it, and on the slot panel
+            // before it, so its slots stay on vanilla's 18 px pitch: the group's box
+            // is its slots' frames (SlotGroupPanelAdapter.box), and a created slot is
+            // one frame. A gap the definition declared itself wins.
+            PanelPosition position = def.position();
+            if (!def.anchorGroups().isEmpty() && !slots.isEmpty()
+                    && position.gap() == PanelPosition.HOST_GAP) {
+                position = position.gap(0);
+            }
+
             Panel panel = Panel.builder(def.panelId())
                     .elements(elements)
                     .style(def.style())
-                    .position(def.position())
+                    .position(position)
                     .build()
                     .opaque(def.opaque());
             if (def.visibleWhen() != null) panel.visibleWhen(def.visibleWhen());

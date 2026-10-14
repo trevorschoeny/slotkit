@@ -9,6 +9,10 @@ Additions for mods that build slots. Nothing in 1.0.0 changes. Needs MenuKit 7.1
 - `SlotSpec.emptyIcon(Identifier)` gives a group's empty slots an outline, drawn the way vanilla draws the armour outlines.
 - `AppliesTo.only(...)` takes a mod's slot group only when its category is one the operation named.
 
+### Changed
+
+- A panel on a slot group is now placed around the group's 18x18 slot frames rather than the 16x16 item boxes, so it sits 1 px further out than before. Slot panels on a group sit flush, with no gap, so a column of created slots keeps vanilla's 18 px slot pitch.
+
 ### Fixed
 
 - Mending declared on a category, as with `SlotOperations.inherent(PLAYER_INVENTORY, MENDING, TRUE)`, now reaches the vanilla inventory slots and not only created ones.
