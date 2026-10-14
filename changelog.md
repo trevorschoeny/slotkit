@@ -11,42 +11,10 @@ Additions for mods that build slots. Nothing in 1.0.0 changes. Needs MenuKit 7.1
 
 ### Changed
 
-- A panel on a slot group is now placed around the group's 18x18 slot frames rather than the 16x16 item boxes, so it sits 1 px further out than before. Slot panels on a group sit flush, with no gap, so a column of created slots keeps vanilla's 18 px slot pitch.
+- A panel on a slot group is now placed around the group's 18x18 slot frames rather than the 16x16 item boxes, so it sits 1 pixel further out than before. Slot panels on a group sit flush, with no gap, so a column of created slots keeps vanilla's 18 pixel slot pitch.
 
 ### Fixed
 
 - Mending declared on a category, as with `SlotOperations.inherent(PLAYER_INVENTORY, MENDING, TRUE)`, now reaches the vanilla inventory slots and not only created ones.
 - An XP orb no longer counts the held item twice when its hotbar slot is opted in to Mending.
 - On chests, barrels and horse inventories with mods' slots added, the chest's or horse's storage no longer takes in part of the player's inventory, and panels placed on the player's inventory stay beside it instead of moving to the top of the screen.
-
-## 1.0.0
-
-SlotKit is MenuKit: Containers renamed, plus the slot code MenuKit 6 carried. It has its own version number and needs MenuKit 7.0.0 or newer, below 8.0.0. Mods built for Containers or for MenuKit 6's slot code need an update. The [upgrading guide](https://github.com/trevorschoeny/slotkit/blob/main/docs/upgrading.md) has the steps and an import map that rewrites the moved names.
-
-### Renamed
-
-- The mod id `menukit-containers` is `slotkit`, and `com.trevlar.menukit.containers.api.*` is `com.trevlar.slotkit.api.*`.
-- `SlotGroup`, the created kind, is `CreatedSlotGroup`. `ContainerKeys.MENDING` is `BehaviorKeys.MENDING`, and `ContainerKeys` is gone.
-
-### Moved in from MenuKit
-
-- Slot groups, categories and sets (`api.group`), `Storage` and `VirtualStorage` (`api.storage`), the window, addresses, slot operations, gates and vetoes (`api.window`), and `SlotGroupPanelAdapter`.
-
-### Changed
-
-- A server no longer refuses every player without SlotKit. It refuses only players missing SlotKit or a mod that declares `"bothSides": "required"`, and names the mods with links. Everyone else joins.
-- A mod that builds slots or custom menus declares `required`, and namespaces its panel and menu ids with its own mod id. `ContainerPanel.define` and `CustomMenu.define` throw at startup otherwise, with a message naming the fix.
-- The join check also compares each required mod's `ContainerPanel` slot groups and slot counts, and refuses a player whose copy differs, naming the mod.
-- Slot state carried on a shulker box is kept in `minecraft:custom_data` and stays off the network. Shulkers saved with Containers keep their contents and state.
-
-### Added
-
-- `Presence` answers what the other side runs: `serverHasSlotKit`, `serverHas` and `serverHasChannel` on the client, `clientHasSlotKit` and `clientHas` on the server.
-
-### Removed
-
-- `Address.panel` and `Address.panelElement`, the window's panel and element handles, and the `VISIBILITY` and `OPACITY` keys. A panel's own `visibleWhen` and `opaque` do the job.
-
-### Unchanged
-
-- Every saved id keeps its `menukit:` namespace. Worlds, player files and a mod's saved settings load with no conversion.

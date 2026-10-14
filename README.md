@@ -1,6 +1,6 @@
 # SlotKit
 
-Formerly MenuKit: Containers. Mods built for Containers need an update, and the [upgrading guide](https://github.com/trevorschoeny/slotkit/blob/main/docs/upgrading.md) has the steps. Inventory Max stays on MenuKit: Containers 6.2.0, which is still in this project's version list.
+Formerly MenuKit: Containers. Mods built for Containers need an update, and the [upgrading guide](https://github.com/trevorschoeny/slotkit/blob/main/docs/upgrading.md) has the steps. MenuKit: Containers 6.2.0 is still in this project's version list.
 
 SlotKit is a slot library for Fabric mods, built on [MenuKit](https://modrinth.com/mod/menukit). A mod uses it to find and act on the slots in any menu, or to build real slots and custom menus that persist and sync.
 
@@ -22,7 +22,7 @@ What it does:
 - Attaches per-slot state to any slot, either private to each player or shared by everyone viewing it. The server checks every write a client sends. The state is stored on the slot's owner (a player, block, entity or item), where `/data get` can read it.
 - Checks which mods each side has before the world loads. A server refuses only players missing a mod that builds slots, and names the mods to install, with links. Everyone else joins.
 
-Requires MenuKit 7 and Fabric API. Worlds and player files saved with MenuKit: Containers load with no conversion, and shulker boxes keep their contents and slot state.
+Requires MenuKit 7.1.0 or newer and Fabric API. Worlds and player files saved with MenuKit: Containers load with no conversion, and shulker boxes keep their contents and slot state.
 
 ## Install
 
@@ -33,8 +33,8 @@ repositories {
     maven { url 'https://api.modrinth.com/maven' }
 }
 dependencies {
-    implementation 'maven.modrinth:menukit:7.0.0+26.3'
-    implementation 'maven.modrinth:xQUBXV8I:1.0.0+26.3'   // SlotKit
+    implementation 'maven.modrinth:menukit:7.1.0+26.3'
+    implementation 'maven.modrinth:xQUBXV8I:1.1.0+26.3'   // SlotKit
 }
 ```
 
@@ -43,7 +43,7 @@ dependencies {
 Declare both in `fabric.mod.json`, each against its own version, with both bounds ([why](https://github.com/trevorschoeny/slotkit/blob/main/docs/versioning.md)):
 
 ```json
-"depends": { "menukit": ">=7.0.0 <8.0.0", "slotkit": ">=1.0.0 <2.0.0" }
+"depends": { "menukit": ">=7.1.0 <8.0.0", "slotkit": ">=1.1.0 <2.0.0" }
 ```
 
 A mod that builds slots or custom menus also declares that it needs SlotKit on both sides:
@@ -100,7 +100,7 @@ The API is every type in a package named `api`: `com.trevlar.slotkit.api.*`. The
 
 ## Compatibility
 
-Minecraft 26.3, Fabric. SlotKit replaces MenuKit: Containers, so the two cannot be installed together, and neither can SlotKit and Inventory Max. A player who keeps Inventory Max keeps the whole 6.2 set (MenuKit 6.2.0 and MenuKit: Containers 6.2.0) in a separate profile.
+Minecraft 26.3, Fabric. SlotKit replaces MenuKit: Containers, so the two can't be installed together.
 
 ## License
 
