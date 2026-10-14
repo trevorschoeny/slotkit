@@ -101,7 +101,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * <h2>Source</h2>
  *
  * {@link #source} names the mod a row comes from, so a screen can say "Pockets
- * (Inventory Max)". It is {@code null} for vanilla's groups. For anything else it is
+ * (Hotbar Pockets)". It is {@code null} for vanilla's groups. For anything else it is
  * the mod whose namespace the row is named in: a set's namespace, a created group's
  * panel-id namespace (the part before the colon), or a mod's own category's
  * namespace. The name is that mod's display name from its {@code fabric.mod.json},

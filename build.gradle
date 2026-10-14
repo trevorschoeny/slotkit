@@ -218,8 +218,9 @@ tasks.register('verifyKitRanges') {
         def ceiling = "<${major + 1}.0.0"
         def expected = ">=${major}.${minor}.0 ${ceiling}".toString()
         if (declared != expected) {
-            // ci-cd.md's rule 2: a stale floor (our major, our minor or older, our ceiling)
-            // on a repo untouched since its last published tag keeps its published range.
+            // One exception: a stale floor (our major, our minor or older, our ceiling)
+            // keeps its published range while the repo is untouched since its last
+            // published tag.
             def m = (declared =~ /^>=(\d+)\.(\d+)\.0 (<\d+\.0\.0)$/)
             def staleFloorOnly = m.matches() &&
                 (m.group(1) as int) == major &&

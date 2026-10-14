@@ -135,12 +135,12 @@ public class SKExperienceOrbMendMixin {
         int extras = 0;
 
         // Opted-in slots on the player's own inventory menu, with MENDING resolved from
-        // the engine by the slot's address. Two kinds:
-        //  - a created slot (CreatedSlot), addressed by id. Its storage returns a copy,
-        //    so a write-back commit is queued (flushed before the next scan or at TAIL).
-        //  - a vanilla inventory slot, opted in by its container address. The item is the
-        //    real inventory stack, so vanilla's in-place repair persists and syncs on its
-        //    own (commit is null, as for equipped gear).
+        // the engine. Two kinds:
+        //  * a created slot (CreatedSlot), resolved by its address. Its storage returns a
+        //    copy, so a write-back commit is queued (flushed before the next scan or at TAIL).
+        //  * a vanilla inventory slot, resolved by its address, group or category. The
+        //    item is the real inventory stack, so vanilla's in-place repair persists and
+        //    syncs on its own (commit is null, as for equipped gear).
         // The scan is skipped when no behaviour is set anywhere, so normal XP pickup,
         // by far the common case, costs nothing extra.
         for (Slot slot : !WindowEngine.hasServerDeclarations() ? List.<Slot>of() : player.inventoryMenu.slots) {

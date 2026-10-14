@@ -169,8 +169,8 @@ public final class SlotGroupPanelAdapter {
      *
      * <p>The frame, not the 16x16 item box: vanilla lays slots out on an 18 px pitch,
      * so a created slot (itself an 18x18 frame) stacked flush on this box with
-     * {@code gap(0)} lands exactly one pitch away, on the grid (Beryl, 2026-10-14:
-     * the item box plus MenuKit's 2 px gap sat it 1 to 3 px off).
+     * {@code gap(0)} lands exactly one pitch away, on the grid. Measuring from the item
+     * box, with MenuKit's 2 px gap, put it 1 to 3 px off.
      */
     private static @Nullable Reference box(Screen screen, SlotGroupId id) {
         if (!(screen instanceof AbstractContainerScreen<?> acs)) return null;

@@ -21,7 +21,7 @@ import org.jspecify.annotations.Nullable;
  * {@code finally}, so it never outlives the click.
  *
  * <p>A mod may also move items on the server with no click at all, calling a
- * menu's {@code quickMoveStack(player, index)} directly (Inventory Max restocking
+ * menu's {@code quickMoveStack(player, index)} directly (Hotbar Pockets restocking
  * from a pocket). {@code quickMoveStack} is abstract and every menu overrides it,
  * so it cannot be wrapped once; every one of those moves goes through
  * {@code moveItemStackTo}, which is concrete and is the seam that lacks a player.

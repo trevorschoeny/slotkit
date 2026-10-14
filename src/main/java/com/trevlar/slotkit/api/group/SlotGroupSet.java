@@ -13,7 +13,7 @@ import java.util.Objects;
  *
  * <p>Group granularity is an author's layout choice: a group is the unit a panel
  * anchors to, so a mod that anchors per slot declares one group per slot
- * (Inventory Max's pockets are 27). A player should see one entry, "Pockets", and a
+ * (Hotbar Pockets declares 27, one per pocket). A player should see one entry, "Pockets", and a
  * choice made against it should reach all 27. Groups join a set with
  * {@link SlotGroups#declare(SlotGroupId, com.trevlar.slotkit.api.group.SlotGroupCategory, SlotGroupSet)};
  * {@link SlotGroups#listing()} then lists the set once.
