@@ -17,6 +17,7 @@ Additions for mods that build slots. Nothing in 1.0.0 changes. Needs MenuKit 7.1
 
 - Mending declared on a category, as with `SlotOperations.inherent(PLAYER_INVENTORY, MENDING, TRUE)`, now reaches the vanilla inventory slots and not only created ones.
 - An XP orb no longer counts the held item twice when its hotbar slot is opted in to Mending.
+- On chests, barrels and horse inventories with mods' slots added, the chest's or horse's storage no longer takes in part of the player's inventory, and panels placed on the player's inventory stay beside it instead of moving to the top of the screen.
 
 ## 1.0.0
 

@@ -102,7 +102,7 @@ public final class ClientContainerPanel {
 
             // A slot panel on a slot group sits flush on it, and on the slot panel
             // before it, so its slots stay on vanilla's 18 px pitch: the group's box
-            // is its slots' frames (SlotGroupPanelAdapter.box), and a created slot is
+            // is its slots' frames (SlotGroupBox.of), and a created slot is
             // one frame. A gap the definition declared itself wins.
             PanelPosition position = def.position();
             if (!def.anchorGroups().isEmpty() && !slots.isEmpty()

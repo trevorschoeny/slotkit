@@ -3,6 +3,7 @@ package com.trevlar.slotkit.core;
 import com.trevlar.slotkit.api.group.SlotGroupCategories;
 import com.trevlar.slotkit.api.group.SlotGroupResolver;
 import com.trevlar.slotkit.api.group.SlotGroupCategory;
+import com.trevlar.slotkit.api.slot.CreatedSlot;
 
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.AnvilMenu;
@@ -41,8 +42,8 @@ import org.jetbrains.annotations.ApiStatus;
  * {@code net.minecraft.world.inventory.*Menu} classes in the Loom decompile.
  * Most menus follow a "N specific slots + 27 player inventory + 9 player
  * hotbar" pattern; variable-size menus (ChestMenu,
- * HorseInventoryMenu) derive their specific-slot count from
- * {@code menu.slots.size() - 36}.
+ * HorseInventoryMenu) derive their specific-slot count from the menu's own
+ * slot count ({@link #ownSlotCount}) minus the 36 player slots.
  *
  * <p>Each resolver returns an immutable map keyed by {@link SlotGroupCategory},
  * whose values are slot-index arrays into {@code menu.slots}
@@ -73,6 +74,22 @@ public final class VanillaSlotGroupResolvers {
     }
 
     // Shared helpers
+
+    /**
+     * How many slots the menu built itself: every slot before the first created one.
+     * SlotKit appends created slots after the menu's constructor, on every container
+     * menu (a slot mod's panel is built everywhere), so {@code menu.slots.size()}
+     * counts them too. A resolver that sizes a layout from the slot count reads this
+     * instead: counting a chest's created slots as chest storage shifted the
+     * player-inventory range onto the hotbar and the parked created slots
+     * (y = -10000), and every panel anchored to the inventory flew off the frame.
+     */
+    static int ownSlotCount(AbstractContainerMenu menu) {
+        for (int i = 0; i < menu.slots.size(); i++) {
+            if (menu.slots.get(i) instanceof CreatedSlot) return i;
+        }
+        return menu.slots.size();
+    }
 
     /** A contiguous index range {@code [fromInclusive, toExclusive)} as an {@code int[]}. */
     static int[] range(int fromInclusive, int toExclusive) {
@@ -109,7 +126,7 @@ public final class VanillaSlotGroupResolvers {
         // ChestMenu: N storage + 27 inv + 9 hotbar (N = 9, 18, 27, 36, 45, 54)
         // Includes chests, barrels (Barrel uses ChestMenu with size 27).
         SlotGroupCategories.register(ChestMenu.class, menu -> {
-            int storage = menu.slots.size() - 36;
+            int storage = ownSlotCount(menu) - 36;
             Map<SlotGroupCategory, int[]> out = new LinkedHashMap<>();
             out.put(SlotGroupCategory.CHEST_STORAGE, range(0, storage));
             addPlayerInvTail(out, storage);
@@ -294,7 +311,7 @@ public final class VanillaSlotGroupResolvers {
         // (3 * j slots, j = 0 for horse/mule, 3 for donkey/mule-with-chest, 5 for
         // llama). Then 27 inv + 9 hotbar. Total = 2 + 3j + 36.
         SlotGroupCategories.register(HorseInventoryMenu.class, menu -> {
-            int storage = menu.slots.size() - 38; // 38 = 2 saddle/armor + 36 player
+            int storage = ownSlotCount(menu) - 38; // 38 = 2 saddle/armor + 36 player
             Map<SlotGroupCategory, int[]> out = new LinkedHashMap<>();
             out.put(SlotGroupCategory.MOUNT_SADDLE, range(0, 1));
             out.put(SlotGroupCategory.MOUNT_BODY_ARMOR, range(1, 2));

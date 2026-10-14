@@ -7,12 +7,12 @@ import com.trevlar.menukit.api.panel.Panel;
 import com.trevlar.menukit.api.panel.PanelStyle;
 import com.trevlar.menukit.api.panel.Reference;
 import com.trevlar.menukit.api.panel.WrapsPanelAdapter;
+import com.trevlar.slotkit.core.SlotGroupBox;
 import com.trevlar.slotkit.mixin.AbstractContainerScreenAccessor;
 
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.inventory.Slot;
 
 import org.jspecify.annotations.Nullable;
 
@@ -160,35 +160,10 @@ public final class SlotGroupPanelAdapter {
         return Identifier.fromNamespaceAndPath("slotkit", "group/" + path);
     }
 
-    /**
-     * One slot group's box: the rectangle around its slots' 18x18 frames this frame
-     * (re-resolved every time, since creative tab switches and dynamic menus change
-     * {@code menu.slots}), or {@code null} when the group is not on this screen right
-     * now. Each group gets its own box: a created group declaring a vanilla category
-     * never stretches that category's box.
-     *
-     * <p>The frame, not the 16x16 item box: vanilla lays slots out on an 18 px pitch,
-     * so a created slot (itself an 18x18 frame) stacked flush on this box with
-     * {@code gap(0)} lands exactly one pitch away, on the grid. Measuring from the item
-     * box, with MenuKit's 2 px gap, put it 1 to 3 px off.
-     */
+    /** One slot group's box on this screen this frame ({@link SlotGroupBox#of}), or {@code null} off a container screen. */
     private static @Nullable Reference box(Screen screen, SlotGroupId id) {
         if (!(screen instanceof AbstractContainerScreen<?> acs)) return null;
-        for (ResolvedSlotGroup group : SlotGroupCategories.groups(acs.getMenu())) {
-            if (!group.id().equals(id) || group.slots().isEmpty()) continue;
-            int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
-            int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
-            for (Slot slot : group.slots()) {
-                // A slot's frame is its item box grown by 1 px on every side.
-                minX = Math.min(minX, slot.x - 1);
-                minY = Math.min(minY, slot.y - 1);
-                maxX = Math.max(maxX, slot.x + 17);
-                maxY = Math.max(maxY, slot.y + 17);
-            }
-            AbstractContainerScreenAccessor acc = (AbstractContainerScreenAccessor) acs;
-            return new Reference(acc.sk$getLeftPos() + minX, acc.sk$getTopPos() + minY,
-                    maxX - minX, maxY - minY);
-        }
-        return null;
+        AbstractContainerScreenAccessor acc = (AbstractContainerScreenAccessor) acs;
+        return SlotGroupBox.of(acs.getMenu(), acc.sk$getLeftPos(), acc.sk$getTopPos(), id);
     }
 }
