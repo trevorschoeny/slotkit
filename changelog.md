@@ -5,7 +5,7 @@ Additions for mods that build slots. Nothing in 1.0.0 changes. Needs MenuKit 7.1
 ### Added
 
 - `ContainerPanel.Builder.on(SlotGroupCategory...)` and `onGroup(SlotGroupId...)` place a slot panel around a slot group instead of the menu frame. Panels on one group stack by priority, so several mods can share a column above the offhand.
-- `SlotSpec.shiftClickIn(true)`, said explicitly, makes a group a shift-click target in the player's inventory. Items fill partial stacks first, then empty slots, and anything the slot's filter refuses goes where vanilla sends it. A slot mod no longer needs its own shift-click mixin.
+- `SlotSpec.shiftClickIn(true)`, set explicitly, makes a group a shift-click target in the player's inventory. Items fill partial stacks first, then empty slots, and anything the slot's filter refuses goes where vanilla sends it. A slot mod no longer needs its own shift-click mixin.
 - `SlotSpec.emptyIcon(Identifier)` gives a group's empty slots an outline, drawn the way vanilla draws the armour outlines.
 - `AppliesTo.only(...)` takes a mod's slot group only when its category is one the operation named.
 
