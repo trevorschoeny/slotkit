@@ -3,7 +3,7 @@
   "id": "slotkit",
   "version": "${version}",
   "name": "SlotKit",
-  "icon": "icon.png",
+  "icon": "assets/slotkit/icon.png",
   "description": "Slots for Fabric mods: find and act on slots in any menu, and build real slots that persist and sync. Built on MenuKit.",
   "authors": ["trevorschoeny"],
   "contact": {
