@@ -5,6 +5,8 @@ import com.trevlar.slotkit.api.group.SlotGroupResolver;
 import com.trevlar.slotkit.api.group.SlotGroupCategory;
 import com.trevlar.slotkit.api.slot.CreatedSlot;
 
+import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.AnvilMenu;
 import net.minecraft.world.inventory.BeaconMenu;
@@ -27,9 +29,12 @@ import net.minecraft.world.inventory.NautilusInventoryMenu;
 import net.minecraft.world.inventory.ShulkerBoxMenu;
 import net.minecraft.world.inventory.SmithingMenu;
 import net.minecraft.world.inventory.SmokerMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.inventory.StonecutterMenu;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import org.jetbrains.annotations.ApiStatus;
@@ -98,6 +103,10 @@ public final class VanillaSlotGroupResolvers {
         return r;
     }
 
+    private static int[] ints(List<Integer> indices) {
+        return indices.stream().mapToInt(Integer::intValue).toArray();
+    }
+
     /**
      * Adds the standard player-inventory-tail categories (27 inventory + 9
      * hotbar) starting at {@code startIndex}. Used by every menu that calls
@@ -133,11 +142,28 @@ public final class VanillaSlotGroupResolvers {
             return Collections.unmodifiableMap(out);
         });
 
-        // ShulkerBoxMenu: 27 shulker + 27 inv + 9 hotbar = 63 slots
+        // ShulkerBoxMenu: 27 shulker + 27 inv + 9 hotbar = 63 slots in vanilla. Mapped by
+        // container, not by index range, because a mod may enlarge the box: Shulker
+        // Palette appends more slots over the same shulker container after the player
+        // inventory (slots can only be added at construction). Every slot over the
+        // box's container is shulker storage, so a 16-row box still reads as one
+        // "Shulker" group; the player's slots are sorted by their inventory index.
+        // For a vanilla box this gives exactly 0..26, 27..53 and 54..62.
         SlotGroupCategories.register(ShulkerBoxMenu.class, menu -> {
+            Container box = menu.slots.get(0).container; // vanilla adds the box's slots first
+            List<Integer> storage = new ArrayList<>(), inventory = new ArrayList<>(), hotbar = new ArrayList<>();
+            for (int i = 0; i < menu.slots.size(); i++) {
+                Slot slot = menu.slots.get(i);
+                if (slot instanceof CreatedSlot) continue; // created slots resolve as their own groups
+                if (slot.container == box) storage.add(i);
+                else if (slot.container instanceof Inventory) {
+                    (Inventory.isHotbarSlot(slot.getContainerSlot()) ? hotbar : inventory).add(i);
+                }
+            }
             Map<SlotGroupCategory, int[]> out = new LinkedHashMap<>();
-            out.put(SlotGroupCategory.SHULKER_STORAGE, range(0, 27));
-            addPlayerInvTail(out, 27);
+            out.put(SlotGroupCategory.SHULKER_STORAGE, ints(storage));
+            if (!inventory.isEmpty()) out.put(SlotGroupCategory.PLAYER_INVENTORY, ints(inventory));
+            if (!hotbar.isEmpty()) out.put(SlotGroupCategory.PLAYER_HOTBAR, ints(hotbar));
             return Collections.unmodifiableMap(out);
         });
 

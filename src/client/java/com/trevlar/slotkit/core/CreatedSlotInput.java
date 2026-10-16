@@ -69,6 +69,9 @@ public final class CreatedSlotInput {
 
     private CreatedSlotInput() {}
 
+    /** Where a created slot no panel placed sits ({@code CreatedSlots.OFFSCREEN}). */
+    private static final int PARKED = -10000;
+
     /**
      * Resolution of a screen point against the revealed registered panels on a
      * screen.
@@ -131,10 +134,27 @@ public final class CreatedSlotInput {
         // spanning two separate panels.
         Map<String, int[]> bounds = null; // panelId -> {minX, minY, maxX, maxY}
 
+        // Vanilla slots a panel presents (SlotElement.slot(Address)) win where they
+        // are, like created ones, so a vanilla slot the panel covers can't take the
+        // click first. They add no bounds: they are the menu's own slots, and an
+        // opaque panel already makes its gaps inert.
+        Set<Slot> hosted = SlotElementRegistry.hostedVanillaSlots(menu);
+
         for (Slot slot : menu.slots) {
             CreatedSlot mk = CreatedSlotAccess.asMKCSlot(slot);
-            if (mk == null || mk.isInert()) continue;
+            if (mk == null) {
+                if (hosted.contains(slot) && relX >= slot.x - 1 && relX < slot.x + 17
+                        && relY >= slot.y - 1 && relY < slot.y + 17) {
+                    return Resolution.hit(slot);
+                }
+                continue;
+            }
+            if (mk.isInert()) continue;
             if (panelFilter != null && !panelFilter.contains(mk.panelId())) continue;
+            // Parked (its panel did not place it last frame: a row scrolled out of a
+            // ScrollContainer, say): not on screen, so neither hit nor part of the panel's
+            // box. Counted, its off-screen corner stretched the box over half the screen.
+            if (slot.x == PARKED) continue;
 
             // Vanilla's hover area for an 18px slot cell, x-1 to x+17, around the
             // in-menu slot's own x/y (the creative wrapper's on creative). That is the
