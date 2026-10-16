@@ -12,6 +12,7 @@ import com.trevlar.menukit.api.element.AbstractPanelElement;
 import com.trevlar.menukit.api.element.PanelElement;
 import com.trevlar.menukit.api.element.RenderContext;
 import com.trevlar.menukit.api.element.SlotRendering;
+import com.trevlar.menukit.api.host.SlotClip;
 
 import com.trevlar.slotkit.mixin.AbstractContainerScreenAccessor;
 import com.trevlar.slotkit.mixin.SlotPositionAccessor;
@@ -57,6 +58,15 @@ import java.util.Objects;
  * and a vanilla slot the same, because SlotKit has no separate slot pass for them
  * to differ in. {@code CustomContainerScreen} has always worked this way on its own
  * screens.
+ *
+ * <h3>In a clipping container</h3>
+ *
+ * In a {@code ScrollContainer} (or anything else that clips what it draws) the slot
+ * scrolls and clips like any element. Each frame it places its slot, it reports it to
+ * MenuKit ({@code SlotClip.shown}) with the clip it draws under, and MenuKit holds
+ * vanilla's draw of the slot and its hover to that clip: a slot across the viewport's
+ * edge keeps its position and shows, hovers and takes clicks only inside. A slot
+ * wholly out of view is not rendered, so it is parked (below).
  *
  * <h3>Vanilla slots</h3>
  *
@@ -212,6 +222,9 @@ public final class SlotElement extends AbstractPanelElement {
                 screenX + SlotRendering.ITEM_INSET - acc.sk$getLeftPos(),
                 screenY + SlotRendering.ITEM_INSET - acc.sk$getTopPos());
         presented = true;
+        // Tell MenuKit the clip this element draws under, so a slot across a
+        // ScrollContainer's edge draws, hovers and clicks only where it is shown.
+        SlotClip.shown(ctx, slot);
 
         // The frame is panel chrome, and the only thing drawn here.
         SlotRendering.drawSlotBackground(ctx.graphics(), screenX, screenY,

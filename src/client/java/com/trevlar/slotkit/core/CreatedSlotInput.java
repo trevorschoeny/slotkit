@@ -69,6 +69,9 @@ public final class CreatedSlotInput {
 
     private CreatedSlotInput() {}
 
+    /** Where a created slot no panel placed sits ({@code CreatedSlots.OFFSCREEN}). */
+    private static final int PARKED = -10000;
+
     /**
      * Resolution of a screen point against the revealed registered panels on a
      * screen.
@@ -148,6 +151,10 @@ public final class CreatedSlotInput {
             }
             if (mk.isInert()) continue;
             if (panelFilter != null && !panelFilter.contains(mk.panelId())) continue;
+            // Parked (its panel did not place it last frame: a row scrolled out of a
+            // ScrollContainer, say): not on screen, so neither hit nor part of the panel's
+            // box. Counted, its off-screen corner stretched the box over half the screen.
+            if (slot.x == PARKED) continue;
 
             // Vanilla's hover area for an 18px slot cell, x-1 to x+17, around the
             // in-menu slot's own x/y (the creative wrapper's on creative). That is the
