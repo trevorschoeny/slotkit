@@ -131,9 +131,22 @@ public final class CreatedSlotInput {
         // spanning two separate panels.
         Map<String, int[]> bounds = null; // panelId -> {minX, minY, maxX, maxY}
 
+        // Vanilla slots a panel presents (SlotElement.slot(Address)) win where they
+        // are, like created ones, so a vanilla slot the panel covers can't take the
+        // click first. They add no bounds: they are the menu's own slots, and an
+        // opaque panel already makes its gaps inert.
+        Set<Slot> hosted = SlotElementRegistry.hostedVanillaSlots(menu);
+
         for (Slot slot : menu.slots) {
             CreatedSlot mk = CreatedSlotAccess.asMKCSlot(slot);
-            if (mk == null || mk.isInert()) continue;
+            if (mk == null) {
+                if (hosted.contains(slot) && relX >= slot.x - 1 && relX < slot.x + 17
+                        && relY >= slot.y - 1 && relY < slot.y + 17) {
+                    return Resolution.hit(slot);
+                }
+                continue;
+            }
+            if (mk.isInert()) continue;
             if (panelFilter != null && !panelFilter.contains(mk.panelId())) continue;
 
             // Vanilla's hover area for an 18px slot cell, x-1 to x+17, around the
