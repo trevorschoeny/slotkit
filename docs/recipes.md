@@ -82,7 +82,7 @@ The category is required. It tells other mods what the group is. `SlotGroupCateg
 
 `SlotSpec.accepts(Predicate<ItemStack>)` limits what a slot takes. `SlotSpec.revealWhen(BooleanSupplier)` hides the slots on the client until the supplier returns true. Death, keepInventory, Curse of Vanishing and Curse of Binding behave as they do for vanilla slots. `POCKETS.dropsOnDeath(DropRule.KEEP)` overrides the death rule.
 
-`SlotSpec.shiftClickIn(true)`, said explicitly, makes the group a shift-click target in the player's inventory (since 1.1.0): a shift-clicked stack tries its partial stacks, then its empty slots, before vanilla's routing, and each slot's gate decides. On other vanilla menus the menu's own routing decides where a shift-click lands. Shift-click out of a created slot goes to the main inventory, then the hotbar.
+`SlotSpec.shiftClickIn(true)`, said explicitly, makes the group a shift-click target (since 1.1.0): in the player's inventory a shift-clicked stack tries its partial stacks, then its empty slots, before vanilla's routing, and each slot's gate decides. On other menus it is tried after the menu's own routing moved nothing, so a chest still takes a stack first. The menu's own routing never lands in these slots by accident (since 2.0.0). Shift-click out of one goes to the player on every menu: on the inventory screen the main inventory, then the hotbar; elsewhere the hotbar end first, as vanilla moves a container's stack. To send shift-clicks somewhere else, register a [route](#decide-where-a-shift-click-goes).
 
 To tell your slots apart on any screen, creative's included:
 
@@ -119,6 +119,36 @@ Result: one slot right above the offhand on the survival and creative inventorie
 `emptyIcon` is the outline an empty slot shows, drawn by vanilla the way it draws the armour outlines. It takes a GUI sprite id; a mod's own sprite lives at `assets/<ns>/textures/gui/sprites/<path>.png`.
 
 On a slot group, the panel's position is a `region`, `center()` or `pixel(...)`. Give the slot a category of your own, not `PLAYER_OFFHAND` or `PLAYER_ARMOR`, which other mods read as vanilla's.
+
+## Open and size a group from the server
+
+Since 2.0.0. `activeCount(start)` lets the server decide how many of a group's slots are live for each player. Declare the most you need; slots past the count are inert on both sides, sent to the client as empty and refusing clicks.
+
+```java
+BAG_SLOTS = ParityGroup.register("mymod:bag",
+        SlotSpec.at("slots", MY_CATEGORY).count(27)
+                .storage(p -> BAG.bind(p))
+                .activeCount(0));
+
+// Server, when the bag opens, and when it closes:
+BAG_SLOTS.setActiveCount(player, 27);
+BAG_SLOTS.setActiveCount(player, 0);
+```
+
+Result: the group is closed until the server opens it, and then shows exactly the live slots: `SlotFlowElement` lays out only those, and `ClientSlots.isShown` is false at 0. The count is the player's, so it holds on every menu, a chest opened meanwhile included. It goes back to the declared start on respawn and on a new login, and isn't saved. The client hears a change before the slots' contents sync, so a closed group's items never reach it.
+
+## Decide where a shift-click goes
+
+Since 2.0.0. A route answers, for the clicked slot, which destinations a shift-clicked stack tries, in order. Register it in common code: the client runs it too, to predict the move, so answer from state both sides have.
+
+```java
+QuickMoveRoutes.register((menu, player, source) -> {
+    if (!bagOpen(player) || CreatedSlot.of(source) != null) return null;   // no opinion
+    return List.of(Dest.group(BAG_SLOTS.id()), Dest.VANILLA);
+});
+```
+
+Result: while the bag is open, a shift-click from the inventory or an open chest fills the bag first, then goes where the menu sends it. The first route with an answer wins; `null` leaves the click to the next route, then to SlotKit's default. `Dest.group(id)` names a created group or a vanilla one (`SlotGroupId.category(...)`), `Dest.groupOf(menuSlot)` whatever group holds that slot, `Dest.PLAYER` the player's inventory and hotbar, and `Dest.VANILLA` the menu's own routing, which only comes last. A route that ends without it stops there and leaves the rest in the source. Every slot still judges the move: gates, vetoes, `shiftClickIn`, and slots past an active count.
 
 ## Show a vanilla slot in your own panel
 
