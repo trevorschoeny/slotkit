@@ -78,6 +78,13 @@ public class SlotKitClient implements ClientModInitializer {
         com.trevlar.slotkit.api.state.SlotState.installClientPlayer(() -> Minecraft.getInstance().player);
         com.trevlar.slotkit.api.state.SlotState.installClientSender(ClientPlayNetworking::send);
 
+        // The server's active counts for this player's groups.
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+                com.trevlar.slotkit.network.ActiveCountS2CPayload.TYPE,
+                (payload, ctx) -> com.trevlar.slotkit.core.ActiveCounts.applyOnClient(payload));
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
+                (handler, client) -> com.trevlar.slotkit.core.ActiveCounts.clearClient());
+
         // Answer the server's hello. With no hello, turn created slots off.
         HandshakeClient.register();
 

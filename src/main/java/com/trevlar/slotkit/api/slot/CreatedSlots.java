@@ -186,6 +186,7 @@ public final class CreatedSlots {
         private SlotGroupCategory category;                   // required: what the group is
         private Storage storage;                              // required
         private BooleanSupplier revealWhen = null;            // null => always client-visible
+        private java.util.function.IntSupplier activeCount = null;   // null => no active count
         private String displayLabel = null;                  // null => capitalized groupId
 
         Builder(AbstractContainerMenu menu, Player player) {
@@ -213,6 +214,13 @@ public final class CreatedSlots {
          * {@link PersistentContainerKey}) to persist per-slot state as well.
          */
         public Builder storage(Storage storage) { this.storage = storage; return this; }
+
+        /** Library use: slots from this count on are inert, on both sides ({@code SlotSpec.activeCount}). */
+        @org.jetbrains.annotations.ApiStatus.Internal
+        public Builder activeCount(java.util.function.IntSupplier count) {
+            this.activeCount = count;
+            return this;
+        }
 
         /**
          * Client-side reveal predicate. The panel, and so the whole group, is visible and
@@ -303,6 +311,7 @@ public final class CreatedSlots {
             for (int local = 0; local < storage.size(); local++) {
                 CreatedSlot slot = new CreatedSlot(
                         adapter, local, OFFSCREEN, OFFSCREEN, group, panel, groupId, local);
+                if (activeCount != null) slot.activeCount(activeCount);
                 inv.sk$addSlot(slot);
                 mkSlots.add(slot);
             }

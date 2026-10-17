@@ -1,5 +1,7 @@
 package com.trevlar.slotkit.api.storage;
 
+import org.jspecify.annotations.Nullable;
+
 import com.trevlar.slotkit.api.slot.DropRule;
 import com.trevlar.slotkit.api.storage.Storage;
 
@@ -18,6 +20,9 @@ import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.block.entity.BlockEntity;
 
 import java.util.function.Supplier;
+import java.util.WeakHashMap;
+import java.util.Collections;
+import java.util.Map;
 
 /**
  * Where a slot group's contents are saved, by owner type.
@@ -343,30 +348,60 @@ public abstract class StorageAttachment<O, C> {
     private static final class ItemContainerAttachment
             extends StorageAttachment<ItemStack, ItemContainerContents> {
         private final int slotCount;
+
+        /**
+         * The live contents of each bound item: one list per stack, shared by every
+         * {@code bind} of it ({@code bind(Supplier)} binds again on each access). Vanilla
+         * changes a slot's stack in place ({@code grow} when stacking onto it, in a
+         * click or a shift-click) and then calls only {@code setChanged}, so the stacks
+         * handed out must be the ones that are written back: a fresh copy per
+         * {@code getStack} lost that growth, and the items with it. Reread whenever the
+         * item's component is no longer the one last read or written (another mod or a
+         * command changed it). Weak keys, so a dropped stack frees its entry.
+         */
+        private final Map<ItemStack, Live> live = Collections.synchronizedMap(new WeakHashMap<>());
+
+        private static final class Live {
+            @Nullable ItemContainerContents component;
+            NonNullList<ItemStack> list;
+        }
+
         ItemContainerAttachment(int slotCount) { this.slotCount = slotCount; }
         @Override public int slotCount() { return slotCount; }
+
+        private Live liveOf(ItemStack stack) {
+            Live l = live.computeIfAbsent(stack, k -> new Live());
+            ItemContainerContents c = stack.get(DataComponents.CONTAINER);
+            if (l.list == null || c != l.component) {
+                l.list = StorageAttachments.contentsToList(c, slotCount);
+                l.component = c;
+            }
+            return l;
+        }
+
+        private static void write(ItemStack stack, Live l) {
+            ItemContainerContents c = StorageAttachments.listToContents(l.list);
+            stack.set(DataComponents.CONTAINER, c);
+            l.component = stack.get(DataComponents.CONTAINER);
+        }
+
         @Override public Storage bind(ItemStack stack) {
             return new Storage() {
                 @Override public ItemStack getStack(int i) {
                     if (stack.isEmpty()) return ItemStack.EMPTY;
-                    ItemContainerContents c = stack.get(DataComponents.CONTAINER);
-                    if (c == null) return ItemStack.EMPTY;
-                    NonNullList<ItemStack> list =
-                            StorageAttachments.contentsToList(c, slotCount);
-                    return list.get(i);
+                    return liveOf(stack).list.get(i);
                 }
                 @Override public void setStack(int i, ItemStack s) {
                     if (stack.isEmpty()) return;
-                    ItemContainerContents c = stack.get(DataComponents.CONTAINER);
-                    NonNullList<ItemStack> list =
-                            StorageAttachments.contentsToList(c, slotCount);
-                    list.set(i, s);
-                    stack.set(DataComponents.CONTAINER,
-                            StorageAttachments.listToContents(list));
+                    Live l = liveOf(stack);
+                    l.list.set(i, s);
+                    write(stack, l);
                 }
                 @Override public int size() { return slotCount; }
                 @Override public void markDirty() {
-                    // Setting a data component already marks it changed.
+                    // A stack handed out by getStack may have changed in place.
+                    if (stack.isEmpty()) return;
+                    write(stack, liveOf(stack));
                 }
             };
         }

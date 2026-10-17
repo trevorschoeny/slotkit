@@ -74,7 +74,7 @@ public final class ParityGroup {
     private static volatile boolean projectionSourceRegistered = false;
 
     // Groups whose spec declared shiftClickIn(true): the shift-click targets on the
-    // player's inventory menu (SKInventoryQuickMoveMixin). Opt-in, so a group that
+    // player's inventory menu and after a menu's own routing elsewhere (QuickMoveRouting). Opt-in, so a group that
     // never said so keeps vanilla's behaviour there.
     private static final Set<SlotGroupId> SHIFT_CLICK_TARGETS = ConcurrentHashMap.newKeySet();
 
@@ -113,6 +113,9 @@ public final class ParityGroup {
 
         // The recipe both build hooks read, under the slot panel id the built
         // CreatedSlots carry and SlotElements resolve against.
+        if (spec.activeCountStart() != null) {
+            com.trevlar.slotkit.core.ActiveCounts.declare(id.panelId(), spec.activeCountStart(), spec.count());
+        }
         ParitySlotRegistry.register(id.panelId(), spec);
         armInlineBehavior(id, spec);
         ensureProjectionSource();
@@ -137,6 +140,32 @@ public final class ParityGroup {
 
     /** How many slots the group has. */
     public int count() { return spec.count(); }
+
+    /**
+     * Sets how many of the group's slots are live for {@code player}: slots
+     * {@code 0..count-1} live, the rest inert on both sides. Server only, on the
+     * server thread. The count is the player's, so it holds on every menu carrying
+     * the group (a chest opened meanwhile included) until the server changes it or the
+     * player respawns or logs out, when it returns to the declared start. The client
+     * hears at once, before the slots' contents sync, and when the count drops the
+     * next sync sends those slots empty, so a closed item's contents never reach it.
+     * Setting the same count again sends nothing.
+     *
+     * @throws IllegalStateException    when the group didn't declare {@code SlotSpec.activeCount}
+     * @throws IllegalArgumentException when {@code count} is outside {@code 0..count()}
+     */
+    public void setActiveCount(net.minecraft.server.level.ServerPlayer player, int count) {
+        com.trevlar.slotkit.core.ActiveCounts.set(player, id.panelId(), count);
+    }
+
+    /**
+     * How many of the group's slots are live for {@code player}, on the side the
+     * player is on: the full count for a group that didn't opt in.
+     */
+    public int activeCount(net.minecraft.world.entity.player.Player player) {
+        return com.trevlar.slotkit.core.ActiveCounts.optedIn(id.panelId())
+                ? com.trevlar.slotkit.core.ActiveCounts.get(player, id.panelId()) : count();
+    }
 
     /** The empty-slot outline {@code group} declared, or {@code null}. Library use. */
     @ApiStatus.Internal

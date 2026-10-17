@@ -135,7 +135,17 @@ public class CreatedSlot extends Slot {
      * those methods.
      */
     public boolean isInert() {
-        return !panel.isShown();
+        return !panel.isShown() || (activeCount != null && localIndex >= activeCount.getAsInt());
+    }
+
+    // The group's active count for this menu's player (SlotSpec.activeCount), or null
+    // when the group didn't opt in. Slots from the count on are inert.
+    private java.util.function.@Nullable IntSupplier activeCount;
+
+    /** Library use: ties the slot to its group's active count. */
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public void activeCount(java.util.function.IntSupplier count) {
+        this.activeCount = count;
     }
 
     // Each override calls super so other mods' mixins into Slot still run. SlotKit

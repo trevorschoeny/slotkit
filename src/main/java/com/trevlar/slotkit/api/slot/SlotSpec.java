@@ -82,6 +82,7 @@ public final class SlotSpec {
     private int count = 1;                                // logical slots in this group
     private @Nullable Function<Player, Storage> storageFactory;   // required
     private @Nullable BooleanSupplier revealWhen = null;  // client-side reveal; null => always
+    private @Nullable Integer activeCount = null;        // server-set live count, its start; null => opted out
     private @Nullable String label = null;               // display name; null => capitalized groupId
     private @Nullable Supplier<Component> tooltip = null; // hover tooltip on each slot in the group; null => none
     private @Nullable Identifier emptyIcon = null;       // outline sprite on an empty slot; null => none
@@ -143,6 +144,23 @@ public final class SlotSpec {
      */
     public SlotSpec count(int count) {
         this.count = Math.max(1, count);
+        return this;
+    }
+
+    /**
+     * Opts the group in to a server-set <b>active count</b>, starting at
+     * {@code startCount}: slot {@code i} is live while {@code i < count}, and every
+     * slot from the count on is inert on both sides (empty to the client, refusing
+     * clicks), so the server opens and closes the group and sizes it per player
+     * ({@link ParityGroup#setActiveCount}). Declare the largest size you need with
+     * {@link #count}; only the count moves. A group without this is always its full
+     * count, with no sync traffic.
+     *
+     * @param startCount the count a player starts at, on login and after respawn, from
+     *                   {@code 0} to {@link #count}
+     */
+    public SlotSpec activeCount(int startCount) {
+        this.activeCount = startCount;
         return this;
     }
 
@@ -316,6 +334,9 @@ public final class SlotSpec {
     public @Nullable BooleanSupplier revealWhen() { return revealWhen; }
     @ApiStatus.Internal
     public @Nullable String label() { return label; }
+    /** The active count's start, or {@code null} when the group didn't opt in. */
+    @ApiStatus.Internal
+    public @Nullable Integer activeCountStart() { return activeCount; }
     @Nullable Supplier<Component> tooltip() { return tooltip; }
     @Nullable Identifier emptyIcon() { return emptyIcon; }
 

@@ -47,6 +47,7 @@ public class SlotKit implements ModInitializer {
         com.trevlar.slotkit.state.PortableSlotState.installWireStrip();
         com.trevlar.slotkit.state.SlotStateHooks.registerCommon();
         com.trevlar.slotkit.state.SlotStateHooks.registerServer();
+        com.trevlar.slotkit.core.ActiveCounts.registerCommon();
 
         // The one generic open request every CustomMenu shares. The server checks it:
         // the menu must declare validWhen, and it must hold for the player.

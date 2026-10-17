@@ -97,6 +97,12 @@ public final class ParitySlotRegistry {
         return counts;
     }
 
+    /** Whether {@code slotPanelId} is a parity group's: what shift-click routing keeps vanilla out of. */
+    public static boolean isParity(String slotPanelId) {
+        for (Entry e : RECIPES) if (e.slotPanelId().equals(slotPanelId)) return true;
+        return false;
+    }
+
     /** Whether no parity recipe is registered, so the build hooks can skip work. */
     public static boolean isEmpty() {
         return RECIPES.isEmpty();
@@ -127,6 +133,10 @@ public final class ParitySlotRegistry {
             // are set later through the window by the slot's address.
             if (spec.label() != null) b.label(spec.label());     // MenuKit naming (client-guarded in register)
             if (spec.revealWhen() != null) b.revealWhen(spec.revealWhen());
+            if (spec.activeCountStart() != null) {
+                String id = e.slotPanelId();
+                b.activeCount(() -> ActiveCounts.get(player, id));
+            }
             b.register();
         }
     }
