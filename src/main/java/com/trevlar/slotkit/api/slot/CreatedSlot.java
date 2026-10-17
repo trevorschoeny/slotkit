@@ -78,7 +78,7 @@ public class CreatedSlot extends Slot {
         this.groupId = groupId;
         this.localIndex = localIndex;
         // Declared at init, before any menu exists, so read once here.
-        this.emptyIcon = ContainerPanel.emptyIconOf(com.trevlar.slotkit.api.group.SlotGroupId.created(panelId, groupId));
+        this.emptyIcon = ParityGroup.emptyIconOf(com.trevlar.slotkit.api.group.SlotGroupId.created(panelId, groupId));
     }
 
     // The group's SlotSpec.emptyIcon, or null for vanilla's (none).

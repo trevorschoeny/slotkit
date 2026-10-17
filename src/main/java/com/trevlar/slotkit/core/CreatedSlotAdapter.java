@@ -1,6 +1,5 @@
 package com.trevlar.slotkit.core;
 
-import com.trevlar.slotkit.api.slot.ContainerPanel;
 import com.trevlar.slotkit.api.slot.CreatedSlot;
 import com.trevlar.slotkit.api.group.SlotGroupId;
 

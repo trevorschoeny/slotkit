@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Makes container-parity slots appear on the player's own {@code InventoryMenu}. This
  * is why a consumer using
- * {@link com.trevlar.slotkit.api.slot.ContainerPanel} writes no mixin.
+ * {@link com.trevlar.slotkit.api.slot.ParityGroup} writes no mixin.
  *
  * <h3>Why the library owns this one</h3>
  *

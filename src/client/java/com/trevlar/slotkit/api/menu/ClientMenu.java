@@ -39,9 +39,11 @@ import java.util.function.Consumer;
  *
  * A panel's look is MenuKit's {@link Panel.Builder}: elements, style, placement, toggle
  * key. Whether it is shown is the server's (the screen shows it while the server says
- * so); a {@code visible(...)} here is ignored. A panel with no declaration here is a
- * plain raised panel of its slots, placed by the standalone default (the first is the
- * main frame, later ones stack below it).
+ * so); a {@code visible(...)} here is ignored. The builder starts raised. The panel's
+ * slots are elements the mod adds, {@code SlotFlowElement.of(id, count)} or
+ * {@code SlotElement}s, as in any panel. Every panel the menu declares needs one
+ * here: the screen refuses to open without it. Unplaced panels take the standalone
+ * default (the first is the main frame, later ones stack below it).
  */
 public final class ClientMenu {
 

@@ -272,7 +272,7 @@ public final class SlotElement extends AbstractPanelElement {
 
         /**
          * The created slot to present: its group ({@code CreatedSlots.groupId(panelId, groupId)}
-         * or {@code ContainerPanel.groupId(...)}) and its index in the group.
+         * or {@code ParityGroup.idOf(...)}) and its index in the group.
          */
         public Builder slot(SlotGroupId.Created group, int index) {
             this.group = Objects.requireNonNull(group, "group");

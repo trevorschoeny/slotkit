@@ -1,7 +1,7 @@
 package com.trevlar.slotkit.mixin;
 
 import com.trevlar.slotkit.api.group.SlotGroupId;
-import com.trevlar.slotkit.api.slot.ContainerPanel;
+import com.trevlar.slotkit.api.slot.ParityGroup;
 import com.trevlar.slotkit.api.slot.CreatedSlot;
 import com.trevlar.slotkit.core.CreatedSlotAccess;
 
@@ -56,7 +56,7 @@ public abstract class SKInventoryQuickMoveMixin {
                 if (to.hasItem() != (pass == 0) || !to.isActive()) continue;
                 CreatedSlot created = CreatedSlotAccess.asMKCSlot(to);
                 if (created == null
-                        || !ContainerPanel.isShiftClickTarget(SlotGroupId.created(created.panelId(), created.groupId()))) continue;
+                        || !ParityGroup.isShiftClickTarget(SlotGroupId.created(created.panelId(), created.groupId()))) continue;
                 move.sk$moveItemStackTo(live, i, i + 1, false);
             }
         }

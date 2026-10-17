@@ -27,7 +27,7 @@ import java.util.function.Supplier;
 
 /**
  * A side-neutral description of one group of registered slots that a
- * {@link ContainerPanel} adds to every container the player opens. It is the recipe
+ * {@link ParityGroup} adds to every container the player opens. It is the recipe
  * half of container parity.
  *
  * <h3>Why a recipe and not a built slot</h3>
@@ -35,17 +35,17 @@ import java.util.function.Supplier;
  * A real {@link CreatedSlot} belongs to one menu. The player's own
  * {@code InventoryMenu}, every chest or furnace they open, and the creative item
  * picker each carry their own slot instance for the same logical slot. To put a slot
- * on all of them from one registration, the panel can't hold a slot. It holds the
+ * on all of them from one registration, the group can't hold a slot. It holds the
  * instructions to build one, applied to each menu and bound to that menu's player.
  * That is this class: plain data plus a {@code Player -> Storage} factory, evaluated
  * the same way on the logical server and the client so the appended slots are
  * byte-identical (see {@link CreatedSlotProjection} on sync safety).
  *
  * <p>It holds the same settings as the per-call parameters on
- * {@link CreatedSlots.Builder} (storage, layout, the client reveal predicate), but as
- * reusable data instead of calls against one menu. {@link ContainerPanel} turns each
- * {@code SlotSpec} into the real slots (every menu, both sides) and the
- * {@link SlotElement}s that show them (client).
+ * {@link CreatedSlots.Builder} (storage, label, the client reveal predicate), but as
+ * reusable data instead of calls against one menu. {@link ParityGroup#register} turns
+ * a {@code SlotSpec} into the real slots (every menu, both sides). The mod's own panel
+ * shows them ({@code SlotFlowElement.of(group)}, client).
  *
  * <h3>Behaviour methods set it once for the whole group</h3>
  *
@@ -54,12 +54,12 @@ import java.util.function.Supplier;
  * ({@link #gate}, {@link #accepts}, {@link #binding}, {@link #mending},
  * {@link #shiftClickOut}, {@link #shiftClickIn}, {@link #collect}, {@link #dragFill})
  * don't add a second place to store behaviour. They record what the consumer asked
- * for, and {@link ContainerPanel.Builder#register()} sets it in the engine once, on
- * the group's own key ({@code GroupKey.of(ContainerPanel.groupId(panelId, groupId))}),
+ * for, and {@link ParityGroup#register} sets it in the engine once, on
+ * the group's own key ({@code GroupKey.of(group.id())}),
  * one level above any single slot. Behaviour is declared next to the slot group, with
  * no separate step to forget and no per-slot loop. To give one slot something else,
  * set it on that slot's address,
- * {@code Window.slot(Address.createdSlot(ContainerPanel.groupId(panelId, groupId), i))};
+ * {@code Window.slot(Address.createdSlot(group.id(), i))};
  * the slot's own value wins because it is more specific.
  *
  * <h3>Storage is a factory, not bound storage</h3>
@@ -72,7 +72,7 @@ import java.util.function.Supplier;
  * and give the same storage size for a given player on both sides, or the appended
  * slots desync.
  *
- * <p>A mutable builder, used once by {@link ContainerPanel.Builder#addSlot}.
+ * <p>A mutable builder, used once by {@link ParityGroup#register}.
  */
 public final class SlotSpec {
 
@@ -118,7 +118,7 @@ public final class SlotSpec {
      * another mod depends on a category name it is a public contract, and renaming it
      * is a breaking change.
      *
-     * @param groupId  slot-group id, unique within the owning {@link ContainerPanel}
+     * @param groupId  slot-group id, unique within its owner ({@link ParityGroup#register})
      * @param category what the group is: a vanilla category, or one the mod
      *                 declares ({@code new SlotGroupCategory("mymod", "pockets")})
      */
@@ -198,7 +198,7 @@ public final class SlotSpec {
         return this;
     }
 
-    // Behaviour methods. Each records a value that ContainerPanel.Builder.register()
+    // Behaviour methods. Each records a value that ParityGroup.register()
     // sets in the engine once for this group; see the class doc.
 
     /**
@@ -304,7 +304,7 @@ public final class SlotSpec {
         return this;
     }
 
-    // Read by ContainerPanel and ParitySlotRegistry
+    // Read by ParityGroup and ParitySlotRegistry
 
     @ApiStatus.Internal
     public String groupId()       { return groupId; }
@@ -312,15 +312,6 @@ public final class SlotSpec {
     public SlotGroupCategory category() { return category; }
     @ApiStatus.Internal
     public int count()     { return count; }
-    // SlotFlowElement owns slot positions. These are only the starting layout
-    // ParitySlotRegistry hands to CreatedSlots, which the SlotElement replaces every
-    // frame, so it never shows: origin (0,0), one row (columns = count).
-    @ApiStatus.Internal
-    public int childX()           { return 0; }
-    @ApiStatus.Internal
-    public int childY()           { return 0; }
-    @ApiStatus.Internal
-    public int columns()          { return count; }
     @ApiStatus.Internal
     public @Nullable BooleanSupplier revealWhen() { return revealWhen; }
     @ApiStatus.Internal

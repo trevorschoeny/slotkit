@@ -1,5 +1,7 @@
 package com.trevlar.slotkit.api.slot;
 
+import com.trevlar.slotkit.api.group.SlotGroupId;
+
 import com.trevlar.menukit.api.element.AbstractPanelElement;
 import com.trevlar.menukit.api.element.PanelElement;
 import com.trevlar.menukit.api.element.RenderContext;
@@ -17,7 +19,7 @@ import java.util.Objects;
  *
  * <h3>Why a flow and not a fixed grid</h3>
  *
- * A {@link ContainerPanel}'s slots used to sit at fixed {@code (childX, childY)}
+ * A panel's slots used to sit at fixed {@code (childX, childY)}
  * positions on a column count the consumer declared. A panel whose groups reveal
  * separately had to pin a wide fixed width to reserve the largest extent. That left
  * empty space when only a narrow group was shown, and slid the panel sideways (a
@@ -76,6 +78,28 @@ public final class SlotFlowElement extends AbstractPanelElement {
     /** A flow of slot elements: {@code SlotFlowElement.builder().addAll(slots).at(x, y).build()}. */
     public static Builder builder() {
         return new Builder();
+    }
+
+    /**
+     * Every slot of a parity group, in order, flowing to the panel's width: the
+     * one-liner for putting a group in a panel. Each slot carries the spec's tooltip.
+     */
+    public static SlotFlowElement of(ParityGroup group) {
+        var tooltip = group.spec().tooltip();
+        Builder b = builder();
+        for (int i = 0; i < group.count(); i++) {
+            SlotElement.Builder slot = SlotElement.builder().slot(group.id(), i);
+            if (tooltip != null) slot.tooltip(tooltip);
+            b.add(slot.build());
+        }
+        return b.build();
+    }
+
+    /** Slots {@code 0} to {@code count - 1} of a group, for an {@code onto} group or one named by id. */
+    public static SlotFlowElement of(SlotGroupId.Created group, int count) {
+        Builder b = builder();
+        for (int i = 0; i < count; i++) b.add(SlotElement.builder().slot(group, i).build());
+        return b.build();
     }
 
     /** Column fill does not apply: the flow hugs its visible slots. */

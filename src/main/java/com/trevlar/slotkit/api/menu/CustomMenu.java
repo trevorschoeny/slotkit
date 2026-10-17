@@ -27,7 +27,7 @@ import java.util.function.Predicate;
  * the four or so pieces a consumer used to write by hand for every custom
  * {@link CustomContainerMenu}: its own {@code MenuType} registration, its own
  * client-to-server open payload and receiver, its own {@code MenuScreens.register},
- * and its own open call. Modelled on {@code ContainerPanel.define(...).register()}.
+ * and its own open call. Modelled on {@code ParityGroup.register(...)}.
  *
  * <h3>Recipe</h3>
  *

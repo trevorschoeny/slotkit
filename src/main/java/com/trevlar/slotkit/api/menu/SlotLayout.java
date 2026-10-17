@@ -77,8 +77,7 @@ public final class SlotLayout {
         for (PanelBuilder pb : panels) {
             List<CreatedSlotGroup> groups = new ArrayList<>();
             for (GroupConfig gc : pb.groups) {
-                CreatedSlotGroup group = new CreatedSlotGroup(gc.id, gc.category, gc.storage, gc.priority,
-                        gc.columns, gc.rowGapAfter, gc.rowGapSize);
+                CreatedSlotGroup group = new CreatedSlotGroup(gc.id, gc.category, gc.storage, gc.priority);
                 if (gc.rightClick != null) group.setRightClickHandler(gc.rightClick);
                 groups.add(group);
                 byRef.put(pb.id + "." + gc.id, group);
@@ -116,28 +115,17 @@ public final class SlotLayout {
         }
 
         /**
-         * Adds a slot group (priority 100, columns from its size). Structure only:
+         * Adds a slot group (priority 100). Structure only:
          * per-slot rules (gate, binding, mending, shift-click) are declared by address
          * in the engine, ideally in {@link CustomMenu.Builder#arm}.
          */
         public PanelBuilder group(String id, SlotGroupCategory category, Storage storage) {
-            return group(id, category, storage, 100, -1, -1, 0);
+            return group(id, category, storage, 100);
         }
 
         /** Adds a slot group with a shift-click priority (higher is tried first). */
         public PanelBuilder group(String id, SlotGroupCategory category, Storage storage, int priority) {
-            return group(id, category, storage, priority, -1, -1, 0);
-        }
-
-        /** Adds a slot group with a priority and a column count. */
-        public PanelBuilder group(String id, SlotGroupCategory category, Storage storage, int priority, int columns) {
-            return group(id, category, storage, priority, columns, -1, 0);
-        }
-
-        /** Adds a slot group with a priority, a column count and a gap of {@code rowGapSize} after row {@code rowGapAfter}. */
-        public PanelBuilder group(String id, SlotGroupCategory category, Storage storage, int priority, int columns,
-                                  int rowGapAfter, int rowGapSize) {
-            groups.add(new GroupConfig(id, category, storage, priority, columns, rowGapAfter, rowGapSize));
+            groups.add(new GroupConfig(id, category, storage, priority));
             return this;
         }
 
@@ -188,19 +176,15 @@ public final class SlotLayout {
         final String id;
         final SlotGroupCategory category;
         final Storage storage;
-        final int priority, columns, rowGapAfter, rowGapSize;
+        final int priority;
         final List<String> pairs = new ArrayList<>();
         @Nullable BiConsumer<Player, CreatedSlot> rightClick;
 
-        GroupConfig(String id, SlotGroupCategory category, Storage storage, int priority, int columns,
-                    int rowGapAfter, int rowGapSize) {
+        GroupConfig(String id, SlotGroupCategory category, Storage storage, int priority) {
             this.id = id;
             this.category = category;
             this.storage = storage;
             this.priority = priority;
-            this.columns = columns;
-            this.rowGapAfter = rowGapAfter;
-            this.rowGapSize = rowGapSize;
         }
     }
 }

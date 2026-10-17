@@ -49,7 +49,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *       mod that registers a resolver for its own menu declares its categories'
  *       groups the same way, with {@link #declare}.</li>
  *   <li><b>Created</b>: SlotKit declares each group as it registers. A
- *       container-panel group ({@code ContainerPanel.define(...).register()})
+ *       parity group ({@code ParityGroup.register(...)})
  *       registers at init, so it is listed from the title screen. A group built with
  *       a menu ({@code CreatedSlots.onto(menu, player)}) registers when that menu is
  *       built, so it is listed only after the first one; to list it from the title

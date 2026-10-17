@@ -1,6 +1,6 @@
 package com.trevlar.slotkit.core;
 
-import com.trevlar.slotkit.api.slot.ContainerPanel;
+import com.trevlar.slotkit.api.slot.ParityGroup;
 import com.trevlar.slotkit.api.slot.CreatedSlot;
 import com.trevlar.slotkit.api.slot.CreatedSlots;
 import com.trevlar.slotkit.api.slot.SlotSpec;
@@ -34,7 +34,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *       covered them.)</li>
  *   <li>Every foreign menu (chest, furnace, donkey, modded): appended by a single
  *       {@link CreatedSlotProjection} source, registered once by
- *       {@link ContainerPanel}, whose factory calls {@link #applyTo}. Its
+ *       {@link ParityGroup}, whose factory calls {@link #applyTo}. Its
  *       {@code appliesTo} excludes {@code InventoryMenu} so the inventory menu
  *       isn't served twice.</li>
  *   <li>The creative item picker gets the slots with no extra work:
@@ -67,7 +67,7 @@ public final class ParitySlotRegistry {
     /**
      * Registers one parity slot recipe. The {@code slotPanelId} is the id the built
      * {@link CreatedSlot}s carry and the {@code SlotElement}s resolve against.
-     * {@link ContainerPanel} derives it from the container-panel id and group, so it
+     * {@link ParityGroup} derives it from the owner and group, so it
      * is stable and never collides.
      */
     public static synchronized void register(String slotPanelId, SlotSpec spec) {
@@ -122,11 +122,7 @@ public final class ParitySlotRegistry {
                     .panel(e.slotPanelId())
                     .group(spec.groupId())
                     .category(spec.category())
-                    .storage(storage)
-                    // Initial layout from the spec's panel-local origin. The SlotElement
-                    // moves the slot to its panel spot every frame, so this starting
-                    // position is never shown.
-                    .layout(spec.childX(), spec.childY(), spec.columns());
+                    .storage(storage);
             // Creation carries no behaviour: gating, quick-move, binding and mending
             // are set later through the window by the slot's address.
             if (spec.label() != null) b.label(spec.label());     // MenuKit naming (client-guarded in register)

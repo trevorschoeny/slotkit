@@ -48,7 +48,7 @@ import java.util.Objects;
  *
  * <ul>
  *   <li>a created slot: {@link #createdSlot(SlotGroupId.Created, int)}, from the
- *       group's id ({@code ContainerPanel.groupId}, {@code CreatedSlots.groupId},
+ *       group's id ({@code ParityGroup.idOf}, {@code CreatedSlots.groupId},
  *       {@code SlotGroupId.created}) and the slot's index in the group;</li>
  *   <li>a vanilla slot: from the live slot, where an operation or veto has it.</li>
  * </ul>

@@ -58,12 +58,11 @@ import java.util.function.Predicate;
  *
  * <h3>What projection does not do</h3>
  *
- * Projection only puts the slots on the foreign menu. The panel pipeline draws them
- * (each slot is a {@code SlotElement} on its {@code ContainerPanel}, which renders
- * inline on whatever screen its parity matcher accepts). Shift-click into them is the
- * handler's own {@code quickMoveStack}, and creative placement is the creative
+ * Projection only puts the slots on the foreign menu. The mod's own panel draws them
+ * (each slot is a {@code SlotElement} in it, on whatever screens its adapter
+ * accepts). Shift-click into them is the handler's own {@code quickMoveStack}, and creative placement is the creative
  * set-slot bridge, which now works on any menu. A consumer that wants pockets on a
- * chest registers a projection source here and also widens its panel's parity
+ * chest registers a projection source here and also widens its panel adapter's
  * targeting to that screen.
  */
 public final class CreatedSlotProjection {

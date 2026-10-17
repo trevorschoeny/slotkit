@@ -10,9 +10,7 @@ import com.trevlar.slotkit.api.slot.CreatedSlotGroup;
 import com.trevlar.slotkit.core.*;
 import com.trevlar.slotkit.core.*;
 import com.trevlar.menukit.api.host.OwnHost;
-import com.trevlar.menukit.api.element.SlotRendering;
 import com.trevlar.menukit.api.panel.Reference;
-import com.trevlar.slotkit.mixin.SlotPositionAccessor;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
@@ -37,29 +35,30 @@ import java.util.function.Consumer;
 
 /**
  * Client-side partner to {@link CustomContainerMenu}: a standalone screen whose panels
- * hold slot groups. Owns slot positioning, hover events, key actions and drag modes;
- * placement, render and element input belong to its MenuKit {@link OwnHost}.
+ * hold slot groups. Owns hover events, key actions, drag modes and the server's
+ * shown flags; placement, render and element input belong to its MenuKit
+ * {@link OwnHost}, and slot positions to the panels' slot elements.
  *
  * <h3>Its panels</h3>
  * The handler knows each panel's id, slot groups and whether the server shows it; how
  * a panel looks is declared on the client with {@link ClientMenu#panel} on MenuKit's
- * {@code Panel.Builder}. This screen builds one {@link Panel} per handler panel
- * (a raised panel of its slots when nothing is declared) and shows it while the server
- * says so.
+ * {@code Panel.Builder}, slots included: the mod adds the panel's
+ * {@code SlotFlowElement} or {@code SlotElement}s as in any other panel. This screen
+ * builds one {@link Panel} per handler panel from that declaration (a menu panel with
+ * none is an error when the screen opens) and shows it while the server says so.
  *
  * <h3>Its host</h3>
  * The panels go into a standalone host with the title band inside the frame. The host
  * places them by their {@link PanelPosition}; an unplaced one takes the standalone
  * default (the first is the {@code main()} frame, later ones stack below it). This
- * screen tells the host what it cannot know on its own: a panel's content size includes its slot grid,
- * its slot frames draw between its background and its elements, the main panel
- * auto-fits its height only when it holds no slots, and a panel's own slots stay
- * live under the panel's own claim. The host is attached to MenuKit's screen, so
+ * screen tells the host what it cannot know on its own: a panel's content size, and
+ * that the main panel auto-fits its height only when it holds no slots. A panel's own
+ * slots stay live under its claim through their elements, as on any screen. The host is attached to MenuKit's screen, so
  * claims and modals see these panels together with anything injected onto it.
  *
  * <h3>Frame order</h3>
  * <ol>
- *   <li>{@code extractContents} HEAD: layout, slot positions, then the host's FLOW
+ *   <li>{@code extractContents} HEAD: layout, then the host's FLOW
  *       layer (backgrounds, slot frames, elements), under every slot;</li>
  *   <li>vanilla: labels, slot highlight, slots (created slots included);</li>
  *   <li>{@code ContainerScreenLayers}: injected FLOW panels, then the dim and every
@@ -70,8 +69,6 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
 
     private static final Logger LOGGER = LoggerFactory.getLogger("MenuKit");
 
-    /** Size of one slot cell (18x18: 16px item + 1px border each side). */
-    private static final int SLOT_SIZE = 18;
 
     /** Places, renders and routes input for this screen's panels. */
     private final OwnHost host;
@@ -157,11 +154,9 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         // in the container look, as every inventory's do (ScreenKind.of).
         this.host = OwnHost.of(this, ScreenKind.CONTAINER, OwnHost.TitleBand.IN_FRAME)
                 .contentSize(this::contentSize)
-                // A slot-bearing main can't scroll: its slots sit in absolute
-                // coordinates with no scroll hook. A pure-element main can.
-                .autoFitMain(p -> menu.getGroupsFor(p.id()).isEmpty())
-                .slotOwnership(this::ownsSlotAt)
-                .decoration(this::drawSlotFrames);
+                // A slot-bearing main doesn't auto-fit its height, so a resize never
+                // pushes its slots under a scroll it can't show. A pure-element main can.
+                .autoFitMain(p -> menu.getGroupsFor(p.id()).isEmpty());
         this.panels = buildPanels(handler);
         List<PanelPosition> positions = PanelPosition.standaloneDefaults(
                 panels.stream().map(Panel::getPosition).toList());
@@ -175,8 +170,13 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     }
 
     /**
-     * One {@link Panel} per handler panel: raised by default, then the look declared with
-     * {@link ClientMenu#panel}, shown while the server shows the panel.
+     * One {@link Panel} per handler panel, built by the mod with {@link ClientMenu#panel}
+     * (raised unless it says otherwise) and shown while the server shows the panel. The
+     * mod puts the panel's slots in it ({@code SlotFlowElement}, {@code SlotElement}),
+     * as in any other panel; this screen builds no panel and positions no slot itself.
+     *
+     * @throws IllegalStateException when the menu declares a panel the client has no
+     *         {@code ClientMenu.panel} for
      */
     private static List<Panel> buildPanels(CustomContainerMenu handler) {
         MenuType<?> type;
@@ -190,7 +190,13 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
             String id = server.id();
             Panel.Builder b = Panel.builder(id).style(PanelStyle.RAISED);
             Consumer<Panel.Builder> look = ClientMenu.lookFor(type, id);
-            if (look != null) look.accept(b);
+            if (look == null) {
+                throw new IllegalStateException("Custom menu " + (type == null ? "(no type)"
+                        : net.minecraft.core.registries.BuiltInRegistries.MENU.getKey(type))
+                        + " declares panel '" + id + "', but the client has no ClientMenu.panel(\"" + id
+                        + "\", ...) for it. Declare the panel, with its slots as SlotFlowElement or SlotElements.");
+            }
+            look.accept(b);
             Panel panel = b.visible(true).build();
             panel.visibleWhen(() -> handler.isPanelVisible(id));
             built.add(panel);
@@ -203,7 +209,6 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         computeLayout();
         super.init(); // sets leftPos = (width - imageWidth) / 2, etc.
         recenter();   // the host's main frame wins over vanilla's centering
-        positionSlots();
 
         // Rebuild the key table from the panels on every init, including after a resize.
         keyRegistry.clear();
@@ -225,33 +230,19 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     // invalidation step.
 
     /**
-     * A panel's content size, padding excluded: the larger of its slot grid and its
-     * elements' extent on each axis, or its pinned size where pinned (the consumer's
+     * A panel's content size, padding excluded: its elements' extent on each axis
+     * (its slot elements included), or its pinned size where pinned (the consumer's
      * explicit budget wins). Pure measure: the host feeds each panel its size budget
-     * per role before asking. Slot grids are author-fixed and do not reflow; wrapping
-     * slots is {@code SlotFlowElement}'s job.
+     * per role before asking.
      */
     private int[] contentSize(Panel panel) {
-        int maxCols = 0;
-        int totalSlotHeight = 0;
-        for (CreatedSlotGroup group : menu.getGroupsFor(panel.id())) {
-            int cols = group.getColumns();
-            maxCols = Math.max(maxCols, cols);
-            int rows = (group.getStorage().size() + cols - 1) / cols; // ceiling division
-            totalSlotHeight += rows * SLOT_SIZE;
-            if (group.getRowGapAfter() >= 0 && group.getRowGapAfter() < rows - 1) {
-                totalSlotHeight += group.getRowGapSize();
-            }
-        }
         // Elements' child coordinates are relative to the content area.
-        int elementWidth = 0;
-        int elementHeight = 0;
+        int width = 0;
+        int height = 0;
         for (PanelElement element : panel.getElements()) {
-            elementWidth  = Math.max(elementWidth,  element.getChildX() + element.getWidth());
-            elementHeight = Math.max(elementHeight, element.getChildY() + element.getHeight());
+            width  = Math.max(width,  element.getChildX() + element.getWidth());
+            height = Math.max(height, element.getChildY() + element.getHeight());
         }
-        int width  = Math.max(maxCols * SLOT_SIZE, elementWidth);
-        int height = Math.max(totalSlotHeight, elementHeight);
         if (panel.getPinnedWidth() >= 0) width = panel.getPinnedWidth();
         if (panel.getPinnedHeight() >= 0) height = panel.getPinnedHeight();
         return new int[]{width, height};
@@ -298,90 +289,12 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         this.topPos = mkcTopPos;
     }
 
-    /**
-     * Sets each slot's x/y from its panel's placement and grid. Slot.x/y are
-     * container-relative (vanilla adds leftPos/topPos). A slot whose panel is hidden
-     * or not placed goes off-screen, so vanilla neither draws nor hit-tests it; its
-     * content keeps syncing server-side (CreatedSlot.isInert reads the panel's own
-     * visibility, not the client window).
-     */
-    private void positionSlots() {
-        for (Panel panel : panels) {
-            OwnHost.Placement placed = placements.get(panel.id());
-            int groupOffsetY = 0;
-            for (CreatedSlotGroup group : menu.getGroupsFor(panel.id())) {
-                int cols = group.getColumns();
-                int rows = (group.getStorage().size() + cols - 1) / cols;
-                for (int s = group.getFlatIndexStart(); s < group.getFlatIndexEnd(); s++) {
-                    int localIdx = s - group.getFlatIndexStart();
-                    int col = localIdx % cols;
-                    int row = localIdx / cols;
-                    int extraY = (group.getRowGapAfter() >= 0 && row > group.getRowGapAfter())
-                            ? group.getRowGapSize() : 0;
-                    Slot slot = menu.slots.get(s);
-                    if (placed != null) {
-                        // +1: slot.x/y name the 16x16 item box, 1px inside the 18x18 frame.
-                        // The content origin is the placement inset by the padding this
-                        // screen gave the panel when it added it.
-                        int contentX = placed.x() + panel.interiorPadding();
-                        int contentY = placed.y() + panel.interiorPadding();
-                        ((SlotPositionAccessor) slot).sk$setX(
-                                contentX - mkcLeftPos + col * SLOT_SIZE + 1);
-                        ((SlotPositionAccessor) slot).sk$setY(
-                                contentY - mkcTopPos + groupOffsetY + row * SLOT_SIZE + extraY + 1);
-                    } else {
-                        ((SlotPositionAccessor) slot).sk$setX(-9999);
-                        ((SlotPositionAccessor) slot).sk$setY(-9999);
-                    }
-                }
-                int groupGapExtra = (group.getRowGapAfter() >= 0 && group.getRowGapAfter() < rows - 1)
-                        ? group.getRowGapSize() : 0;
-                groupOffsetY += rows * SLOT_SIZE + groupGapExtra;
-            }
-        }
-    }
-
-    /**
-     * The host's decoration hook: a panel's slot frames, drawn after its background
-     * and before its elements (18x18 frames around the 16x16 item boxes).
-     */
-    private void drawSlotFrames(GuiGraphicsExtractor graphics, OwnHost.Placement placed) {
-        for (CreatedSlotGroup group : menu.getGroupsFor(placed.panel().id())) {
-            for (int s = group.getFlatIndexStart(); s < group.getFlatIndexEnd(); s++) {
-                Slot slot = menu.slots.get(s);
-                if (!slot.isActive()) continue;
-                SlotRendering.drawSlotBackground(graphics, leftPos + slot.x - 1, topPos + slot.y - 1, SlotRendering.DEFAULT_SIZE, false);
-            }
-        }
-    }
-
-    /**
-     * The host's slot-ownership hook: whether {@code panel}'s own live slot is under
-     * the point, so the panel's claim routes the point to that slot (hover, click,
-     * tooltip) rather than making it inert. The hover frame is vanilla's: the 18x18
-     * cell around the item box.
-     */
-    private boolean ownsSlotAt(Panel panel, double mouseX, double mouseY) {
-        double relX = mouseX - leftPos;
-        double relY = mouseY - topPos;
-        for (CreatedSlotGroup group : menu.getGroupsFor(panel.id())) {
-            for (int s = group.getFlatIndexStart(); s < group.getFlatIndexEnd(); s++) {
-                Slot slot = menu.slots.get(s);
-                if (!slot.isActive()) continue;
-                if (relX >= slot.x - 1 && relX < slot.x + 17 && relY >= slot.y - 1 && relY < slot.y + 17) {
-                    return true;
-                }
-            }
-        }
-        return false;
-    }
-
     // Rendering
 
     /**
-     * Layout, slot positions, then this screen's FLOW layer, all before vanilla's
-     * content pass (widgets, labels, slot highlight, slots), where the old
-     * {@code renderBg} sat. Recomputed each frame so visibility toggles take effect
+     * Layout, then this screen's FLOW layer (where each panel's slot elements write
+     * their slots' positions), all before vanilla's content pass (widgets, labels,
+     * slot highlight, slots), where the old {@code renderBg} sat. Recomputed each frame so visibility toggles take effect
      * at once. This screen's OVERLAY layer draws later, above the slots, through
      * {@code ContainerScreenLayers}.
      */
@@ -389,7 +302,6 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     public void extractContents(GuiGraphicsExtractor graphics, int mouseX, int mouseY, float delta) {
         computeLayout();
         recenter();
-        positionSlots();
         host.renderFlow(graphics, mouseX, mouseY);
         super.extractContents(graphics, mouseX, mouseY, delta);
     }

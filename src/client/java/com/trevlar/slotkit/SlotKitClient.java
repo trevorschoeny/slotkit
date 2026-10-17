@@ -1,6 +1,5 @@
 package com.trevlar.slotkit;
 
-import com.trevlar.slotkit.api.slot.ClientContainerPanel;
 import com.trevlar.slotkit.core.CreatedSlotProjection;
 import com.trevlar.slotkit.core.CreatedSlotScreenHook;
 import com.trevlar.slotkit.network.HandshakeClient;
@@ -88,12 +87,8 @@ public class SlotKitClient implements ClientModInitializer {
 
         // At client start, after every client initializer: menus' screens (a consumer's
         // ClientMenu.screen may come from its own client initializer, which Fabric does
-        // not order against this one), and container panels' presentation (likewise
-        // ClientContainerPanel). MenuKit freezes declarations in a later phase.
-        ClientLifecycleEvents.CLIENT_STARTED.register(client -> {
-            ClientMenu.registerScreens();
-            ClientContainerPanel.wireAll();
-        });
+        // not order against this one). MenuKit freezes declarations in a later phase.
+        ClientLifecycleEvents.CLIENT_STARTED.register(client -> ClientMenu.registerScreens());
 
         // Parity projection, the client's seam: append the player's projected slots to
         // every menu the server opened, as its screen is built (before the first content

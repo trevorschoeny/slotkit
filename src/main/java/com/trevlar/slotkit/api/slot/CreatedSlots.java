@@ -77,15 +77,15 @@ import java.util.function.BooleanSupplier;
  * the library's {@code SKCreativeSetSlotMixin}. Direct click-to-place works in both
  * modes, and per-slot state comes along with it.
  *
- * <h3>One menu only (use {@link ContainerPanel} for parity)</h3>
+ * <h3>One menu only (use {@link ParityGroup} for parity)</h3>
  *
  * {@code onto} adds slots to the one menu the consumer's mixin targets (such as
  * {@code InventoryMenu}). It does not project onto other menus: open a chest and the
  * slots are not there. That is on purpose, since {@code onto} is the narrow tool for
  * one menu whose mixin the consumer owns. For container parity (the same slots on
  * every container screen, with the foreign-menu projection and creative wiring, from
- * one call and no mixin) use {@link ContainerPanel#define}. It builds on this and
- * adds the projection and the panel around the slots. Use {@code onto} only when you
+ * one call and no mixin) use {@link ParityGroup#register}. It builds on this and
+ * adds the projection. Use {@code onto} only when you
  * want slots on one menu you mix into.
  *
  * <h3>Known limitation</h3>
@@ -109,15 +109,16 @@ import java.util.function.BooleanSupplier;
  *     .group("pockets")
  *     .category(SlotGroupCategory.PLAYER_INVENTORY)       // required: what the group is to other mods
  *     .storage(storage)
- *     .layout(originX, originY, 3)                      // screen-relative origin + columns
  *     .revealWhen(() -> PocketHoverState.isRevealed())  // client-side predicate
  *     .register();
  *
- * // Client init (ONCE, NOT per menu construction), wire the PRESENTATION half.
+ * // Client init (once, not per menu construction): the mod's own panel shows them.
  * // register() above added the synced slot data; this draws the slots:
- * ClientSlots.renderGroup("inventory-plus:pockets", "pockets", 3, 3,
- *         OutsideRegion.RIGHT_ALIGN_TOP, ScreenPanelAdapter.DEFAULT_PADDING,
- *         ScreenMatcher.all());
+ * Panel panel = Panel.builder("inventory-plus:pockets")
+ *         .add(SlotFlowElement.of(CreatedSlots.groupId("inventory-plus:pockets", "pockets"), 3))
+ *         .position(PanelPosition.region(OutsideRegion.RIGHT_ALIGN_TOP))
+ *         .build();
+ * new ScreenPanelAdapter(panel).on(InventoryScreen.class);
  * }</pre>
  */
 public final class CreatedSlots {
@@ -141,7 +142,7 @@ public final class CreatedSlots {
      * The {@link SlotGroupId} of a group registered through {@link #onto}, which is
      * what {@code SlotGroupPanelAdapter.onGroup(...)} anchors to. This path registers
      * under the declared panel id as is, unlike the container-parity path
-     * ({@code ContainerPanel.groupId}), which derives one.
+     * ({@code ParityGroup.idOf}), which derives one.
      */
     public static SlotGroupId.Created groupId(String panelId, String groupId) {
         return SlotGroupId.created(panelId, groupId);
@@ -159,9 +160,9 @@ public final class CreatedSlots {
      * whose server does not run SlotKit.
      *
      * <p>{@code register()} adds only the synced slot data. To make the slots draw and
-     * take input, show them from the client: a panel of {@code SlotElement}s, or
-     * {@code ClientSlots.renderGroup(...)} once at client init with the same
-     * {@code panelId} and {@code groupId}.
+     * take input, show them from the client: a {@code SlotFlowElement} or
+     * {@code SlotElement}s in the mod's own panel, built once at client init with
+     * the same {@code panelId} and {@code groupId}.
      */
     public record RegisteredSlots(MenuPanel panel, CreatedSlotGroup group, int flatStart, int flatEnd,
                           List<CreatedSlot> slots) {}
@@ -184,9 +185,6 @@ public final class CreatedSlots {
         private String groupId = "slot";
         private SlotGroupCategory category;                   // required: what the group is
         private Storage storage;                              // required
-        private int columns = 9;
-        private int originX = 0;
-        private int originY = 0;
         private BooleanSupplier revealWhen = null;            // null => always client-visible
         private String displayLabel = null;                  // null => capitalized groupId
 
@@ -215,18 +213,6 @@ public final class CreatedSlots {
          * {@link PersistentContainerKey}) to persist per-slot state as well.
          */
         public Builder storage(Storage storage) { this.storage = storage; return this; }
-
-        /**
-         * Slot layout: an origin relative to the screen (added to its {@code leftPos}
-         * and {@code topPos} at render time) and a column count. Slots fill left to
-         * right, top to bottom on an 18px grid.
-         */
-        public Builder layout(int originX, int originY, int columns) {
-            this.originX = originX;
-            this.originY = originY;
-            this.columns = Math.max(1, columns);
-            return this;
-        }
 
         /**
          * Client-side reveal predicate. The panel, and so the whole group, is visible and
@@ -275,13 +261,13 @@ public final class CreatedSlots {
             // listed from the title screen declares it at init as well.
             com.trevlar.slotkit.api.group.SlotGroups.declareDerived(groupId(panelId, groupId), category);
 
-            // 1. A standalone CreatedSlotGroup with storage and layout only. Behaviour
+            // 1. A standalone CreatedSlotGroup with storage only. Behaviour
             //    (gating, quick-move, binding, mending) resolves from the engine by
             //    each slot's address (vanilla by default), set by the consumer with
             //    Window.slot(address).set(...).
             CreatedSlotGroup group = new CreatedSlotGroup(
                     groupId, category, storage,
-                    /*shiftClickPriority*/ 100, columns, /*rowGapAfter*/ -1, /*rowGapSize*/ 0);
+                    /*shiftClickPriority*/ 100);
 
             // 2. The panel as the menu knows it: its id, and whether its slots are
             //    shown. The server always shows it, so getItem returns real content and
@@ -307,9 +293,8 @@ public final class CreatedSlots {
             // A slot's position is presentation that changes, not fixed structure. It
             // starts parked off-screen (vanilla draws and hit-tests nothing there),
             // and the panel that shows it (its SlotElement) writes its real position
-            // into vanilla's Slot.x/y every frame, before vanilla's slot pass. The
-            // originX/originY/columns layout is the elements' layout
-            // (ClientSlots.renderGroup), not the slots'.
+            // into vanilla's Slot.x/y every frame, before vanilla's slot pass. Where
+            // the slots sit is wholly the panel's.
             StorageContainerAdapter adapter = new StorageContainerAdapter(storage);
             AbstractContainerMenuInvoker inv = (AbstractContainerMenuInvoker) menu;
 

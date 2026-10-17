@@ -103,7 +103,7 @@ public final class ModSides {
      * namespace. This is what keeps a server with only {@code preferred} mods safe for
      * vanilla clients: such a server never changes a menu's slot count.
      *
-     * @param what "ContainerPanel" or "CustomMenu", for the message
+     * @param what "ParityGroup" or "CustomMenu", for the message
      * @param id   the panel or menu id; its namespace must be the defining mod's id
      * @throws IllegalStateException naming the id and the line to add
      */

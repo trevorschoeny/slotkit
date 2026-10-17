@@ -41,11 +41,6 @@ public class CreatedSlotGroup {
     private final Storage storage;
     private final int shiftClickPriority;
 
-    // Layout, read by the screen
-    private final int columns;      // grid columns for slot layout
-    private final int rowGapAfter;  // 0-indexed row after which to insert a gap (-1 = none)
-    private final int rowGapSize;   // gap size in pixels
-
     // Optional handler called when a slot in this group is right-clicked. It lives
     // on the group because right-click is a group-level capability, not a slot one.
     private @Nullable BiConsumer<Player, CreatedSlot> rightClickHandler;
@@ -59,34 +54,18 @@ public class CreatedSlotGroup {
     private final List<CreatedSlotGroup> pairedWith = new ArrayList<>();
 
     /**
+     * Where the slots sit on screen is the panel's (its slot elements), not the group's.
+     *
      * @param id                  unique identifier within the panel
      * @param category            what the group is ({@link SlotGroupCategory}); required
      * @param storage             where items live
      * @param shiftClickPriority  numeric priority (higher = tried first)
-     * @param columns             grid columns for slot layout (-1 = auto)
-     * @param rowGapAfter         0-indexed row after which to insert a gap (-1 = none)
-     * @param rowGapSize          gap size in pixels (only used if rowGapAfter >= 0)
      */
-    public CreatedSlotGroup(String id, SlotGroupCategory category, Storage storage, int shiftClickPriority,
-                     int columns, int rowGapAfter, int rowGapSize) {
+    public CreatedSlotGroup(String id, SlotGroupCategory category, Storage storage, int shiftClickPriority) {
         this.id = id;
         this.category = Objects.requireNonNull(category, "CreatedSlotGroup '" + id + "': category is required");
         this.storage = storage;
         this.shiftClickPriority = shiftClickPriority;
-        // Default columns: min(9, storage size)
-        this.columns = columns > 0 ? columns : Math.min(9, storage.size());
-        this.rowGapAfter = rowGapAfter;
-        this.rowGapSize = rowGapSize;
-    }
-
-    /**
-     * @param id                  unique identifier within the panel
-     * @param category            what the group is; required
-     * @param storage             where items live
-     * @param shiftClickPriority  numeric priority (higher = tried first)
-     */
-    public CreatedSlotGroup(String id, SlotGroupCategory category, Storage storage, int shiftClickPriority) {
-        this(id, category, storage, shiftClickPriority, -1, -1, 0);
     }
 
     /** With the default priority, 100. */
@@ -105,15 +84,6 @@ public class CreatedSlotGroup {
 
     /** Returns the numeric shift-click priority (higher = tried first). */
     public int getShiftClickPriority() { return shiftClickPriority; }
-
-    /** Grid columns for slot layout. Always above 0 (computed if not given). */
-    public int getColumns() { return columns; }
-
-    /** 0-indexed row after which to insert a visual gap, or -1 for none. */
-    public int getRowGapAfter() { return rowGapAfter; }
-
-    /** Gap size in pixels (only meaningful if rowGapAfter >= 0). */
-    public int getRowGapSize() { return rowGapSize; }
 
     /** Returns the right-click handler for this group, or null. */
     public @Nullable BiConsumer<Player, CreatedSlot> getRightClickHandler() {

@@ -90,6 +90,26 @@ public final class SlotGroupPanelAdapter {
      */
     public SlotGroupPanelAdapter(Panel panel, int padding) {
         this.anchored = new AnchorPanelAdapter(panel, padding);
+        warnIfSlotPanelKeepsHostGap(panel);
+    }
+
+    /**
+     * A slot panel on a group keeps vanilla's 18 px pitch only at {@code gap(0)}: the
+     * group's box is its slots' frames, and the host's default gap would set the
+     * panel's slots 2 px off the group's. The gap is the panel's to declare, so this
+     * only warns, once per panel; a panel without slots (a toolbar) keeps the host gap.
+     */
+    private static void warnIfSlotPanelKeepsHostGap(Panel panel) {
+        if (panel.getPosition().gap() != com.trevlar.menukit.api.panel.PanelPosition.HOST_GAP) return;
+        for (var element : panel.getRawElements()) {
+            if (element instanceof com.trevlar.slotkit.api.slot.SlotElement
+                    || element instanceof com.trevlar.slotkit.api.slot.SlotFlowElement) {
+                org.slf4j.LoggerFactory.getLogger("SlotKit").warn(
+                        "Panel '{}' shows slots on a slot group but leaves its gap unset, so its slots sit "
+                        + "2 px off the group's 18 px pitch. Declare .gap(0) on its PanelPosition.", panel.id());
+                return;
+            }
+        }
     }
 
     /** Anchors to each category's vanilla group. Call exactly once. */
