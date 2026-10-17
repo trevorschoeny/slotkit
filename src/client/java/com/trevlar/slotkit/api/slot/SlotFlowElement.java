@@ -85,14 +85,7 @@ public final class SlotFlowElement extends AbstractPanelElement {
      * one-liner for putting a group in a panel. Each slot carries the spec's tooltip.
      */
     public static SlotFlowElement of(ParityGroup group) {
-        var tooltip = group.spec().tooltip();
-        Builder b = builder();
-        for (int i = 0; i < group.count(); i++) {
-            SlotElement.Builder slot = SlotElement.builder().slot(group.id(), i);
-            if (tooltip != null) slot.tooltip(tooltip);
-            b.add(slot.build());
-        }
-        return b.build();
+        return builder().addGroup(group).build();
     }
 
     /** Slots {@code 0} to {@code count - 1} of a group, for an {@code onto} group or one named by id. */
@@ -223,6 +216,20 @@ public final class SlotFlowElement extends AbstractPanelElement {
         /** Adds one slot element to the flow. */
         public Builder add(SlotElement slot) {
             slots.add(Objects.requireNonNull(slot, "slot"));
+            return this;
+        }
+
+        /**
+         * Adds every slot of a parity group, in order, each with the spec's tooltip.
+         * Several groups in one flow run on into each other and wrap together.
+         */
+        public Builder addGroup(ParityGroup group) {
+            var tooltip = group.spec().tooltip();
+            for (int i = 0; i < group.count(); i++) {
+                SlotElement.Builder slot = SlotElement.builder().slot(group.id(), i);
+                if (tooltip != null) slot.tooltip(tooltip);
+                add(slot.build());
+            }
             return this;
         }
 

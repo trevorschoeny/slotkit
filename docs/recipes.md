@@ -47,7 +47,7 @@ Result: the switches stack down the right of the player inventory grid, 1 pixel 
 
 ## Add synced slots to the player, shown on every container screen
 
-Needs: SlotKit on both sides, and `"custom": { "slotkit": { "bothSides": "required" } }` in your `fabric.mod.json`. Declare the storage at common init, and call `register()` from the common entry point.
+Needs: SlotKit on both sides, and `"custom": { "slotkit": { "bothSides": "required" } }` in your `fabric.mod.json`. Declare the storage at common init, and register the group from the common entry point.
 
 ```java
 public static final PlayerStorageAttachment<NonNullList<ItemStack>> POCKETS =
@@ -55,28 +55,32 @@ public static final PlayerStorageAttachment<NonNullList<ItemStack>> POCKETS =
 ```
 
 ```java
-ContainerPanel.define("mymod:pockets")
-        .at(PanelPosition.region(OutsideRegion.LEFT_ALIGN_TOP).priority(20), 7)
-        .style(PanelStyle.RAISED)
-        .addSlot(SlotSpec.at("pockets", SlotGroupCategory.PLAYER_INVENTORY).count(9)
-                .storage(player -> POCKETS.bind(player)))
-        .register();
-
-// Client initializer, only for chrome or a narrower set of screens:
-ClientContainerPanel.of("mymod:pockets")
-        .chrome(() -> List.of(Button.builder().label(Component.literal("Sort")).size(60, 14).build()))
-        .parity(ScreenMatcher.all());
+POCKET_SLOTS = ParityGroup.register("mymod:pockets",
+        SlotSpec.at("pockets", SlotGroupCategory.PLAYER_INVENTORY).count(9)
+                .storage(player -> POCKETS.bind(player)));
 ```
 
-Result: nine real slots render in the top left gutter of the survival inventory, the creative inventory, and every container screen. Their contents persist on the player and sync through vanilla's slot protocol. The chrome and the screen scope name client types, so they are declared from the client initializer. The rest is one common registration. `ScreenMatcher.allExcept(Class...)` removes the panel from named screens. The slots still exist on those menus but are not drawn there.
+```java
+// Client initializer: your panel, the slots under a button.
+Panel pockets = Panel.builder("mymod:pockets")
+        .add(Button.builder().label(Component.literal("Sort")).size(60, 14).build())
+        .add(SlotFlowElement.builder().addGroup(POCKET_SLOTS).at(0, 18).build())
+        .style(PanelStyle.RAISED)
+        .position(PanelPosition.region(OutsideRegion.LEFT_ALIGN_TOP).priority(20))
+        .build()
+        .visibleWhen(() -> ClientSlots.isShown(POCKET_SLOTS.id()));
+new ScreenPanelAdapter(pockets).onMatching(ScreenMatcher.all());
+```
 
-The panel id's namespace is your mod id. `define` throws at startup if it is not, or if your mod does not declare `required` ([the definition check](concepts.md#declaring-sides)). A player whose copy of your mod registers different slot groups is refused by a server running yours, with a message naming the mod.
+Result: nine real slots under a Sort button, in the top left gutter of the survival inventory, the creative inventory, and every container screen. Their contents persist on the player and sync through vanilla's slot protocol. The group is data, registered once in common code, and is on every menu. The panel is yours: its place, its look, what sits beside the slots and which screens show it, all MenuKit's. `SlotFlowElement.of(group)` (or `builder().addGroup(group)` for several groups in one flow) lays the slots out at vanilla's 18 px pitch, wrapping to the panel's width; `SlotElement.builder().slot(group.id(), i).at(x, y)` places one by hand. `ScreenMatcher.allExcept(Class...)` keeps the panel off named screens; the slots stay on those menus, parked where nothing draws or clicks them. `ClientSlots.isShown(id)` is false where the group's slots aren't live, so a styled panel hides with them.
+
+The owner id's namespace is your mod id. `define` throws at startup if it is not, or if your mod does not declare `required` ([the definition check](concepts.md#declaring-sides)). A player whose copy of your mod registers different slot groups is refused by a server running yours, with a message naming the mod.
 
 The category is required. It tells other mods what the group is. `SlotGroupCategories.of(menu)` lists the group under it next to the vanilla categories, on every menu the group sits on. A search that walks the player's inventory menu can then treat pockets as inventory and leave an elytra slot alone. Use a vanilla category when the group is one of those things, and declare your own (`new SlotGroupCategory("mymod", "equipment")`) when it is not. The name is a contract once another mod depends on it.
 
 `SlotSpec.shiftClickOut(false)`, `shiftClickIn(false)`, `collect(false)` and `dragFill(false)` keep a group out of the bulk shortcuts (shift-click, double-click collect, drag-fill). The slot stays storage, and the shortcuts skip it.
 
-`SlotSpec.accepts(Predicate<ItemStack>)` limits what a slot takes. `SlotSpec.revealWhen(BooleanSupplier)` hides the slots until the supplier returns true. Death, keepInventory, Curse of Vanishing and Curse of Binding behave as they do for vanilla slots. `POCKETS.dropsOnDeath(DropRule.KEEP)` overrides the death rule.
+`SlotSpec.accepts(Predicate<ItemStack>)` limits what a slot takes. `SlotSpec.revealWhen(BooleanSupplier)` hides the slots on the client until the supplier returns true. Death, keepInventory, Curse of Vanishing and Curse of Binding behave as they do for vanilla slots. `POCKETS.dropsOnDeath(DropRule.KEEP)` overrides the death rule.
 
 `SlotSpec.shiftClickIn(true)`, said explicitly, makes the group a shift-click target in the player's inventory (since 1.1.0): a shift-clicked stack tries its partial stacks, then its empty slots, before vanilla's routing, and each slot's gate decides. On other vanilla menus the menu's own routing decides where a shift-click lands. Shift-click out of a created slot goes to the main inventory, then the hotbar.
 
@@ -89,25 +93,50 @@ return created != null && created.panelId().equals("mymod:pockets");
 
 ## Put a slot above the offhand
 
-Since 1.1.0. `on(...)` places a container panel around a slot group's box instead of the menu frame. Here the panel sits on the offhand, and the slot takes elytras and catches them on shift-click:
+`SlotGroupPanelAdapter` places your panel around a slot group's box instead of the menu frame. Here the panel sits on the offhand, and the slot takes elytras and catches them on shift-click:
 
 ```java
-ContainerPanel.define("mymod:elytra")
-        .on(SlotGroupCategory.PLAYER_OFFHAND)
-        .at(PanelPosition.region(OutsideRegion.TOP_CENTER).priority(20), 0)
-        .addSlot(SlotSpec.at("slot", new SlotGroupCategory("mymod", "elytra"))
+ELYTRA_SLOT = ParityGroup.register("mymod:elytra",
+        SlotSpec.at("slot", new SlotGroupCategory("mymod", "elytra"))
                 .storage(player -> ELYTRA.bind(player))
                 .accepts(stack -> stack.is(Items.ELYTRA))
                 .emptyIcon(Identifier.fromNamespaceAndPath("mymod", "container/slot/elytra"))
-                .shiftClickIn(true))
-        .register();
+                .shiftClickIn(true));
+
+// Client initializer:
+Panel elytra = Panel.builder("mymod:elytra")
+        .add(SlotFlowElement.of(ELYTRA_SLOT))
+        .position(PanelPosition.region(OutsideRegion.TOP_CENTER).priority(20).gap(0))
+        .build()
+        .opaque(false);
+new SlotGroupPanelAdapter(elytra, 0).on(SlotGroupCategory.PLAYER_OFFHAND);
 ```
 
-Result: one slot right above the offhand on the survival and creative inventories, and no slot on screens without an offhand. Panels on the same group share it and stack by region and priority. `TOP_CENTER` stacks upward and a lower priority sits nearer the group, so another mod's slot on `PLAYER_OFFHAND` at priority 10 goes between this one and the offhand, and a panel that isn't shown leaves no gap. (`TOP_ALIGN_LEFT` would stack them in a row to the right.) Mods building one column agree on priorities, nothing else. `onGroup(...)` takes specific groups, created ones included (`ContainerPanel.groupId(panel, group)`).
+Result: one slot right above the offhand on the survival and creative inventories, and no slot on screens without an offhand. Panels on the same group share it and stack by region and priority. `TOP_CENTER` stacks upward and a lower priority sits nearer the group, so another mod's slot on `PLAYER_OFFHAND` at priority 10 goes between this one and the offhand, and a panel that isn't shown leaves no gap. (`TOP_ALIGN_LEFT` would stack them in a row to the right.) Mods building one column agree on priorities, nothing else. `onGroup(...)` takes specific groups, created ones included (`ParityGroup.idOf(owner, group)`).
+
+`gap(0)` keeps stacked slot panels on vanilla's 18 px pitch: the group's box is its slots' frames, and the host's default 2 px gap would set your slots off the grid. `SlotGroupPanelAdapter` logs a warning for a panel holding slots without it.
 
 `emptyIcon` is the outline an empty slot shows, drawn by vanilla the way it draws the armour outlines. It takes a GUI sprite id; a mod's own sprite lives at `assets/<ns>/textures/gui/sprites/<path>.png`.
 
-With an anchor, `at(...)` takes a `region`, `center()` or `pixel(...)`. Give the slot a category of your own, not `PLAYER_OFFHAND` or `PLAYER_ARMOR`, which other mods read as vanilla's.
+On a slot group, the panel's position is a `region`, `center()` or `pixel(...)`. Give the slot a category of your own, not `PLAYER_OFFHAND` or `PLAYER_ARMOR`, which other mods read as vanilla's.
+
+## Show a vanilla slot in your own panel
+
+Since 2.0.0. A `SlotElement` can present a slot the menu built itself. Here a furnace's fuel slot moves into a labelled panel beside the furnace:
+
+```java
+Panel fuel = Panel.builder("mymod:fuel")
+        .add(TextLabel.builder().text(Component.literal("Fuel")).build())
+        .add(SlotElement.builder().slot(Address.menuSlot(MenuType.FURNACE, 1)).at(0, 12).build())
+        .style(PanelStyle.RAISED)
+        .position(PanelPosition.region(OutsideRegion.RIGHT_ALIGN_TOP))
+        .build();
+new ScreenPanelAdapter(fuel).on(FurnaceScreen.class);
+```
+
+Result: the fuel slot sits under the label, drawn above the panel, and keeps everything vanilla gives it: sync, shift-click, its category. `Address.menuSlot(type, index)` names the same slot on every menu of a type; `SlotRef.address()` names one particular container's. Only screens the panel is on change. There the slot sits where the panel puts it, and is parked (not drawn, not clickable) while the panel doesn't show it, as when it scrolls out of a `ScrollContainer`.
+
+The screen's background still draws the slot's old frame at its old place, so a panel taking over a vanilla grid covers it. Present a slot in one panel only: a second element for a slot another one already presents steps aside and logs a warning.
 
 ## Attach a flag to a slot
 
@@ -166,12 +195,14 @@ public static CustomContainerMenu buildHandler(
 ```
 
 ```java
-// Client initializer: how each panel looks, on MenuKit's Panel.Builder.
+// Client initializer: each panel, its slots included, on MenuKit's Panel.Builder.
 ClientMenu.of(CUSTOM)
         .panel("mymod:menu:main", p -> p.position(PanelPosition.main())
-                .add(TextLabel.builder().text(Component.literal("Items")).at(0, -12).build()))
+                .add(TextLabel.builder().text(Component.literal("Items")).at(0, -12).build())
+                .add(SlotFlowElement.of(SlotGroupId.created("mymod:menu:main", "items"), 9)))
         .panel("mymod:menu:extra", p -> p.position(PanelPosition.region(OutsideRegion.RIGHT_ALIGN_TOP))
-                .toggleKey(InputConstants.KEY_E));
+                .toggleKey(InputConstants.KEY_E)
+                .add(SlotFlowElement.of(SlotGroupId.created("mymod:menu:extra", "extra"), 3)));
 
 // Client:
 ClientMenu.of(CUSTOM).requestOpen();
@@ -181,7 +212,7 @@ CUSTOM.open(serverPlayer);
 
 Result: `requestOpen()` sends one payload. The server opens the menu because `validWhen` holds for the player, and the client shows a screen with a nine-slot panel. E shows and hides the extra panel. The handler factory runs on both sides and must build the same storages in the same order. Pass the `type` argument straight to `CustomContainerMenu.builder(type)`. `MOD_ID` is your mod id: the menu id's namespace goes through the same definition check as a container panel's.
 
-The handler is structure only: panels, their groups, `hidden()`, `toggleable()`, `pairsWith`, `rightClick`. A `rightClick` handler runs instead of vanilla's click, as a click, on both sides. The client's run is its prediction and the server's run is the one that counts, so put a one-sided effect behind `player.level().isClientSide()`. `p.group(id, category, storage, priority, columns)` sets shift-click priority and column count. How a panel looks is decided on the client. `ClientMenu.of(menu).panel(id, p -> ...)` takes MenuKit's `Panel.Builder` (elements, style, placement, toggle key), and `.screen(MyScreen::new)` sets a `CustomContainerScreen` subclass. A panel with no look is a raised panel of its slots. One that declares no placement takes the standalone default, where the first is the main panel and later ones stack below it.
+The handler is structure only: panels, their groups, `hidden()`, `toggleable()`, `pairsWith`, `rightClick`. A `rightClick` handler runs instead of vanilla's click, as a click, on both sides. The client's run is its prediction and the server's run is the one that counts, so put a one-sided effect behind `player.level().isClientSide()`. `p.group(id, category, storage, priority)` sets shift-click priority. The panels are the client's. `ClientMenu.of(menu).panel(id, p -> ...)` takes MenuKit's `Panel.Builder` (elements, style, placement, toggle key), raised unless you say otherwise, and the panel's slots are elements you add to it, as in any panel: a group's id is `SlotGroupId.created(panelId, groupId)`. Every panel the handler declares needs one, or the screen refuses to open and names it. `.screen(MyScreen::new)` sets a `CustomContainerScreen` subclass. A panel that declares no placement takes the standalone default, where the first is the main panel and later ones stack below it.
 
 The server decides whether a panel is shown, with `setPanelVisible(id, visible)`, and syncs it to the client. A player's toggle key sends a request to the server, which honours it only for a panel declared `toggleable()`. Without `validWhen` a client cannot open the menu at all. The server can, and the menu stays open while the player is alive.
 

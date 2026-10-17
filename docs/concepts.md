@@ -52,11 +52,11 @@ A mod states in its `fabric.mod.json` whether it needs SlotKit on both sides:
 
 Any other value throws when the mod loads. The message names the mod and the line to write.
 
-**The definition check.** `ContainerPanel.define(id)` and `CustomMenu.define(id, ...)` throw unless the id's namespace is the id of a loaded mod that declares `required`. A panel id is namespaced by the id of the mod that defines it: `"mymod:pockets"` for a mod whose id is `mymod`. The message names the panel or menu and what to change:
+**The definition check.** `ParityGroup.register(owner, ...)` and `CustomMenu.define(id, ...)` throw unless the id's namespace is the id of a loaded mod that declares `required`. A group's owner id is namespaced by the id of the mod that defines it: `"mymod:pockets"` for a mod whose id is `mymod`. The message names the group or menu and what to change:
 
-- An id with no namespace: `ContainerPanel 'pockets': an id that builds slots is namespaced by the id of the mod that defines it ('mymod:pockets').`
+- An id with no namespace: `ParityGroup 'pockets': an id that builds slots is namespaced by the id of the mod that defines it ('mymod:pockets').`
 - A namespace that is no loaded mod: `... its namespace 'my-mod' is not a loaded mod's id.`
-- A mod without `required`: `ContainerPanel 'mymod:pockets' builds slots, so SlotKit is needed on both sides wherever 'mymod' is installed. Add to mymod's fabric.mod.json: "custom": { "slotkit": { "bothSides": "required" } }`
+- A mod without `required`: `ParityGroup 'mymod:pockets' builds slots, so SlotKit is needed on both sides wherever 'mymod' is installed. Add to mymod's fabric.mod.json: "custom": { "slotkit": { "bothSides": "required" } }`
 
 The check fails in development, before any player joins. It also keeps a server with only `preferred` mods safe for vanilla clients, because such a server never changes a menu's slot count.
 
@@ -70,7 +70,7 @@ The check fails in development, before any player joins. It also keeps a server 
 | Has every required mod, but one of them builds different slots | Refused. The message names that mod: its slots differ. | Cannot happen |
 | Has every required mod, with the same slots | Admitted, with SlotKit | Admitted, with SlotKit |
 
-The slot comparison is per mod: each slot group the mod registers through `ContainerPanel`, with its slot count. Two versions of a mod that register the same groups admit each other. A version that adds, removes or resizes one refuses players on the other version, with a message, instead of desyncing them. Custom menus and groups built with `CreatedSlots.onto` are not compared. When a new version of a mod changes their slot layout, change the menu or panel id in the same release, so mismatched players do not desync.
+The slot comparison is per mod: each slot group the mod registers through `ParityGroup`, with its slot count. Two versions of a mod that register the same groups admit each other. A version that adds, removes or resizes one refuses players on the other version, with a message, instead of desyncing them. Custom menus and groups built with `CreatedSlots.onto` are not compared. When a new version of a mod changes their slot layout, change the menu or group id in the same release, so mismatched players do not desync.
 
 Each message links the homepage from each named mod's `contact.homepage`. A mod with no homepage is named only. The singleplayer owner and a LAN host are never judged.
 
@@ -170,15 +170,15 @@ A gate is not a lock. A lock is another mod's policy laid over a slot, and that 
 
 A created slot is a real `Slot` that a mod adds to a menu. It syncs through vanilla's slot protocol. Its contents persist through a `StorageAttachment` on the slot's owner, which is a player, block entity, entity, or item stack.
 
-`ContainerPanel` creates slots on the player's inventory menu and projects them onto every container screen. `CustomContainerMenu` creates slots on a custom menu. `CreatedSlot.of(slot)` tells a created slot from any other, on any screen, creative's included.
+`ParityGroup` creates slots on the player's inventory menu and projects them onto every container menu. `CustomContainerMenu` creates slots on a custom menu. `CreatedSlot.of(slot)` tells a created slot from any other, on any screen, creative's included.
 
-The code that builds slots, stores state and judges writes is common, and runs on the server and the client alike. The code that draws is client-only: `SlotElement`, `CustomContainerScreen`, and the client halves `ClientMenu`, `ClientContainerPanel` and `ClientSlots`. A custom menu's handler holds each panel's id, its slot groups and whether it is shown. How a panel looks is a MenuKit `Panel`, built by the client screen from `ClientMenu.of(menu).panel(id, ...)`. The server decides whether a panel is shown and syncs that to the client. A player may toggle only a panel declared `toggleable()`, and a client may open a menu only when its `validWhen` holds, which is also how long it stays open.
+The code that builds slots, stores state and judges writes is common, and runs on the server and the client alike. The code that draws is client-only: `SlotElement`, `SlotFlowElement`, `CustomContainerScreen`, `ClientMenu` and `ClientSlots`. SlotKit builds no panel. A slot is an element the mod puts in its own MenuKit panel, next to buttons and labels, and the mod's panel decides where it sits, how it looks and which screens show it. A custom menu's handler holds each panel's id, its slot groups and whether it is shown. The panel itself is a MenuKit `Panel` the mod declares with `ClientMenu.of(menu).panel(id, ...)`, slots included. The server decides whether a panel is shown and syncs that to the client. A player may toggle only a panel declared `toggleable()`, and a client may open a menu only when its `validWhen` holds, which is also how long it stays open.
 
 Only a `required` mod builds created slots ([Declaring sides](#declaring-sides)). A client on a server without SlotKit, or without the mod, builds none of that mod's slots and sends nothing SlotKit-only there, instead of desyncing.
 
 ## Address
 
-An `Address` names one slot without holding a reference to it. The same address resolves after a menu reopens and on both client and server. `Address.createdSlot(group, index)` names a created slot, with the group from `CreatedSlots.groupId(panelId, groupId)` or `ContainerPanel.groupId(...)`. `Window.slot(address).set(key, value)` attaches behaviour by address. A veto reads a slot's address from its `SlotRef` with `address()`. `asString()`, `Address.parse` and `Address.CODEC` save one as text. Never save its parts.
+An `Address` names one slot without holding a reference to it. The same address resolves after a menu reopens and on both client and server. `Address.createdSlot(group, index)` names a created slot, with the group from `CreatedSlots.groupId(panelId, groupId)` or `ParityGroup.idOf(owner, groupId)` (a registered group's `id()`). `Window.slot(address).set(key, value)` attaches behaviour by address. A veto reads a slot's address from its `SlotRef` with `address()`. `asString()`, `Address.parse` and `Address.CODEC` save one as text. Never save its parts.
 
 ## Slot state channel
 

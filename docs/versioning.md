@@ -47,7 +47,7 @@ SlotKit declares `breaks` against mods known to be incompatible, but it can only
 
 ## Your mod's own version and its slots
 
-The join check compares the slot groups each `required` mod registers through `ContainerPanel`, not its version number ([concepts](concepts.md#declaring-sides)). A release of your mod that changes those groups refuses players on the other release, with a message. A release that changes a custom menu's slots, or a group built with `CreatedSlots.onto`, is not caught. Change that menu's or panel's id in the same release.
+The join check compares the slot groups each `required` mod registers through `ParityGroup`, not its version number ([concepts](concepts.md#declaring-sides)). A release of your mod that changes those groups refuses players on the other release, with a message. A release that changes a custom menu's slots, or a group built with `CreatedSlots.onto`, is not caught. Change that menu's or panel's id in the same release.
 
 ## When SlotKit takes a new major
 

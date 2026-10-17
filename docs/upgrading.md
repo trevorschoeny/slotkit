@@ -1,6 +1,28 @@
-# Upgrading from MenuKit: Containers or MenuKit 6
+# Upgrading
 
-This page moves a mod to SlotKit 1.0.0 from MenuKit: Containers 6.x, or from the slot code MenuKit 6 carried (`api.slot`, `api.window`, `SlotGroupPanelAdapter`). SlotKit is Containers renamed, plus that slot code.
+## From SlotKit 1.x to 2.0
+
+SlotKit 2.0 builds no panels. A mod registers its slot groups as data and shows them in MenuKit panels of its own, next to anything else it puts there. 2.0 needs MenuKit 7.3. Saved data needs no migration: a group's id is derived exactly as before, so its contents, slot state and every setting another mod keyed to it carry over.
+
+| 1.x | 2.0 |
+|---|---|
+| `ContainerPanel.define(id).addSlot(spec).register()` | `ParityGroup.register(id, spec)`, once per group, in common code |
+| `.at(...)`, `.on(...)`, `.onGroup(...)`, `.style(...)`, `.opaque(...)`, `.visibleWhen(...)`, `.pinnedWidth/Height(...)`, `.size(...)` on the definition | The same on your own `Panel` (its `position`, `style`, `opaque`, `visibleWhen`, pinned size), built in the client initializer, holding `SlotFlowElement.of(group)` |
+| A panel `on(...)` a slot group | `new SlotGroupPanelAdapter(panel, 0).on(...)`, with `.gap(0)` on the panel's position |
+| Any other placement | `new ScreenPanelAdapter(panel, padding).onMatching(ScreenMatcher.all())` |
+| `ContainerPanel.groupId(id, group)` | `ParityGroup.idOf(id, group)`, or the registered group's `id()` |
+| `ClientContainerPanel.of(id).chrome(...)` | More elements in your panel |
+| `ClientContainerPanel.of(id).parity(matcher)` | The adapter's `onMatching(matcher)` |
+| `ClientSlots.renderGroup(panel, group, count, ...)` | `SlotFlowElement.of(CreatedSlots.groupId(panel, group), count)` in your panel |
+| `CreatedSlots.Builder.layout(x, y, columns)` | Removed; the panel lays slots out |
+| `p.group(id, category, storage, priority, columns[, rowGapAfter, rowGapSize])` on a custom menu | `p.group(id, category, storage, priority)`; place the slots in the panel |
+| A custom menu panel with no `ClientMenu.panel(...)` | Declare one, with its slots: `.add(SlotFlowElement.of(SlotGroupId.created(panelId, groupId), count))` |
+
+Pass the 1.x panel id as the group's owner id, unchanged, so its id stays the same. To keep a styled panel hidden where its slots aren't (a server without SlotKit), add `visibleWhen(() -> ClientSlots.isShown(group.id()))`. New in 2.0: a `SlotElement` can show a vanilla slot ([recipe](recipes.md#show-a-vanilla-slot-in-your-own-panel)).
+
+## From MenuKit: Containers or MenuKit 6
+
+This section moves a mod to SlotKit 1.0.0 from MenuKit: Containers 6.x, or from the slot code MenuKit 6 carried (`api.slot`, `api.window`, `SlotGroupPanelAdapter`). SlotKit is Containers renamed, plus that slot code. Then follow [1.x to 2.0](#from-slotkit-1x-to-20).
 
 Do MenuKit's 7.0.0 upgrade first: [MenuKit's upgrading page](https://github.com/trevorschoeny/menukit/blob/main/docs/upgrading-7.md). It also tells you whether your mod needs SlotKit at all.
 
@@ -143,7 +165,7 @@ Two changes need no edit in your code. Payload ids are `slotkit:v1/...`; they we
 
 ## 6. Declare sides
 
-This step applies to a mod that builds slots or custom menus: `ContainerPanel`, `CustomMenu`, `CreatedSlots`, or storage behind them. A mod that only finds and acts on slots in existing menus skips it and adds no `slotkit` block.
+This step applies to a mod that builds slots or custom menus: `ParityGroup` (1.x: `ContainerPanel`), `CustomMenu`, `CreatedSlots`, or storage behind them. A mod that only finds and acts on slots in existing menus skips it and adds no `slotkit` block.
 
 `fabric.mod.json` (6.x had no declaration):
 
@@ -163,18 +185,15 @@ This step applies to a mod that builds slots or custom menus: `ContainerPanel`, 
 
 [Declaring sides](concepts.md#declaring-sides) has what each value does on a server.
 
-**Namespace your ids with your mod id.** `ContainerPanel.define` and `CustomMenu.define` throw at startup unless the id's namespace is a loaded mod that declares `required`. A mod whose id is `mymod`:
+**Namespace your ids with your mod id.** `ParityGroup.register` (in 1.x, `ContainerPanel.define`) and `CustomMenu.define` throw at startup unless the id's namespace is a loaded mod that declares `required`. A mod whose id is `mymod`:
 
 ```java
-ContainerPanel.define("mymod:pockets")
-        .at(OutsideRegion.LEFT_ALIGN_TOP, 7)
-        .style(PanelStyle.RAISED)
-        .addSlot(SlotSpec.at("pockets", SlotGroupCategory.PLAYER_INVENTORY).count(9)
-                .storage(player -> POCKETS.bind(player)))
-        .register();
+POCKET_SLOTS = ParityGroup.register("mymod:pockets",
+        SlotSpec.at("pockets", SlotGroupCategory.PLAYER_INVENTORY).count(9)
+                .storage(player -> POCKETS.bind(player)));
 ```
 
-An id under another namespace, such as `"my-mod:pockets"` or `"pockets"`, throws at `define` with a message naming the panel and the fix. Containers accepted any id, so check every `define` call.
+An id under another namespace, such as `"my-mod:pockets"` or `"pockets"`, throws with a message naming the group and the fix. Containers accepted any id, so check every call.
 
 **Set `contact.homepage`** in your `fabric.mod.json`. A player refused for lacking your mod gets a link to it from there.
 
@@ -185,14 +204,14 @@ An id under another namespace, such as `"my-mod:pockets"` or `"pockets"`, throws
 | SlotKit and your `required` mod | SlotKit and your mod | Joins. The slots are there on both sides. |
 | SlotKit and your `required` mod | Vanilla, or Fabric without SlotKit | Refused before the world loads: "This server needs SlotKit and your mod on your game too", with links. |
 | SlotKit and your `required` mod | SlotKit without your mod | Refused, naming your mod. |
-| SlotKit and your `required` mod | Your mod, but a version that registers different `ContainerPanel` slot groups | Refused: "Your mod doesn't match the server's: its slots differ." |
+| SlotKit and your `required` mod | Your mod, but a version that registers different `ParityGroup` slot groups | Refused: "Your mod doesn't match the server's: its slots differ." |
 | SlotKit and only `preferred` mods | Vanilla | Joins as a vanilla player. Server-side enforcement still applies. |
 | Without SlotKit | SlotKit and your `required` mod | Joins. Your mod builds no slots on this server. |
 | Any | A mod with no `slotkit` block | Joins. The mod works as it did on 6.x. |
 | Singleplayer, or the host of a LAN game | n/a | Everything on, both sides. The host is never judged. |
 | A Containers 6.2 server | SlotKit | Refused by that server, which asks for MenuKit and Containers 6.2. |
 
-The handshake compares `ContainerPanel` slot groups, not version numbers. A custom menu's slots are not compared, so when a release of your mod changes a custom menu's layout, change that menu's id.
+The handshake compares `ParityGroup` slot groups, not version numbers. A custom menu's slots are not compared, so when a release of your mod changes a custom menu's layout, change that menu's id.
 
 ### Asking what the other side has
 
@@ -234,8 +253,8 @@ Do not rename `menukit:` to `slotkit:` in any saved id. The ids keep the old nam
 | `cannot find symbol: class SlotGroup` | Containers' created group type, in a file the first rename in step 4 did not reach. | Rename it to `CreatedSlotGroup` in that file. Leave a `SlotGroup` class of your own alone. |
 | `cannot find symbol: variable ContainerKeys` | A `ContainerKeys.MENDING` the second rename did not reach. | Write `BehaviorKeys.MENDING`. |
 | Startup throws `IllegalStateException: Mod 'mymod' has a "slotkit" block in fabric.mod.json, but "bothSides" must be "required" or "preferred"` | A misspelt value. | Write `"required"` or `"preferred"`. |
-| Startup throws `IllegalStateException: ContainerPanel 'mymod:pockets' builds slots, so SlotKit is needed on both sides` (or `CustomMenu ...`) | The mod does not declare `required`. | Add `"custom": { "slotkit": { "bothSides": "required" } }`. |
+| Startup throws `IllegalStateException: ParityGroup 'mymod:pockets' builds slots, so SlotKit is needed on both sides` (or `CustomMenu ...`) | The mod does not declare `required`. | Add `"custom": { "slotkit": { "bothSides": "required" } }`. |
 | Startup throws `... its namespace 'my-mod' is not a loaded mod's id`, or `... an id that builds slots is namespaced by the id of the mod that defines it` | The panel or menu id's namespace is not your mod id. | Use your mod id as the namespace. |
 | A player is refused: "This server needs SlotKit and ... on your game too" | Expected for a `required` mod. The player lacks SlotKit or the mod. | The player installs both. |
-| A player is refused: "Your ... doesn't match the server's: its slots differ" | The player's copy of the mod registers different `ContainerPanel` slot groups. | The player installs the version the server uses. |
+| A player is refused: "Your ... doesn't match the server's: its slots differ" | The player's copy of the mod registers different `ParityGroup` slot groups. | The player installs the version the server uses. |
 | A player is refused: "This server runs a different version of SlotKit (protocol ..., yours ...)" | The player's SlotKit speaks another protocol. | The player installs the SlotKit version the server uses. |
