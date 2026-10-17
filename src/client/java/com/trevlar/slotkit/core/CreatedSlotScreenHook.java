@@ -47,8 +47,8 @@ public final class CreatedSlotScreenHook implements SlotScreenHook {
     @Override
     public SlotHoverResult resolveHover(AbstractContainerScreen<?> screen,
                                          double mouseX, double mouseY) {
-        Set<String> ids = SlotElementRegistry.activePanelIds();
-        if (ids.isEmpty()) return SlotHoverResult.PASS;
+        if (!SlotElementRegistry.hasActive()) return SlotHoverResult.PASS;
+        Set<String> ids = SlotElementRegistry.activePanelIds(); // empty when only vanilla slots are hosted
 
         CreatedSlotInput.Resolution r =
                 CreatedSlotInput.resolveHoveredSlot(screen, mouseX, mouseY, ids);
@@ -65,8 +65,8 @@ public final class CreatedSlotScreenHook implements SlotScreenHook {
         // itself is not eaten, since getHoveredSlot already routed it. In an opaque
         // panel, opacity already eats gap clicks at the MouseHandler level before this
         // runs; this still covers a non-opaque panel of bare slots.
+        if (!SlotElementRegistry.hasActive()) return false;
         Set<String> ids = SlotElementRegistry.activePanelIds();
-        if (ids.isEmpty()) return false;
         CreatedSlotInput.Resolution r =
                 CreatedSlotInput.resolveHoveredSlot(screen, mouseX, mouseY, ids);
         return r.handled() && r.slot() == null;

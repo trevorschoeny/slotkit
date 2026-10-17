@@ -10,7 +10,9 @@ import com.mojang.serialization.Codec;
 import com.mojang.serialization.DataResult;
 import com.trevlar.slotkit.api.group.SlotGroupId;
 
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.inventory.MenuType;
 
 import org.jetbrains.annotations.ApiStatus;
 
@@ -50,7 +52,8 @@ import java.util.Objects;
  *   <li>a created slot: {@link #createdSlot(SlotGroupId.Created, int)}, from the
  *       group's id ({@code ParityGroup.idOf}, {@code CreatedSlots.groupId},
  *       {@code SlotGroupId.created}) and the slot's index in the group;</li>
- *   <li>a vanilla slot: from the live slot, where an operation or veto has it.</li>
+ *   <li>a vanilla slot: from the live slot, where an operation or veto has it, or
+ *       by its place in a menu type's slot list, {@link #menuSlot(MenuType, int)}.</li>
  * </ul>
  * Panel and panel-element addresses are no longer minted (MenuKit names its panels
  * by {@code Panel.id()}), but {@link #parse} still reads the text 6.x saved for them.
@@ -91,6 +94,21 @@ public record Address(OwnerRef owner, Token token, KindTag kind) {
     public static Address createdSlot(SlotGroupId.Created group, int index) {
         return createdSlot(PanelAddressing.PANEL_FAMILY, OwnerScope.primary(),
                 PanelAddressing.regKey(group.panelId()), group.groupId() + CREATED_SEP + index);
+    }
+
+    /**
+     * Slot {@code index} of {@code menu.slots} on every menu of {@code type}: the
+     * menu-based form of a vanilla slot's address. A panel registered once for a
+     * menu type holds this, since a slot's container-based address (what
+     * {@code SlotRef.address()} gives for a chest or a shulker box) names one
+     * particular box. Not equal to that container-based address, so behaviors keyed
+     * on a slot's address don't see this one; it is for placing slots
+     * ({@code SlotElement.builder().slot(Address)}).
+     */
+    public static Address menuSlot(MenuType<?> type, int index) {
+        Objects.requireNonNull(type, "type");
+        if (index < 0) throw new IllegalArgumentException("index must not be negative, got " + index);
+        return vanillaSlot(ScreenFamilyKey.of(BuiltInRegistries.MENU.getKey(type)), OwnerScope.primary(), index);
     }
 
     // A created slot's declaration id is groupId<NUL>index: a NUL never appears in

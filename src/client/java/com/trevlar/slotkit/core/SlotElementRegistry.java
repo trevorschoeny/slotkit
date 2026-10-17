@@ -42,6 +42,17 @@ public final class SlotElementRegistry {
         ACTIVE.remove(element);
     }
 
+    /** Whether an attached element already resolves to {@code slot} on {@code menu}. */
+    public static boolean presents(net.minecraft.world.inventory.AbstractContainerMenu menu,
+                                   net.minecraft.world.inventory.Slot slot) {
+        synchronized (ACTIVE) {
+            for (SlotElement element : ACTIVE) {
+                if (element.resolve(menu) == slot) return true;
+            }
+            return false;
+        }
+    }
+
     /** Whether any panel-hosted slot is currently attached. */
     public static boolean hasActive() {
         return !ACTIVE.isEmpty();
@@ -72,9 +83,27 @@ public final class SlotElementRegistry {
             if (ACTIVE.isEmpty()) return Set.of();
             Set<String> ids = new HashSet<>(ACTIVE.size() * 2);
             for (SlotElement element : ACTIVE) {
-                ids.add(element.panelId());
+                if (element.panelId() != null) ids.add(element.panelId());
             }
             return ids;
+        }
+    }
+
+    /**
+     * The vanilla slots attached elements have on screen on {@code menu}, so hover
+     * resolution lets them win over whatever vanilla would find first at the same
+     * point. Empty when no element hosts a vanilla slot.
+     */
+    static Set<net.minecraft.world.inventory.Slot> hostedVanillaSlots(net.minecraft.world.inventory.AbstractContainerMenu menu) {
+        synchronized (ACTIVE) {
+            Set<net.minecraft.world.inventory.Slot> slots = null;
+            for (SlotElement element : ACTIVE) {
+                var slot = element.hostedVanillaSlot(menu);
+                if (slot == null) continue;
+                if (slots == null) slots = Collections.newSetFromMap(new IdentityHashMap<>());
+                slots.add(slot);
+            }
+            return slots == null ? Set.of() : slots;
         }
     }
 }

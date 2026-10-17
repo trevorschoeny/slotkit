@@ -58,6 +58,30 @@ public final class VanillaAddressing {
                 .map(r -> Address.vanillaSlot(CONTAINER_FAMILY, OwnerScope.sub(r.scopeId()), r.localIndex()));
     }
 
+    /**
+     * The live slot on {@code menu} that a {@code VANILLA_SLOT} address names (the
+     * creative wrapper where the menu holds one), or {@code null} when it isn't on
+     * this menu. A menu-based address matches by the menu's family and the flat
+     * index; a container-based one by the address each slot on the menu mints.
+     */
+    @ApiStatus.Internal
+    public static net.minecraft.world.inventory.@org.jspecify.annotations.Nullable Slot resolve(
+            AbstractContainerMenu menu, Address address) {
+        if (address.kind() != com.trevlar.slotkit.api.window.KindTag.VANILLA_SLOT) return null;
+        if (!isContainerAddressed(address)) {
+            if (!(address.owner() instanceof OwnerRef.RootOwner root)
+                    || !root.family().equals(WindowMint.familyOf(menu))
+                    || !(address.token() instanceof Token.IndexToken(int index))) return null;
+            return index < menu.slots.size() ? menu.slots.get(index) : null;
+        }
+        // ponytail: a scan over menu.slots (each slot's address is cached per menu);
+        // index it per menu if a panel ever hosts hundreds of container-addressed slots.
+        for (Slot slot : menu.slots) {
+            if (address.equals(com.trevlar.slotkit.api.window.SlotRef.addressOf(menu, slot))) return slot;
+        }
+        return null;
+    }
+
     /** Whether {@code address} is a container-identified (menu-independent) vanilla address. */
     public static boolean isContainerAddressed(Address address) {
         return address.owner() instanceof OwnerRef.RootOwner root

@@ -17,6 +17,8 @@ import com.trevlar.menukit.api.host.SlotClip;
 import com.trevlar.slotkit.mixin.AbstractContainerScreenAccessor;
 import com.trevlar.slotkit.mixin.SlotPositionAccessor;
 import com.trevlar.slotkit.api.window.Address;
+import com.trevlar.slotkit.api.window.KindTag;
+import com.trevlar.slotkit.window.VanillaAddressing;
 
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.Screen;
@@ -66,6 +68,21 @@ import java.util.Objects;
  * edge keeps its position and shows, hovers and takes clicks only inside. A slot
  * wholly out of view is not rendered, so it is parked (below).
  *
+ * <h3>Vanilla slots</h3>
+ *
+ * {@link Builder#slot(Address)} presents a vanilla slot instead: one the menu built
+ * itself, named by {@link Address#menuSlot} (the same slot on every menu of a type,
+ * which is what a panel registered once wants) or by the container-based address
+ * {@code SlotRef.address()} gives (one particular box). The slot keeps everything
+ * vanilla gives it (sync, shift-click, its category); the panel only moves it. Its
+ * position changes only on screens where this element is attached: there it sits
+ * where the panel puts it, or parked when the panel doesn't show it, and every
+ * other screen's layout is untouched. A screen's background still draws the slot's
+ * old frame at its old spot, so a panel taking over a vanilla grid hides that.
+ * Present each vanilla slot at most once per screen, and never as a created slot
+ * over the same container as well, which would put two views of one container in
+ * {@code menu.slots}.
+ *
  * <h3>Looked up each frame, not held</h3>
  *
  * A {@code SlotElement} holds no slot reference. It holds the slot's stable
@@ -109,16 +126,24 @@ public final class SlotElement extends AbstractPanelElement {
     /** Off-screen: where a slot sits when no panel is showing it this frame. */
     private static final int PARKED = CreatedSlots.OFFSCREEN;
 
-    private final String panelId;
+    /** The created slot's panel, or {@code null} for a vanilla slot. */
+    private final @Nullable String panelId;
     private final Address address;
 
     /** Whether a panel placed this element's slot this frame. Render thread only. */
     private boolean presented = false;
 
+    /**
+     * Whether another element on this screen already presents this element's slot.
+     * Such an element stays out of the way (no placement, no claim) so the first one
+     * keeps the slot: two panels writing one slot's position would fight every frame.
+     */
+    private boolean duplicate = false;
+
     private SlotElement(Builder b) {
         super(b);
-        this.panelId = b.group.panelId();
-        this.address = Address.createdSlot(b.group, b.index);
+        this.panelId = b.group != null ? b.group.panelId() : null;
+        this.address = b.group != null ? Address.createdSlot(b.group, b.index) : b.address;
         this.width = SlotRendering.DEFAULT_SIZE;
         this.authoredWidth = SlotRendering.DEFAULT_SIZE;
         this.height = SlotRendering.DEFAULT_SIZE;
@@ -134,8 +159,19 @@ public final class SlotElement extends AbstractPanelElement {
         return new Builder();
     }
 
-    /** The panel id of the registered slot this element shows (its registry key). */
-    public String panelId() { return panelId; }
+    /** The panel id of the created slot this element shows (its registry key), or {@code null} for a vanilla slot. */
+    public @Nullable String panelId() { return panelId; }
+
+    /**
+     * The vanilla slot this element hosts on {@code menu} when a panel has it on
+     * screen (not parked), else {@code null}. Always {@code null} for a created slot.
+     */
+    @ApiStatus.Internal
+    public @Nullable Slot hostedVanillaSlot(AbstractContainerMenu menu) {
+        if (panelId != null) return null;
+        Slot slot = VanillaAddressing.resolve(menu, address);
+        return slot != null && slot.x != PARKED ? slot : null;
+    }
 
     /** The element's size is the slot's frame and never shrinks. */
     @Override public void layoutWithin(int budget) {}
@@ -218,8 +254,8 @@ public final class SlotElement extends AbstractPanelElement {
     public void endFrame(AbstractContainerMenu menu) {
         boolean wasPresented = presented;
         presented = false;
-        if (wasPresented) return;
-        Slot slot = CreatedSlotAdapter.INSTANCE.resolve(menu, address);
+        if (wasPresented || duplicate) return;   // a duplicate never parks the first element's slot
+        Slot slot = resolve(menu);
         if (slot != null) place(slot, PARKED, PARKED);
     }
 
@@ -229,11 +265,19 @@ public final class SlotElement extends AbstractPanelElement {
      * (inert, which looks the same as absent).
      */
     private @Nullable Slot presented(@Nullable AbstractContainerMenu menu) {
-        if (menu == null) return null;
-        Slot slot = CreatedSlotAdapter.INSTANCE.resolve(menu, address);
-        if (slot == null) return null;
+        if (menu == null || duplicate) return null;
+        Slot slot = resolve(menu);
+        if (slot == null || panelId == null) return slot; // a vanilla slot is never inert
         CreatedSlot mk = CreatedSlotAccess.asMKCSlot(slot);
         return (mk == null || mk.isInert()) ? null : slot;
+    }
+
+    /** The live in-menu slot the address names on {@code menu}, whatever its state. */
+    @ApiStatus.Internal
+    public @Nullable Slot resolve(AbstractContainerMenu menu) {
+        return panelId != null
+                ? CreatedSlotAdapter.INSTANCE.resolve(menu, address)
+                : VanillaAddressing.resolve(menu, address);
     }
 
     private static @Nullable AbstractContainerMenu currentMenu() {
@@ -253,6 +297,16 @@ public final class SlotElement extends AbstractPanelElement {
 
     @Override
     public void onAttach(Screen screen) {
+        duplicate = false;
+        if (screen instanceof AbstractContainerScreen<?> acs) {
+            Slot mine = resolve(acs.getMenu());
+            if (mine != null && SlotElementRegistry.presents(acs.getMenu(), mine)) {
+                duplicate = true;
+                org.slf4j.LoggerFactory.getLogger("SlotKit").warn(
+                        "Two slot elements on {} present the same slot ({}); the first keeps it. "
+                        + "Present each slot in one panel only.", screen.getClass().getSimpleName(), address);
+            }
+        }
         SlotElementRegistry.add(this);
     }
 
@@ -261,10 +315,11 @@ public final class SlotElement extends AbstractPanelElement {
         SlotElementRegistry.remove(this);
     }
 
-    /** Builds a {@link SlotElement}. {@link #slot} is required. */
+    /** Builds a {@link SlotElement}. One of the {@code slot} methods is required. */
     public static final class Builder extends AbstractPanelElement.Builder<SlotElement, Builder> {
         private SlotGroupId.@org.jspecify.annotations.Nullable Created group;
         private int index = -1;
+        private @Nullable Address address;
 
         private Builder() {}
 
@@ -278,12 +333,30 @@ public final class SlotElement extends AbstractPanelElement {
             this.group = Objects.requireNonNull(group, "group");
             if (index < 0) throw new IllegalArgumentException("index must not be negative, got " + index);
             this.index = index;
+            this.address = null;
+            return this;
+        }
+
+        /**
+         * The vanilla slot to present: {@link Address#menuSlot(net.minecraft.world.inventory.MenuType, int)}
+         * for the same slot on every menu of a type, or a slot's container-based
+         * address from {@code SlotRef.address()} for one particular container. A
+         * created slot goes through {@link #slot(SlotGroupId.Created, int)}.
+         */
+        public Builder slot(Address address) {
+            Objects.requireNonNull(address, "address");
+            if (address.kind() != KindTag.VANILLA_SLOT) {
+                throw new IllegalArgumentException("slot(Address) takes a vanilla slot's address, got " + address.kind()
+                        + "; present a created slot with slot(group, index)");
+            }
+            this.address = address;
+            this.group = null;
             return this;
         }
 
         @Override
         public SlotElement build() {
-            require(group != null, "slot(group, index) is required");
+            require(group != null || address != null, "slot(group, index) or slot(address) is required");
             return new SlotElement(this);
         }
     }
