@@ -104,9 +104,14 @@ import java.util.Objects;
  * frames matches what is on screen. ({@link CreatedSlot#isActive} handles a hidden
  * panel by itself; parking handles the other cases.)
  *
- * <p>An element in an overlay panel (layer 4) writes its position after vanilla's
- * slot pass, so vanilla draws it a frame late and under the overlay's chrome.
- * Created slots belong in flow panels; nothing puts them in overlays today.
+ * <p>A vanilla slot parks only while its panel is shown (scrolled out of a
+ * {@code ScrollContainer}, say). While its panel is hidden, or once the screen
+ * closes, it goes back to where the menu put it ({@code SlotClip.panelShowing}), so
+ * a mod that hides its panel hands the slot back to vanilla's layout.
+ *
+ * <p>MenuKit lays out every panel before vanilla's slot pass and draws each panel's
+ * slots right after the panel (7.3.0), so a slot in an overlay or popover panel draws
+ * on it, in the same frame.
  *
  * <h3>Why a slot stays live under its own panel</h3>
  *
@@ -139,6 +144,11 @@ public final class SlotElement extends AbstractPanelElement {
      * keeps the slot: two panels writing one slot's position would fight every frame.
      */
     private boolean duplicate = false;
+
+    // A vanilla slot's own position, read when the element attaches, so the slot can go
+    // back there while its panel is hidden and when the screen closes.
+    private boolean hasHome = false;
+    private int homeX, homeY;
 
     private SlotElement(Builder b) {
         super(b);
@@ -256,7 +266,11 @@ public final class SlotElement extends AbstractPanelElement {
         presented = false;
         if (wasPresented || duplicate) return;   // a duplicate never parks the first element's slot
         Slot slot = resolve(menu);
-        if (slot != null) place(slot, PARKED, PARKED);
+        if (slot == null) return;
+        // A vanilla slot whose panel is hidden (or not on this screen) goes back to its
+        // own place; one scrolled out of a shown panel parks, as a created slot always does.
+        if (hasHome && !SlotClip.panelShowing(slot)) place(slot, homeX, homeY);
+        else place(slot, PARKED, PARKED);
     }
 
     /**
@@ -298,8 +312,14 @@ public final class SlotElement extends AbstractPanelElement {
     @Override
     public void onAttach(Screen screen) {
         duplicate = false;
+        hasHome = false;
         if (screen instanceof AbstractContainerScreen<?> acs) {
             Slot mine = resolve(acs.getMenu());
+            if (mine != null && panelId == null && mine.x != PARKED) {
+                hasHome = true;
+                homeX = mine.x;
+                homeY = mine.y;
+            }
             if (mine != null && SlotElementRegistry.presents(acs.getMenu(), mine)) {
                 duplicate = true;
                 org.slf4j.LoggerFactory.getLogger("SlotKit").warn(
@@ -312,6 +332,11 @@ public final class SlotElement extends AbstractPanelElement {
 
     @Override
     public void onDetach(Screen screen) {
+        // Hand a vanilla slot back its own place: the menu can outlive the screen.
+        if (hasHome && !duplicate && screen instanceof AbstractContainerScreen<?> acs) {
+            Slot slot = resolve(acs.getMenu());
+            if (slot != null) place(slot, homeX, homeY);
+        }
         SlotElementRegistry.remove(this);
     }
 

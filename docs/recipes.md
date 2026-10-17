@@ -164,7 +164,7 @@ Panel fuel = Panel.builder("mymod:fuel")
 new ScreenPanelAdapter(fuel).on(FurnaceScreen.class);
 ```
 
-Result: the fuel slot sits under the label, drawn above the panel, and keeps everything vanilla gives it: sync, shift-click, its category. `Address.menuSlot(type, index)` names the same slot on every menu of a type; `SlotRef.address()` names one particular container's. Only screens the panel is on change. There the slot sits where the panel puts it, and is parked (not drawn, not clickable) while the panel doesn't show it, as when it scrolls out of a `ScrollContainer`.
+Result: the fuel slot sits under the label, drawn above the panel, and keeps everything vanilla gives it: sync, shift-click, its category. `Address.menuSlot(type, index)` names the same slot on every menu of a type; `SlotRef.address()` names one particular container's. Only screens the panel is on change. There the slot sits where the panel puts it. Scrolled out of a `ScrollContainer` it is parked (not drawn, not clickable); while the panel is hidden, and once the screen closes, it is back where the menu put it.
 
 The screen's background still draws the slot's old frame at its old place, so a panel taking over a vanilla grid covers it. Present a slot in one panel only: a second element for a slot another one already presents steps aside and logs a warning.
 
