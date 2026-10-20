@@ -167,7 +167,21 @@ ItemSources.walk(player, scope, ref -> {
 });
 ```
 
-Result: items are visited nearest first, level by level. The inventory's own slots come first (hotbar first), then everything one container deep, then two deep; the ender chest follows in the same order. A shulker keeps its slot positions and a bundle keeps its order. A screen showing the same shulker through item-backed storage sees the change on its next read. A reference whose slot or containers changed since it was read writes nothing, so `take` returns `EMPTY` and `commit` returns `false`. Server side only; armour, the offhand and the cursor aren't walked.
+Result: items are visited nearest first, level by level. The inventory's own slots come first (hotbar first), then everything one container deep, then two deep; the ender chest follows in the same order. A shulker keeps its slot positions and a bundle keeps its order. A screen showing the same shulker through item-backed storage sees the change on its next read. A reference whose slot or containers changed since it was read writes nothing, so `take` returns `EMPTY` and `commit` returns `false`. Armour, the offhand and the cursor aren't walked.
+
+A client can choose the item and the server move it. `find` lists matches read-only on either side, from the contents that ride on the stacks the client sees; the client sends the chosen `ItemPath` in its own packet (`ItemPath.STREAM_CODEC`), and the server resolves it with `at`, which returns `null` if the item isn't there any more:
+
+```java
+// Client:
+List<ItemSources.Found> found = ItemSources.find(player, scope, s -> s.is(Items.COBBLESTONE));
+// send found.get(0).path() in your payload
+
+// Server, on receiving it:
+ItemRef ref = ItemSources.at(serverPlayer, path);
+if (ref != null && ref.stack().is(Items.COBBLESTONE)) { ItemStack moved = ref.take(64); /* put it where the client asked */ }
+```
+
+The ender chest's contents are only known to a client while it's open, so a client finds nothing there otherwise.
 
 ## Show a vanilla slot in your own panel
 
