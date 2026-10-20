@@ -142,6 +142,8 @@ public final class SlotElement extends AbstractPanelElement {
 
     /** Whether a panel placed this element's slot this frame. Render thread only. */
     private boolean presented = false;
+    // Whether render placed the slot in the last finished frame, for hover between frames.
+    private boolean placedLastFrame = false;
 
     // Whether this element has warned that another shown panel holds its slot (once per screen).
     private boolean warnedShared = false;
@@ -174,14 +176,15 @@ public final class SlotElement extends AbstractPanelElement {
     public @Nullable String panelId() { return panelId; }
 
     /**
-     * The vanilla slot this element hosts on {@code menu} when a panel has it on
-     * screen (not parked), else {@code null}. Always {@code null} for a created slot.
+     * The vanilla slot this element hosts on {@code menu} when it placed the slot in
+     * the last frame, else {@code null}. A slot parked, or back at its own place while
+     * the panel is hidden, isn't hosted: there it must not win hover over a created slot
+     * a shown panel puts on that spot. Always {@code null} for a created slot.
      */
     @ApiStatus.Internal
     public @Nullable Slot hostedVanillaSlot(AbstractContainerMenu menu) {
-        if (panelId != null) return null;
-        Slot slot = VanillaAddressing.resolve(menu, address);
-        return slot != null && slot.x != PARKED ? slot : null;
+        if (panelId != null || !placedLastFrame) return null;
+        return VanillaAddressing.resolve(menu, address);
     }
 
     /** The element's size is the slot's frame and never shrinks. */
@@ -265,6 +268,7 @@ public final class SlotElement extends AbstractPanelElement {
     public void endFrame(AbstractContainerMenu menu, java.util.Set<Slot> shownThisFrame) {
         boolean wasPresented = presented;
         presented = false;
+        placedLastFrame = wasPresented;
         if (wasPresented) return;
         Slot slot = resolve(menu);
         if (slot == null || shownThisFrame.contains(slot)) return;   // another panel holding it showed it
@@ -329,6 +333,7 @@ public final class SlotElement extends AbstractPanelElement {
     @Override
     public void onAttach(Screen screen) {
         warnedShared = false;
+        placedLastFrame = false;
         hasHome = false;
         if (screen instanceof AbstractContainerScreen<?> acs) {
             Slot mine = resolve(acs.getMenu());

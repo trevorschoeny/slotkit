@@ -1,5 +1,7 @@
 package com.trevlar.slotkit.api.menu;
 
+import com.trevlar.slotkit.api.group.SlotGroupId;
+import com.trevlar.slotkit.api.slot.SlotFlowElement;
 import com.trevlar.menukit.api.panel.Panel;
 import com.trevlar.menukit.api.panel.PanelPosition;
 import com.trevlar.slotkit.api.slot.CreatedSlot;
@@ -175,8 +177,8 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
      * mod puts the panel's slots in it ({@code SlotFlowElement}, {@code SlotElement}),
      * as in any other panel; this screen builds no panel and positions no slot itself.
      *
-     * @throws IllegalStateException when the menu declares a panel the client has no
-     *         {@code ClientMenu.panel} for
+     * A panel the client has no {@code ClientMenu.panel} for (a server on another version
+     * of the mod) is logged and shown as a plain panel of its slots.
      */
     private static List<Panel> buildPanels(CustomContainerMenu handler) {
         MenuType<?> type;
@@ -191,12 +193,18 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
             Panel.Builder b = Panel.builder(id).style(PanelStyle.RAISED);
             Consumer<Panel.Builder> look = ClientMenu.lookFor(type, id);
             if (look == null) {
-                throw new IllegalStateException("Custom menu " + (type == null ? "(no type)"
-                        : net.minecraft.core.registries.BuiltInRegistries.MENU.getKey(type))
-                        + " declares panel '" + id + "', but the client has no ClientMenu.panel(\"" + id
-                        + "\", ...) for it. Declare the panel, with its slots as SlotFlowElement or SlotElements.");
+                // A server with another version of the mod can declare a panel this client
+                // doesn't know. Show its slots in a plain panel rather than crash the client.
+                LOGGER.error("Custom menu {} declares panel '{}', but the client has no ClientMenu.panel(\"{}\", ...) "
+                        + "for it. Showing its slots in a plain panel. Declare the panel, with its slots as "
+                        + "SlotFlowElement or SlotElements.", type == null ? "(no type)"
+                        : net.minecraft.core.registries.BuiltInRegistries.MENU.getKey(type), id, id);
+                for (var group : handler.getGroupsFor(id)) {
+                    b.add(SlotFlowElement.of(SlotGroupId.created(id, group.id()), group.getStorage().size()));
+                }
+            } else {
+                look.accept(b);
             }
-            look.accept(b);
             Panel panel = b.visible(true).build();
             panel.visibleWhen(() -> handler.isPanelVisible(id));
             built.add(panel);

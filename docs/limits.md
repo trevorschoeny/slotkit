@@ -36,6 +36,7 @@ Behaviour that is incomplete in the current release.
 - Slot-state writes from one player are limited to a burst of 64, then 32 a second. Past that the server refuses them until the allowance refills.
 - A client sends a slot-state write only to a server that registered the channel. Otherwise the write is neither sent nor shown.
 - A custom menu with no `validWhen` cannot be opened by a client's request, only by the server.
+- A custom menu panel the client has no `ClientMenu.panel` for, as on a server running another version of the mod, is logged as an error and shown as a plain panel of its slots.
 - The slot state a shulker box carries as an item is never sent to clients. A creative player who moves such an item sends the game's copy back without it, so its slot state is lost. Survival is unaffected.
 - Hoppers and dispensers ask a slot's gate, not the vetoes. No automation operation exists, so a lock meant to stop automation needs its own seam.
 - Only the `api` packages are public. Everything else is internal and may change in any release.
