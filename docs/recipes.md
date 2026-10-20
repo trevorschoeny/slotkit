@@ -150,6 +150,25 @@ QuickMoveRoutes.register((menu, player, source) -> {
 
 Result: while the bag is open, a shift-click from the inventory or an open chest fills the bag first, then goes where the menu sends it. The first route with an answer wins; `null` leaves the click to the next route, then to SlotKit's default. `Dest.group(id)` names a created group or a vanilla one (`SlotGroupId.category(...)`), `Dest.groupOf(menuSlot)` whatever group holds that slot, `Dest.PLAYER` the player's inventory and hotbar, and `Dest.VANILLA` the menu's own routing, which only comes last. A route that ends without it stops there and leaves the rest in the source. Every slot still judges the move: gates, vetoes, `shiftClickIn`, and slots past an active count.
 
+## Find and use items inside shulker boxes and bundles
+
+Since 2.0.0. `ItemSources` walks every item a player has, into shulker boxes and bundles to any depth, on the server. A take or a change writes back up through every container to the slot it started in.
+
+```java
+ItemScope scope = ItemScope.inventory().enderChest(true).shulkers(true).bundles(true);
+
+// Take one totem from anywhere in scope.
+ItemStack used = ItemSources.take(player, scope, s -> s.has(DataComponents.DEATH_PROTECTION), 1);
+
+// Or visit each item, change it in place, and commit.
+ItemSources.walk(player, scope, ref -> {
+    if (ref.stack().isDamaged()) { ref.stack().setDamageValue(0); ref.commit(); }
+    return true;                                    // false stops the walk
+});
+```
+
+Result: items are visited nearest first, level by level. The inventory's own slots come first (hotbar first), then everything one container deep, then two deep; the ender chest follows in the same order. A shulker keeps its slot positions and a bundle keeps its order. A screen showing the same shulker through item-backed storage sees the change on its next read. A reference whose slot or containers changed since it was read writes nothing, so `take` returns `EMPTY` and `commit` returns `false`. Server side only; armour, the offhand and the cursor aren't walked.
+
 ## Show a vanilla slot in your own panel
 
 Since 2.0.0. A `SlotElement` can present a slot the menu built itself. Here a furnace's fuel slot moves into a labelled panel beside the furnace:
