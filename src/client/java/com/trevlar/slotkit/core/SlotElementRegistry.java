@@ -42,17 +42,6 @@ public final class SlotElementRegistry {
         ACTIVE.remove(element);
     }
 
-    /** Whether an attached element already resolves to {@code slot} on {@code menu}. */
-    public static boolean presents(net.minecraft.world.inventory.AbstractContainerMenu menu,
-                                   net.minecraft.world.inventory.Slot slot) {
-        synchronized (ACTIVE) {
-            for (SlotElement element : ACTIVE) {
-                if (element.resolve(menu) == slot) return true;
-            }
-            return false;
-        }
-    }
-
     /** Whether any panel-hosted slot is currently attached. */
     public static boolean hasActive() {
         return !ACTIVE.isEmpty();
@@ -60,15 +49,22 @@ public final class SlotElementRegistry {
 
     /**
      * End of frame: parks every attached element's slot that no panel showed this
-     * frame, and clears the marks for the next one. So a slot whose panel is hidden,
+     * frame, and clears the marks for the next one. A slot several panels hold parks
+     * only when none of them showed it, so the shown one keeps it. So a slot whose panel is hidden,
      * out of its region, or hidden by the window sits where vanilla neither draws nor
      * hit-tests it. A slot a panel did show keeps the position that panel wrote, so
      * between frames input matches what is on screen.
      */
     static void parkUnpresented(net.minecraft.world.inventory.AbstractContainerMenu menu) {
         synchronized (ACTIVE) {
+            Set<net.minecraft.world.inventory.Slot> shown = Collections.newSetFromMap(new IdentityHashMap<>());
+            var screen = net.minecraft.client.Minecraft.getInstance().gui.screen();
             for (SlotElement element : ACTIVE) {
-                element.endFrame(menu);
+                var slot = element.shownThisFrame(menu);
+                if (slot != null && !shown.add(slot) && screen != null) element.warnShared(screen);
+            }
+            for (SlotElement element : ACTIVE) {
+                element.endFrame(menu, shown);
             }
         }
     }

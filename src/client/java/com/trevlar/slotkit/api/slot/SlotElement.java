@@ -104,6 +104,11 @@ import java.util.Objects;
  * frames matches what is on screen. ({@link CreatedSlot#isActive} handles a hidden
  * panel by itself; parking handles the other cases.)
  *
+ * <p>Several panels may hold the same slot, each gated by {@code visibleWhen} (one
+ * layout on survival's inventory, another on creative's): the panel shown this frame
+ * places it, and it parks only when none did. Two shown at once both write it, and
+ * SlotKit warns, since the slot can only be in one place.
+ *
  * <p>A vanilla slot parks only while its panel is shown (scrolled out of a
  * {@code ScrollContainer}, say). While its panel is hidden, or once the screen
  * closes, it goes back to where the menu put it ({@code SlotClip.panelShowing}), so
@@ -138,12 +143,8 @@ public final class SlotElement extends AbstractPanelElement {
     /** Whether a panel placed this element's slot this frame. Render thread only. */
     private boolean presented = false;
 
-    /**
-     * Whether another element on this screen already presents this element's slot.
-     * Such an element stays out of the way (no placement, no claim) so the first one
-     * keeps the slot: two panels writing one slot's position would fight every frame.
-     */
-    private boolean duplicate = false;
+    // Whether this element has warned that another shown panel holds its slot (once per screen).
+    private boolean warnedShared = false;
 
     // A vanilla slot's own position, read when the element attaches, so the slot can go
     // back there while its panel is hidden and when the screen closes.
@@ -261,12 +262,12 @@ public final class SlotElement extends AbstractPanelElement {
      * on {@code menu}.
      */
     @ApiStatus.Internal
-    public void endFrame(AbstractContainerMenu menu) {
+    public void endFrame(AbstractContainerMenu menu, java.util.Set<Slot> shownThisFrame) {
         boolean wasPresented = presented;
         presented = false;
-        if (wasPresented || duplicate) return;   // a duplicate never parks the first element's slot
+        if (wasPresented) return;
         Slot slot = resolve(menu);
-        if (slot == null) return;
+        if (slot == null || shownThisFrame.contains(slot)) return;   // another panel holding it showed it
         // A vanilla slot whose panel is hidden (or not on this screen) goes back to its
         // own place; one scrolled out of a shown panel parks, as a created slot always does.
         if (hasHome && !SlotClip.panelShowing(slot)) place(slot, homeX, homeY);
@@ -279,11 +280,27 @@ public final class SlotElement extends AbstractPanelElement {
      * (inert, which looks the same as absent).
      */
     private @Nullable Slot presented(@Nullable AbstractContainerMenu menu) {
-        if (menu == null || duplicate) return null;
+        if (menu == null) return null;
         Slot slot = resolve(menu);
         if (slot == null || panelId == null) return slot; // a vanilla slot is never inert
         CreatedSlot mk = CreatedSlotAccess.asMKCSlot(slot);
         return (mk == null || mk.isInert()) ? null : slot;
+    }
+
+    /** The slot {@link #render} placed this frame, before {@link #endFrame} clears the mark, or {@code null}. Library use. */
+    @ApiStatus.Internal
+    public @Nullable Slot shownThisFrame(AbstractContainerMenu menu) {
+        return presented ? resolve(menu) : null;
+    }
+
+    /** Warns, once per screen, that another shown panel also placed this element's slot. Library use. */
+    @ApiStatus.Internal
+    public void warnShared(Screen screen) {
+        if (warnedShared) return;
+        warnedShared = true;
+        org.slf4j.LoggerFactory.getLogger("SlotKit").warn(
+                "Two shown panels on {} hold the same slot ({}); it can only be in one place. "
+                + "Gate them with visibleWhen so one shows at a time.", screen.getClass().getSimpleName(), address);
     }
 
     /** The live in-menu slot the address names on {@code menu}, whatever its state. */
@@ -311,7 +328,7 @@ public final class SlotElement extends AbstractPanelElement {
 
     @Override
     public void onAttach(Screen screen) {
-        duplicate = false;
+        warnedShared = false;
         hasHome = false;
         if (screen instanceof AbstractContainerScreen<?> acs) {
             Slot mine = resolve(acs.getMenu());
@@ -320,12 +337,6 @@ public final class SlotElement extends AbstractPanelElement {
                 homeX = mine.x;
                 homeY = mine.y;
             }
-            if (mine != null && SlotElementRegistry.presents(acs.getMenu(), mine)) {
-                duplicate = true;
-                org.slf4j.LoggerFactory.getLogger("SlotKit").warn(
-                        "Two slot elements on {} present the same slot ({}); the first keeps it. "
-                        + "Present each slot in one panel only.", screen.getClass().getSimpleName(), address);
-            }
         }
         SlotElementRegistry.add(this);
     }
@@ -333,7 +344,7 @@ public final class SlotElement extends AbstractPanelElement {
     @Override
     public void onDetach(Screen screen) {
         // Hand a vanilla slot back its own place: the menu can outlive the screen.
-        if (hasHome && !duplicate && screen instanceof AbstractContainerScreen<?> acs) {
+        if (hasHome && screen instanceof AbstractContainerScreen<?> acs) {
             Slot slot = resolve(acs.getMenu());
             if (slot != null) place(slot, homeX, homeY);
         }
