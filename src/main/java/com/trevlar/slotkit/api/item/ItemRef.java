@@ -22,9 +22,12 @@ public interface ItemRef {
     enum Source { INVENTORY, ENDER_CHEST }
 
     /**
-     * The item. A top-level item is the live stack in its slot; a nested one is the
-     * walk's working copy. It may be changed in place (a repair, a component), and then
-     * {@link #commit} writes it back.
+     * The item. A top-level item is the live stack in its slot, so a change in place
+     * takes effect at once, stale or not; {@link #commit} only marks the container
+     * changed. A nested item is the walk's working copy: change it in place (a repair, a
+     * component) and {@link #commit} writes it back. Any later write through the same
+     * container (a take, put or commit of another item in it) writes it back too, so
+     * change a nested item only when it is to be kept.
      */
     ItemStack stack();
 

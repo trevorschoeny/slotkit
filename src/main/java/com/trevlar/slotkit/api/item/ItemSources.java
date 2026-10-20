@@ -84,9 +84,9 @@ public final class ItemSources {
     /**
      * Every item in scope that {@code test} accepts, nearest first, read only: paths and
      * copies, nothing written. Safe on either side. On the client it reads the contents
-     * that ride on the item stacks the client has; the ender chest's slots are only
-     * known to a client while it's open, so a client finds nothing there otherwise. A
-     * client sends a chosen {@link Found#path()} to the server, which acts on it with
+     * that ride on the item stacks the client has. Vanilla never sends a client its
+     * ender chest's contents outside the chest's own menu, so a client finds nothing
+     * there. A client sends a chosen {@link Found#path()} to the server, which acts on it with
      * {@link #at}.
      */
     public static List<Found> find(Player player, ItemScope scope, Predicate<ItemStack> test) {
@@ -185,9 +185,14 @@ public final class ItemSources {
             this.readFrom = readFrom;
         }
 
-        /** The holder for {@code ref}'s item if it's a shulker box or a bundle, or null. */
+        /**
+         * The holder for {@code ref}'s item if it's a single shulker box or bundle, or null.
+         * A stack of several (stackable shulkers from a mod or a data pack) shares one
+         * component, so writing into it would fill or empty every box at once.
+         */
         static @Nullable Holder open(Ref ref) {
             ItemStack stack = ref.stack();
+            if (stack.getCount() != 1) return null;
             if (isShulkerBox(stack)) {
                 // An empty box may carry no component at all; it still has 27 slots to put into.
                 ItemContainerContents c = stack.get(DataComponents.CONTAINER);
@@ -219,15 +224,17 @@ public final class ItemSources {
             } else {
                 if (!stack.getItem().canFitInsideContainerItems()) return rest;
                 int max = stack.getMaxStackSize();
-                for (ItemStack in : items) {                   // merge into matching stacks first
-                    if (rest.isEmpty()) break;
+                // Only a box's 27 slots: a placed box loads no more, so anything past them is lost.
+                int slots = Math.min(items.size(), SHULKER_SLOTS);
+                for (int i = 0; i < slots && !rest.isEmpty(); i++) {   // merge into matching stacks first
+                    ItemStack in = items.get(i);
                     if (!in.isEmpty() && ItemStack.isSameItemSameComponents(in, rest) && in.getCount() < max) {
                         int n = Math.min(max - in.getCount(), rest.getCount());
                         in.grow(n);
                         rest.shrink(n);
                     }
                 }
-                for (int i = 0; i < items.size() && !rest.isEmpty(); i++) {   // then empty slots
+                for (int i = 0; i < slots && !rest.isEmpty(); i++) {   // then empty slots
                     if (items.get(i).isEmpty()) items.set(i, rest.split(Math.min(max, rest.getCount())));
                 }
                 if (rest.getCount() == stack.getCount()) return rest;
@@ -296,7 +303,11 @@ public final class ItemSources {
             if (holder == null) return new ItemPath(top.source(), top.slot(), List.of());
             ItemPath up = holder.owner.path();
             List<Integer> inside = new ArrayList<>(up.inside());
-            inside.add(index);
+            // A bundle's component drops emptied stacks while this walk's list keeps them in
+            // place, so its index counts only the stacks before this one that are still there.
+            int at = index;
+            if (holder.bundle) for (int i = 0; i < index; i++) if (holder.items.get(i).isEmpty()) at--;
+            inside.add(at);
             return new ItemPath(up.source(), up.slot(), inside);
         }
 
