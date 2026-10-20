@@ -28,7 +28,7 @@ public final class ClientSlots {
      */
     public static boolean isShown(SlotGroupId.Created group) {
         if (!(Minecraft.getInstance().gui.screen() instanceof AbstractContainerScreen<?> acs)) return false;
-        // ponytail: a scan of menu.slots per call; cache per menu if a screen ever
+        // Scans menu.slots on every call; cache per menu if a screen ever
         // asks about many groups every frame.
         for (Slot slot : acs.getMenu().slots) {
             CreatedSlot created = CreatedSlotAccess.asMKCSlot(slot);

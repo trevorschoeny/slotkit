@@ -372,7 +372,7 @@ public abstract class StorageAttachment<O, C> {
          * changes a slot's stack in place ({@code grow} when stacking onto it, in a
          * click or a shift-click) and then calls only {@code setChanged}, so the stacks
          * handed out must be the ones that are written back: a fresh copy per
-         * {@code getStack} lost that growth, and the items with it. Reread whenever the
+         * {@code getStack} would lose that growth, and the items with it. Reread whenever the
          * item's component is no longer the one last read or written (another mod or a
          * command changed it). Weak keys, so a dropped stack frees its entry.
          */
@@ -474,8 +474,8 @@ public abstract class StorageAttachment<O, C> {
      * A storage over saved content that hands out one live list of stacks and writes it
      * back. Vanilla changes a slot's stack in place and then calls {@code setChanged}
      * (a shift-click merging into a partial stack, a split), so the stacks handed out
-     * must be the ones that are written back: a fresh copy per {@code getStack} dropped
-     * the change, losing or duplicating items. The list is read again whenever the saved
+     * must be the ones that are written back: a fresh copy per {@code getStack} would
+     * drop the change, losing or duplicating items. The list is read again whenever the saved
      * content no longer equals what it was read from (another storage over the same
      * owner, a command, death, another mod).
      */

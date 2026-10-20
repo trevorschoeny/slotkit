@@ -130,7 +130,7 @@ public final class ItemSources {
     // Every container kind, for following a path whatever scope found it.
     private static final ItemScope ANYWHERE = ItemScope.inventory().enderChest(true).shulkers(true).bundles(true);
 
-    // ── The walk ────────────────────────────────────────────────────────
+    // The walk
 
     /** One top-level container, level by level. Returns false when the visitor stopped. */
     private static boolean walkContainer(Container container, int slots, ItemRef.Source source,

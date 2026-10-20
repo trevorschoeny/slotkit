@@ -74,7 +74,7 @@ public final class VanillaAddressing {
                     || !(address.token() instanceof Token.IndexToken(int index))) return null;
             return index < menu.slots.size() ? menu.slots.get(index) : null;
         }
-        // ponytail: a scan over menu.slots (each slot's address is cached per menu);
+        // Scans menu.slots (each slot's address is cached per menu);
         // index it per menu if a panel ever hosts hundreds of container-addressed slots.
         for (Slot slot : menu.slots) {
             if (address.equals(com.trevlar.slotkit.api.window.SlotRef.addressOf(menu, slot))) return slot;

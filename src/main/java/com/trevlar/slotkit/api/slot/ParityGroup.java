@@ -74,8 +74,9 @@ public final class ParityGroup {
     private static volatile boolean projectionSourceRegistered = false;
 
     // Groups whose spec declared shiftClickIn(true): the shift-click targets on the
-    // player's inventory menu and after a menu's own routing elsewhere (QuickMoveRouting). Opt-in, so a group that
-    // never said so keeps vanilla's behaviour there.
+    // player's inventory menu, and after a menu's own routing elsewhere
+    // (QuickMoveRouting). Opt-in, so a group that never said so keeps vanilla's
+    // behaviour there.
     private static final Set<SlotGroupId> SHIFT_CLICK_TARGETS = ConcurrentHashMap.newKeySet();
 
     // Each group's SlotSpec.emptyIcon, read once by every CreatedSlot it builds.

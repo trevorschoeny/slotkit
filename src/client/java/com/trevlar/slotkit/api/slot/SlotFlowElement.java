@@ -19,12 +19,11 @@ import java.util.Objects;
  *
  * <h3>Why a flow and not a fixed grid</h3>
  *
- * A panel's slots used to sit at fixed {@code (childX, childY)}
- * positions on a column count the consumer declared. A panel whose groups reveal
- * separately had to pin a wide fixed width to reserve the largest extent. That left
- * empty space when only a narrow group was shown, and slid the panel sideways (a
- * flicker) when a wider group revealed over a narrow one near the screen edge. This
- * element has no fixed grid and no pinned width: the visible slots flow into whatever
+ * With slots at fixed {@code (childX, childY)} positions on a declared column count,
+ * a panel whose groups reveal separately has to pin a wide fixed width to reserve the
+ * largest extent. That leaves empty space when only a narrow group is shown, and
+ * slides the panel sideways (a flicker) when a wider group reveals over a narrow one
+ * near the screen edge. This element has no fixed grid and no pinned width: the visible slots flow into whatever
  * width the panel has this frame, and the panel fits around the result.
  *
  * <h3>Stable budget, fitted size</h3>

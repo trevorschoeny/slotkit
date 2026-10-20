@@ -50,9 +50,9 @@ public final class SlotElementRegistry {
     /**
      * End of frame: parks every attached element's slot that no panel showed this
      * frame, and clears the marks for the next one. A slot several panels hold parks
-     * only when none of them showed it, so the shown one keeps it. So a slot whose panel is hidden,
-     * out of its region, or hidden by the window sits where vanilla neither draws nor
-     * hit-tests it. A slot a panel did show keeps the position that panel wrote, so
+     * only when none of them showed it, so the shown one keeps it. A parked slot (one
+     * whose panel is hidden, out of its region, or hidden by the window) sits where
+     * vanilla neither draws nor hit-tests it. A slot a panel did show keeps the position that panel wrote, so
      * between frames input matches what is on screen.
      */
     static void parkUnpresented(net.minecraft.world.inventory.AbstractContainerMenu menu) {
