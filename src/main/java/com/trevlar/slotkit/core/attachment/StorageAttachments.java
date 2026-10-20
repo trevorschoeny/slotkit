@@ -37,6 +37,8 @@ public final class StorageAttachments {
     // registration, so this cache returns the same type for repeated
     // StorageAttachment declarations with the same id. That is allowed here because
     // consumers may reload static fields during hot reload in dev.
+    // Whether each player content attachment syncs to trackers, by id.
+    private static final ConcurrentHashMap<Identifier, Boolean> SYNCED = new ConcurrentHashMap<>();
     private static final ConcurrentHashMap<Identifier, AttachmentType<ItemContainerContents>> CACHE =
             new ConcurrentHashMap<>();
 
@@ -120,6 +122,12 @@ public final class StorageAttachments {
     public static AttachmentType<ItemContainerContents> registerPlayerContentAttachment(
             Identifier id, int defaultSlots, boolean syncToTrackers) {
         com.trevlar.menukit.api.Declarations.requireOpen("a storage attachment");
+        // Sync is fixed when the type is built, so one id can't be both kinds.
+        Boolean was = SYNCED.putIfAbsent(id, syncToTrackers);
+        if (was != null && was != syncToTrackers) {
+            throw new IllegalStateException("Storage attachment " + id + " is declared both with and without "
+                    + "playerAttachedVisible. Declare it once.");
+        }
         AttachmentType<ItemContainerContents> type = CACHE.computeIfAbsent(id, k -> {
             var builder = AttachmentRegistry.<ItemContainerContents>builder()
                     .persistent(ItemContainerContents.CODEC)

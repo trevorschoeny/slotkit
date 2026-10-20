@@ -301,9 +301,7 @@ public abstract class StorageAttachment<O, C> {
             // A PlayerStorage, so shift-click routing in CustomContainerMenu treats
             // this as the player side.
             return new PlayerFabricStorage(slotCount,
-                    () -> player.hasAttached(type)
-                            ? player.getAttached(type)
-                            : StorageAttachments.defaultEmpty(slotCount),
+                    () -> player.getAttached(type),
                     contents -> player.setAttached(type, contents),
                     () -> { /* Fabric saves player attachments; no setChanged */ });
         }
@@ -319,7 +317,7 @@ public abstract class StorageAttachment<O, C> {
     private static final class PlayerFabricStorage implements PlayerStorage {
         private final FabricAttachmentStorage delegate;
         PlayerFabricStorage(int slotCount,
-                             Supplier<ItemContainerContents> reader,
+                             Supplier<@Nullable ItemContainerContents> reader,
                              java.util.function.Consumer<ItemContainerContents> writer,
                              Runnable dirtyMarker) {
             this.delegate = new FabricAttachmentStorage(slotCount, reader, writer, dirtyMarker);
@@ -341,9 +339,7 @@ public abstract class StorageAttachment<O, C> {
         @Override public int slotCount() { return slotCount; }
         @Override public Storage bind(BlockEntity be) {
             return new FabricAttachmentStorage(slotCount,
-                    () -> be.hasAttached(type)
-                            ? be.getAttached(type)
-                            : StorageAttachments.defaultEmpty(slotCount),
+                    () -> be.getAttached(type),
                     contents -> be.setAttached(type, contents),
                     be::setChanged);
         }
@@ -360,9 +356,7 @@ public abstract class StorageAttachment<O, C> {
         @Override public int slotCount() { return slotCount; }
         @Override public Storage bind(Entity entity) {
             return new FabricAttachmentStorage(slotCount,
-                    () -> entity.hasAttached(type)
-                            ? entity.getAttached(type)
-                            : StorageAttachments.defaultEmpty(slotCount),
+                    () -> entity.getAttached(type),
                     contents -> entity.setAttached(type, contents),
                     () -> { /* Fabric saves entity attachments; no setChanged */ });
         }
@@ -454,58 +448,88 @@ public abstract class StorageAttachment<O, C> {
         }
     }
 
-    // Shared by both custom-spec wrappers. Reads the content again on every call.
+    // Shared by both custom-spec wrappers.
     private static <O, C> Storage bindCustomSpec(CustomAttachmentSpec<O, C> spec, O owner) {
-        return new Storage() {
-            @Override public ItemStack getStack(int i) {
-                C content = spec.read(owner);
-                return spec.toItemList(content).get(i);
-            }
-            @Override public void setStack(int i, ItemStack s) {
-                C content = spec.read(owner);
-                NonNullList<ItemStack> list = spec.toItemList(content);
-                list.set(i, s);
-                spec.write(owner, spec.fromItemList(list));
-                spec.markDirty(owner);
-            }
-            @Override public int size() { return spec.slotCount(); }
-            @Override public void markDirty() { spec.markDirty(owner); }
-        };
+        return new LiveListStorage<>(spec.slotCount(),
+                () -> spec.read(owner),
+                spec::toItemList,
+                list -> spec.write(owner, spec.fromItemList(list)),
+                () -> spec.markDirty(owner));
     }
 
-    // Storage backed by a Fabric attachment reader and writer. Every getStack reads
-    // afresh; every setStack builds new ItemContainerContents and writes it.
-    private static final class FabricAttachmentStorage implements Storage {
-        private final int slotCount;
-        private final Supplier<ItemContainerContents> reader;
-        private final java.util.function.Consumer<ItemContainerContents> writer;
-        private final Runnable dirtyMarker;
-
+    // Storage backed by a Fabric attachment. The reader returns null while nothing is attached.
+    private static final class FabricAttachmentStorage extends LiveListStorage<ItemContainerContents> {
         FabricAttachmentStorage(int slotCount,
-                                 Supplier<ItemContainerContents> reader,
+                                 Supplier<@Nullable ItemContainerContents> reader,
                                  java.util.function.Consumer<ItemContainerContents> writer,
                                  Runnable dirtyMarker) {
+            super(slotCount, reader,
+                    c -> StorageAttachments.contentsToList(c, slotCount),
+                    list -> writer.accept(StorageAttachments.listToContents(list)),
+                    dirtyMarker);
+        }
+    }
+
+    /**
+     * A storage over saved content that hands out one live list of stacks and writes it
+     * back. Vanilla changes a slot's stack in place and then calls {@code setChanged}
+     * (a shift-click merging into a partial stack, a split), so the stacks handed out
+     * must be the ones that are written back: a fresh copy per {@code getStack} dropped
+     * the change, losing or duplicating items. The list is read again whenever the saved
+     * content no longer equals what it was read from (another storage over the same
+     * owner, a command, death, another mod).
+     */
+    private static class LiveListStorage<C> implements Storage {
+        private final int slotCount;
+        private final Supplier<@Nullable C> reader;
+        private final java.util.function.Function<@Nullable C, NonNullList<ItemStack>> toList;
+        private final java.util.function.Consumer<NonNullList<ItemStack>> writer;
+        private final Runnable dirtyMarker;
+        private @Nullable NonNullList<ItemStack> list;
+        private @Nullable C readFrom;          // the saved content the list was read from
+
+        LiveListStorage(int slotCount, Supplier<@Nullable C> reader,
+                        java.util.function.Function<@Nullable C, NonNullList<ItemStack>> toList,
+                        java.util.function.Consumer<NonNullList<ItemStack>> writer,
+                        Runnable dirtyMarker) {
             this.slotCount = slotCount;
             this.reader = reader;
+            this.toList = toList;
             this.writer = writer;
             this.dirtyMarker = dirtyMarker;
         }
 
-        @Override public ItemStack getStack(int i) {
-            NonNullList<ItemStack> list =
-                    StorageAttachments.contentsToList(reader.get(), slotCount);
-            return list.get(i);
+        /** The live list, read again if the saved content changed since. */
+        private NonNullList<ItemStack> live() {
+            C now = reader.get();
+            if (list == null || (now != readFrom && !java.util.Objects.equals(now, readFrom))) {
+                list = toList.apply(now);
+                readFrom = now;
+            }
+            return list;
         }
 
-        @Override public void setStack(int i, ItemStack s) {
-            NonNullList<ItemStack> list =
-                    StorageAttachments.contentsToList(reader.get(), slotCount);
-            list.set(i, s);
-            writer.accept(StorageAttachments.listToContents(list));
+        // Writes the list and records what was saved, so the next read keeps this list.
+        private void writeBack(NonNullList<ItemStack> l) {
+            writer.accept(l);
+            readFrom = reader.get();
             dirtyMarker.run();
         }
 
+        @Override public ItemStack getStack(int i) { return live().get(i); }
+
+        @Override public void setStack(int i, ItemStack s) {
+            NonNullList<ItemStack> l = live();
+            l.set(i, s);
+            writeBack(l);
+        }
+
         @Override public int size() { return slotCount; }
-        @Override public void markDirty() { dirtyMarker.run(); }
+
+        @Override public void markDirty() {
+            // A stack handed out by getStack may have changed in place. live() first: if
+            // the saved content changed meanwhile, that list is gone and so is the change.
+            writeBack(live());
+        }
     }
 }
