@@ -35,6 +35,17 @@ public interface ItemRef {
     ItemStack take(int count);
 
     /**
+     * Puts {@code stack} into this item, when this item is a shulker box or a bundle, by
+     * vanilla's rules: a shulker box takes what may go inside a container item, merging
+     * into matching stacks before empty slots; a bundle takes what its weight allows.
+     * Writes back up the chain and returns what didn't fit, never changing
+     * {@code stack} itself. Returns all of it when this item isn't a container or the
+     * ref is stale. After a put, other refs from the same walk into this container are
+     * stale (a bundle's order changes), so walk again to read it.
+     */
+    ItemStack put(ItemStack stack);
+
+    /**
      * Writes an in-place change to {@link #stack()} back up the chain. Returns
      * {@code false}, writing nothing, if the ref is stale.
      */

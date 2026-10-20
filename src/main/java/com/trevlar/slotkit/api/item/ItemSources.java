@@ -118,7 +118,7 @@ public final class ItemSources {
         if (top.isEmpty()) return null;
         Ref ref = new Ref(new Top(container, path.slot(), top, path.source()), null, -1, top, 0);
         for (int index : path.inside()) {
-            Holder holder = Holder.open(ref, ANYWHERE);
+            Holder holder = ref.child();
             if (holder == null || index < 0 || index >= holder.items.size()) return null;
             ItemStack inner = holder.items.get(index);
             if (inner.isEmpty()) return null;
@@ -148,8 +148,8 @@ public final class ItemSources {
             if (level.get(0).depth >= scope.maxDepth()) break;
             List<Ref> next = new ArrayList<>();
             for (Ref ref : level) {
-                Holder holder = Holder.open(ref, scope);
-                if (holder == null) continue;
+                Holder holder = ref.child();
+                if (holder == null || !(holder.bundle ? scope.bundles() : scope.shulkers())) continue;
                 for (int i = 0; i < holder.items.size(); i++) {
                     ItemStack inner = holder.items.get(i);
                     if (!inner.isEmpty()) next.add(new Ref(ref.top, holder, i, inner, ref.depth + 1));
@@ -173,34 +173,74 @@ public final class ItemSources {
         final Ref owner;                 // the ref of the shulker box or bundle itself
         final boolean bundle;
         final List<ItemStack> items;
-        Object readFrom;                 // the component object the list was read from
+        @Nullable Object readFrom;       // the component object the list was read from (null: none yet)
+        // Bumped by a put, which may reorder the list (a bundle inserts at the front): refs
+        // read before it are stale, so none of them can write a list it no longer matches.
+        int generation;
 
-        private Holder(Ref owner, boolean bundle, List<ItemStack> items, Object readFrom) {
+        private Holder(Ref owner, boolean bundle, List<ItemStack> items, @Nullable Object readFrom) {
             this.owner = owner;
             this.bundle = bundle;
             this.items = items;
             this.readFrom = readFrom;
         }
 
-        /** The holder for {@code ref}'s item if it's a container in scope, or null. */
-        static @Nullable Holder open(Ref ref, ItemScope scope) {
+        /** The holder for {@code ref}'s item if it's a shulker box or a bundle, or null. */
+        static @Nullable Holder open(Ref ref) {
             ItemStack stack = ref.stack();
-            if (scope.shulkers() && isShulkerBox(stack)) {
+            if (isShulkerBox(stack)) {
+                // An empty box may carry no component at all; it still has 27 slots to put into.
                 ItemContainerContents c = stack.get(DataComponents.CONTAINER);
-                if (c == null) return null;
-                return new Holder(ref, false, new ArrayList<>(c.itemCopies().toList()), c);
+                List<ItemStack> items = new ArrayList<>(c == null ? List.of() : c.itemCopies().toList());
+                while (items.size() < SHULKER_SLOTS) items.add(ItemStack.EMPTY);
+                return new Holder(ref, false, items, c);
             }
-            if (scope.bundles()) {
-                BundleContents c = stack.get(DataComponents.BUNDLE_CONTENTS);
-                if (c == null) return null;
-                return new Holder(ref, true, new ArrayList<>(c.itemCopies().toList()), c);
+            BundleContents c = stack.get(DataComponents.BUNDLE_CONTENTS);
+            if (c == null) return null;
+            return new Holder(ref, true, new ArrayList<>(c.itemCopies().toList()), c);
+        }
+
+        /**
+         * Puts what fits of {@code stack} in, by vanilla's rules, and writes back. Returns
+         * what didn't fit. A shulker box takes anything that may go inside a container
+         * item, merging into matching stacks first, then empty slots. A bundle takes what
+         * its weight allows, the way vanilla's bundle insert does (newest first).
+         */
+        ItemStack put(ItemStack stack) {
+            ItemStack rest = stack.copy();
+            if (bundle) {
+                BundleContents.Mutable m = new BundleContents(items.stream()
+                        .filter(s -> !s.isEmpty()).map(ItemStackTemplate::fromNonEmptyStack).toList()).asMutable();
+                int moved = m.tryInsert(stack.copy());
+                if (moved <= 0) return rest;
+                rest.shrink(moved);
+                items.clear();
+                items.addAll(m.toImmutable().itemCopies().toList());
+            } else {
+                if (!stack.getItem().canFitInsideContainerItems()) return rest;
+                int max = stack.getMaxStackSize();
+                for (ItemStack in : items) {                   // merge into matching stacks first
+                    if (rest.isEmpty()) break;
+                    if (!in.isEmpty() && ItemStack.isSameItemSameComponents(in, rest) && in.getCount() < max) {
+                        int n = Math.min(max - in.getCount(), rest.getCount());
+                        in.grow(n);
+                        rest.shrink(n);
+                    }
+                }
+                for (int i = 0; i < items.size() && !rest.isEmpty(); i++) {   // then empty slots
+                    if (items.get(i).isEmpty()) items.set(i, rest.split(Math.min(max, rest.getCount())));
+                }
+                if (rest.getCount() == stack.getCount()) return rest;
             }
-            return null;
+            generation++;
+            write();
+            return rest;
         }
 
         /** True while this holder's component is still the one its list was read from, all the way up. */
         boolean unchanged() {
             Object now = owner.stack().get(bundle ? DataComponents.BUNDLE_CONTENTS : DataComponents.CONTAINER);
+            // A box with no component yet reads as null; one that gained contents since is changed.
             return now == readFrom && owner.unchanged();
         }
 
@@ -228,6 +268,9 @@ public final class ItemSources {
         final int index;
         final ItemStack stack;
         final int depth;
+        final int generation;                  // the holder's generation when this ref was read
+        private @Nullable Holder child;        // this item's own contents, opened once and shared
+        private boolean childOpened;
 
         Ref(Top top, @Nullable Holder holder, int index, ItemStack stack, int depth) {
             this.top = top;
@@ -235,6 +278,13 @@ public final class ItemSources {
             this.index = index;
             this.stack = stack;
             this.depth = depth;
+            this.generation = holder == null ? 0 : holder.generation;
+        }
+
+        /** This item's contents if it's a shulker box or bundle, or null. Every ref into it shares one. */
+        @Nullable Holder child() {
+            if (!childOpened) { child = Holder.open(this); childOpened = true; }
+            return child;
         }
 
         @Override public ItemStack stack() { return stack; }
@@ -252,7 +302,7 @@ public final class ItemSources {
 
         /** Nothing on this ref's chain changed since it was read. */
         boolean unchanged() {
-            return holder == null ? top.stillThere() : holder.unchanged();
+            return holder == null ? top.stillThere() : holder.generation == generation && holder.unchanged();
         }
 
         /** Writes this item's place back: its holder's list (it's already in it), then up. */
@@ -270,12 +320,21 @@ public final class ItemSources {
         }
 
         @Override
+        public ItemStack put(ItemStack stack) {
+            Holder into = child();
+            if (stack.isEmpty() || into == null || !unchanged() || !into.unchanged()) return stack.copy();
+            return into.put(stack);
+        }
+
+        @Override
         public boolean commit() {
             if (!unchanged()) return false;
             write();
             return true;
         }
     }
+
+    private static final int SHULKER_SLOTS = 27;
 
     private static boolean isShulkerBox(ItemStack stack) {
         return stack.getItem() instanceof BlockItem block && block.getBlock() instanceof ShulkerBoxBlock;
