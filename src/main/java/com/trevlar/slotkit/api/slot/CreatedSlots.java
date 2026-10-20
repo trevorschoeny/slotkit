@@ -134,7 +134,8 @@ public final class CreatedSlots {
      * do nothing with it. The creative wrapper is parked at the same coordinate
      * ({@code SKCreativeSlotParkMixin}).
      */
-    static final int OFFSCREEN = -10000;
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public static final int OFFSCREEN = -10000;
 
     private CreatedSlots() {}
 

@@ -60,7 +60,7 @@ import java.util.function.Predicate;
  *
  * Projection only puts the slots on the foreign menu. The mod's own panel draws them
  * (each slot is a {@code SlotElement} in it, on whatever screens its adapter
- * accepts). Shift-click into them is the handler's own {@code quickMoveStack}, and creative placement is the creative
+ * accepts). Shift-click into and out of them is SlotKit's routing ({@code QuickMoveRouting}), which keeps the handler's own {@code quickMoveStack} out of them, and creative placement is the creative
  * set-slot bridge, which now works on any menu. A consumer that wants pockets on a
  * chest registers a projection source here and also widens its panel adapter's
  * targeting to that screen.

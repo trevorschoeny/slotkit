@@ -127,9 +127,9 @@ public class CreatedSlot extends Slot {
     }
 
     /**
-     * True when this slot's panel is hidden. To the outside world an inert slot looks
-     * like no slot at all: getItem returns EMPTY, mayPlace returns false, and
-     * shift-click skips it.
+     * True when this slot's panel is hidden, or the slot is past its group's active
+     * count. To the outside world an inert slot looks like no slot at all: getItem
+     * returns EMPTY, set does nothing, mayPlace returns false, and shift-click skips it.
      *
      * <p>Public for third parties that want to check directly rather than rely on
      * those methods.
@@ -200,6 +200,18 @@ public class CreatedSlot extends Slot {
     public ItemStack getItem() {
         if (isInert()) return ItemStack.EMPTY;
         return super.getItem();
+    }
+
+    /**
+     * Writes the stack, unless the slot is inert. An inert slot reads as EMPTY, so a
+     * write to it is the world catching up with that EMPTY (the server syncing it to
+     * the client, a creative client sending it back), not a real change. Taking it
+     * would wipe the items the slot's storage still holds.
+     */
+    @Override
+    public void set(ItemStack stack) {
+        if (isInert()) return;
+        super.set(stack);
     }
 
     /**

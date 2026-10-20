@@ -3,6 +3,7 @@ package com.trevlar.slotkit.api.menu;
 import com.trevlar.slotkit.api.slot.CreatedSlot;
 import com.trevlar.slotkit.api.menu.MenuPanel;
 import com.trevlar.slotkit.api.slot.CreatedSlotGroup;
+import com.trevlar.slotkit.api.slot.CreatedSlots;
 import com.trevlar.slotkit.api.storage.StorageContainerAdapter;
 
 import net.minecraft.world.entity.player.Player;
@@ -126,10 +127,10 @@ public class CustomContainerMenu extends AbstractContainerMenu {
                 adapters.add(adapter);
                 int groupStart = flatIndex;
                 for (int local = 0; local < group.getStorage().size(); local++) {
-                    // A placeholder grid; the client screen positions slots every frame.
-                    int x = 8 + (flatIndex % 9) * 18;
-                    int y = 18 + (flatIndex / 9) * 18;
-                    addSlot(new CreatedSlot(adapter, local, x, y, group, panel, group.id(), local));
+                    // Parked off screen: a SlotElement in the panel places the slot, and a
+                    // slot no element presents stays where nothing draws or clicks it.
+                    addSlot(new CreatedSlot(adapter, local, CreatedSlots.OFFSCREEN, CreatedSlots.OFFSCREEN,
+                            group, panel, group.id(), local));
                     flatIndex++;
                 }
                 group.setFlatIndexRange(groupStart, flatIndex);

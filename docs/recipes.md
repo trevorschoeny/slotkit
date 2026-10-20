@@ -148,7 +148,7 @@ BAG_SLOTS.setActiveCount(player, 27);
 BAG_SLOTS.setActiveCount(player, 0);
 ```
 
-Result: the group is closed until the server opens it, and then shows exactly the live slots: `SlotFlowElement` lays out only those, and `ClientSlots.isShown` is false at 0. The count is the player's, so it holds on every menu, a chest opened meanwhile included. It goes back to the declared start on respawn and on a new login, and isn't saved. The client hears a change before the slots' contents sync, so a closed group's items never reach it.
+Result: the group is closed until the server opens it, and then shows exactly the live slots: `SlotFlowElement` lays out only those, and `ClientSlots.isShown` is false at 0. The count is the player's, so it holds on every menu, a chest opened meanwhile included. It goes back to the declared start after death and on a new login, and isn't saved. The client hears a change before the slots' contents sync, so a closed group's items never reach it.
 
 ## Decide where a shift-click goes
 

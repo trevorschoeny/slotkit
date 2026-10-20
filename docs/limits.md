@@ -23,7 +23,7 @@ Behaviour that is incomplete in the current release.
 | Block-portable content | Slot state travels with a carried shulker box. General content travel for other blocks does not. |
 | Item sources reach | `ItemSources` walks the inventory's 36 main slots, the ender chest, shulker boxes and bundles. Armour, the offhand, the cursor and created slots are not walked. Inside items, it opens shulker boxes and any item with bundle contents, and no other container. A stack of more than one shulker box or bundle is not opened, since its boxes share one set of contents. |
 | Item sources on the client | `find` reads only what the client has. Vanilla sends a client its ender chest's contents only inside the chest's own menu, so a client finds nothing there. Every write happens on the server. |
-| Active counts | Held per player for the session. They reset to the declared start on respawn and on login, and are not saved. |
+| Active counts | Held per player for the session. They reset to the declared start after death and on login, and are not saved. |
 
 ## Runtime constraints
 

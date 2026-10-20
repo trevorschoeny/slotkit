@@ -146,7 +146,7 @@ public final class ParityGroup {
      * {@code 0..count-1} live, the rest inert on both sides. Server only, on the
      * server thread. The count is the player's, so it holds on every menu carrying
      * the group (a chest opened meanwhile included) until the server changes it or the
-     * player respawns or logs out, when it returns to the declared start. The client
+     * player dies or logs out, when it returns to the declared start. The client
      * hears at once, before the slots' contents sync, and when the count drops the
      * next sync sends those slots empty, so a closed item's contents never reach it.
      * Setting the same count again sends nothing.

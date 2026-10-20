@@ -19,7 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Each player's active count per opted-in group ({@code SlotSpec.activeCount}). The
- * server owns it, per {@code ServerPlayer}: a new one (login, respawn) starts every
+ * server owns it, per {@code ServerPlayer}: a new login or a death starts every
  * group at its declared start, and the client is sent a snapshot then. The client
  * keeps one copy for the local player, replaced by snapshots, changed by updates and
  * cleared on disconnect. Not saved: a session doesn't outlive a connection.
@@ -94,9 +94,18 @@ public final class ActiveCounts {
 
     public static void registerCommon() {
         PayloadTypeRegistry.clientboundPlay().register(ActiveCountS2CPayload.TYPE, ActiveCountS2CPayload.STREAM_CODEC);
-        // A fresh ServerPlayer starts at the declared counts; the client hears so.
+        // A new login or a death starts at the declared counts; the client hears so.
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) -> sendSnapshot(handler.player));
-        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> sendSnapshot(newPlayer));
+        ServerPlayerEvents.AFTER_RESPAWN.register((oldPlayer, newPlayer, alive) -> {
+            // Leaving the End also builds a new ServerPlayer, but nothing ended: keep the counts.
+            if (alive) {
+                synchronized (SERVER) {
+                    Map<String, Integer> old = SERVER.get(oldPlayer);
+                    if (old != null) SERVER.put(newPlayer, new HashMap<>(old));
+                }
+            }
+            sendSnapshot(newPlayer);
+        });
     }
 
     private static void sendSnapshot(ServerPlayer player) {

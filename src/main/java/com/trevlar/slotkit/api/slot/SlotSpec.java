@@ -156,7 +156,7 @@ public final class SlotSpec {
      * {@link #count}; only the count moves. A group without this is always its full
      * count, with no sync traffic.
      *
-     * @param startCount the count a player starts at, on login and after respawn, from
+     * @param startCount the count a player starts at, on login and after death, from
      *                   {@code 0} to {@link #count}
      */
     public SlotSpec activeCount(int startCount) {
