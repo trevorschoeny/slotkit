@@ -108,13 +108,31 @@ public final class StorageAttachments {
      */
     public static AttachmentType<ItemContainerContents> registerPlayerContentAttachment(
             Identifier id, int defaultSlots) {
+        return registerPlayerContentAttachment(id, defaultSlots, false);
+    }
+
+    /**
+     * {@link #registerPlayerContentAttachment(Identifier, int)}, optionally also synced by
+     * Fabric to every client tracking the player (the owner included), for content other
+     * players see. Sync is fixed at registration, which is why it's a parameter here and
+     * not a later call. Called by {@code StorageAttachment.playerAttachedVisible}.
+     */
+    public static AttachmentType<ItemContainerContents> registerPlayerContentAttachment(
+            Identifier id, int defaultSlots, boolean syncToTrackers) {
         com.trevlar.menukit.api.Declarations.requireOpen("a storage attachment");
-        AttachmentType<ItemContainerContents> type = CACHE.computeIfAbsent(id, k ->
-                AttachmentRegistry.<ItemContainerContents>builder()
-                        .persistent(ItemContainerContents.CODEC)
-                        .copyOnDeath()
-                        .initializer(() -> defaultEmpty(defaultSlots))
-                        .buildAndRegister(k));
+        AttachmentType<ItemContainerContents> type = CACHE.computeIfAbsent(id, k -> {
+            var builder = AttachmentRegistry.<ItemContainerContents>builder()
+                    .persistent(ItemContainerContents.CODEC)
+                    .copyOnDeath()
+                    .initializer(() -> defaultEmpty(defaultSlots));
+            if (syncToTrackers) {
+                // Fabric sends it when a client starts tracking the player and on every
+                // change after, so a player coming into view sees the current contents.
+                builder.syncWith(ItemContainerContents.STREAM_CODEC,
+                        net.fabricmc.fabric.api.attachment.v1.AttachmentSyncPredicate.all());
+            }
+            return builder.buildAndRegister(k);
+        });
         ATTACHMENT_SIZES.putIfAbsent(type, defaultSlots);
         PLAYER_DEATH_DROP.putIfAbsent(type, DropRule.DEFAULT);
         return type;

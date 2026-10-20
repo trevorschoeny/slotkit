@@ -153,6 +153,29 @@ public abstract class StorageAttachment<O, C> {
     }
 
     /**
+     * {@link #playerAttached(String, String, int)}, with the contents also sent to every
+     * client tracking the player, for slots whose items other players see: an elytra
+     * worn from its own slot, a cape, anything drawn on the player model. Each client
+     * then reads the contents with {@code bind(otherPlayer)} as it does its own.
+     *
+     * <p>Opt in only for visible gear. A player's own client already gets its slots
+     * through the menu, and what's in most slots (pockets, a totem) is nobody else's
+     * business. The sync uses Fabric's attachment sync: sent when a client starts
+     * tracking the player, then on every change. Since 2.0.0.
+     *
+     * @param namespace attachment-id namespace (consumer's mod id)
+     * @param path      attachment-id path (unique per consumer-declared attachment)
+     * @param slotCount number of item slots the content holds
+     */
+    public static PlayerStorageAttachment<NonNullList<ItemStack>> playerAttachedVisible(
+            String namespace, String path, int slotCount) {
+        Identifier id = Identifier.fromNamespaceAndPath(namespace, path);
+        AttachmentType<ItemContainerContents> type =
+                StorageAttachments.registerPlayerContentAttachment(id, slotCount, true);
+        return new PlayerAttachment(slotCount, type);
+    }
+
+    /**
      * Saves slot-group content on a {@link BlockEntity} in a Fabric attachment. The
      * content lives as long as the block: breaking it destroys the attachment and
      * drops the content, as for a vanilla container. For containers that go with
