@@ -3,6 +3,7 @@ package com.trevlar.slotkit.api.item;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
@@ -76,6 +77,58 @@ public final class ItemSources {
         });
         return taken[0];
     }
+
+    /** One item {@link #find} saw: where it is, and a copy of it ({@code path().depth()} is how deep). */
+    public record Found(ItemPath path, ItemStack stack) {}
+
+    /**
+     * Every item in scope that {@code test} accepts, nearest first, read only: paths and
+     * copies, nothing written. Safe on either side. On the client it reads the contents
+     * that ride on the item stacks the client has; the ender chest's slots are only
+     * known to a client while it's open, so a client finds nothing there otherwise. A
+     * client sends a chosen {@link Found#path()} to the server, which acts on it with
+     * {@link #at}.
+     */
+    public static List<Found> find(Player player, ItemScope scope, Predicate<ItemStack> test) {
+        List<Found> out = new ArrayList<>();
+        ItemVisitor collect = ref -> {
+            if (test.test(ref.stack())) out.add(new Found(ref.path(), ref.stack().copy()));
+            return true;
+        };
+        if (walkContainer(player.getInventory(), 36, ItemRef.Source.INVENTORY, scope, collect) && scope.enderChest()) {
+            Container ender = player.getEnderChestInventory();
+            walkContainer(ender, ender.getContainerSize(), ItemRef.Source.ENDER_CHEST, scope, collect);
+        }
+        return out;
+    }
+
+    /**
+     * The live item at {@code path}, or {@code null} when it isn't there: a slot out of
+     * range, an empty slot, an index past a container's contents, or a step through an
+     * item that isn't a shulker box or bundle. For acting on a path a client chose: the
+     * server checks the item is still what the client expects, then takes from it. The
+     * reference is as fresh as a walk's, so a take writes back up the chain.
+     */
+    public static @Nullable ItemRef at(ServerPlayer player, ItemPath path) {
+        if (path.depth() > ANYWHERE.maxDepth()) return null;
+        Container container = path.source() == ItemRef.Source.INVENTORY ? player.getInventory() : player.getEnderChestInventory();
+        int slots = path.source() == ItemRef.Source.INVENTORY ? 36 : container.getContainerSize();
+        if (path.slot() < 0 || path.slot() >= slots) return null;
+        ItemStack top = container.getItem(path.slot());
+        if (top.isEmpty()) return null;
+        Ref ref = new Ref(new Top(container, path.slot(), top, path.source()), null, -1, top, 0);
+        for (int index : path.inside()) {
+            Holder holder = Holder.open(ref, ANYWHERE);
+            if (holder == null || index < 0 || index >= holder.items.size()) return null;
+            ItemStack inner = holder.items.get(index);
+            if (inner.isEmpty()) return null;
+            ref = new Ref(ref.top, holder, index, inner, ref.depth + 1);
+        }
+        return ref;
+    }
+
+    // Every container kind, for following a path whatever scope found it.
+    private static final ItemScope ANYWHERE = ItemScope.inventory().enderChest(true).shulkers(true).bundles(true);
 
     // ── The walk ────────────────────────────────────────────────────────
 
@@ -187,6 +240,15 @@ public final class ItemSources {
         @Override public ItemStack stack() { return stack; }
         @Override public int depth() { return depth; }
         @Override public Source source() { return top.source(); }
+
+        @Override
+        public ItemPath path() {
+            if (holder == null) return new ItemPath(top.source(), top.slot(), List.of());
+            ItemPath up = holder.owner.path();
+            List<Integer> inside = new ArrayList<>(up.inside());
+            inside.add(index);
+            return new ItemPath(up.source(), up.slot(), inside);
+        }
 
         /** Nothing on this ref's chain changed since it was read. */
         boolean unchanged() {

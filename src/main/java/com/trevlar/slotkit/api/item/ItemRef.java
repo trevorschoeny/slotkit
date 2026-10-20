@@ -45,4 +45,7 @@ public interface ItemRef {
 
     /** Whether the top-level slot is in the inventory or the ender chest. */
     Source source();
+
+    /** Where this item is, as a path both sides can name (see {@link ItemPath}). */
+    ItemPath path();
 }
