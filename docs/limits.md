@@ -21,6 +21,9 @@ Behaviour that is incomplete in the current release.
 | Advancements | Created slots use a separate container and do not fire vanilla's inventory-change trigger. The consumer fires it. |
 | Item-attached storage | Uses vanilla's container component only. |
 | Block-portable content | Slot state travels with a carried shulker box. General content travel for other blocks does not. |
+| Item sources reach | `ItemSources` walks the inventory's 36 main slots, the ender chest, shulker boxes and bundles. Armour, the offhand, the cursor and created slots are not walked. Inside items, it opens shulker boxes and any item with bundle contents, and no other container. A stack of more than one shulker box or bundle is not opened, since its boxes share one set of contents. |
+| Item sources on the client | `find` reads only what the client has. Vanilla sends a client its ender chest's contents only inside the chest's own menu, so a client finds nothing there. Every write happens on the server. |
+| Active counts | Held per player for the session. They reset to the declared start on respawn and on login, and are not saved. |
 
 ## Runtime constraints
 
@@ -36,4 +39,5 @@ Behaviour that is incomplete in the current release.
 - The slot state a shulker box carries as an item is never sent to clients. A creative player who moves such an item sends the game's copy back without it, so its slot state is lost. Survival is unaffected.
 - Hoppers and dispensers ask a slot's gate, not the vetoes. No automation operation exists, so a lock meant to stop automation needs its own seam.
 - Only the `api` packages are public. Everything else is internal and may change in any release.
+- `ItemSources` and `ItemRef` writes run on the server thread only. A walk goes at most 16 containers deep by default (`ItemScope.maxDepth`), and `ItemPath.STREAM_CODEC` refuses a path deeper than 16.
 - The dev runtime assigns a new offline player UUID per launch. Test player-scoped persistence across quit-to-title and re-enter within one launch.

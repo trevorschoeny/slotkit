@@ -4,7 +4,7 @@ Definitions of the terms SlotKit coins and the rules that bind consumer code. Ev
 
 ## SlotKit and MenuKit
 
-SlotKit is one mod, `slotkit`, built on MenuKit. It holds everything about slots: slot groups and categories, slot operations and vetoes, addresses and the window, created slots, custom menus, storage, and per-slot state. SlotKit depends on MenuKit 7 and uses only MenuKit's public API. MenuKit does not depend on SlotKit.
+SlotKit is one mod, `slotkit`, built on MenuKit. It holds everything about slots: slot groups and categories, slot operations and vetoes, addresses and the window, created slots, custom menus, storage, and per-slot state. SlotKit depends on MenuKit 7.3 and uses only MenuKit's public API. MenuKit does not depend on SlotKit.
 
 SlotKit was MenuKit: Containers, plus the slot code MenuKit carried before 7.0.0. [upgrading.md](upgrading.md) moves a mod from Containers or from MenuKit 6's slot code.
 
@@ -17,10 +17,11 @@ The API is the `api` packages: `com.trevlar.slotkit.api.*`. [Versioning](version
 | `api` | `Presence`, what the other side runs | Both |
 | `api.group` | Slot groups, categories, sets, resolvers, `SlotGroupPanelAdapter` | Client |
 | `api.window` | Addresses, the window, behaviour keys, slot operations, gates and vetoes | Client |
-| `api.slot` | Created slots, container panels, `SlotSpec` | Client and server |
+| `api.slot` | Created slots, `ParityGroup`, `SlotSpec`, shift-click routes, and the client-only `SlotElement`, `SlotFlowElement` and `ClientSlots` | Client and server |
 | `api.menu` | Custom container menus and their screens | Client and server |
 | `api.storage` | `Storage` and storage attachments | Client and server |
 | `api.state` | Slot-state channels | Client and server |
+| `api.item` | `ItemSources`: items in the inventory, the ender chest, shulker boxes and bundles | Server; `find` on both |
 
 ## Two tiers
 
@@ -120,7 +121,7 @@ Groups and sets are named like operations. `SlotGroups.name(id)` and `name(set)`
 
 `SlotGroups.of(slotRef)` names the group of the slot a `SlotRef` describes. For a created slot it is the slot's own group, never its category's, so a veto can tell a pocket from the main inventory. For a vanilla slot it is the slot's group on its menu. For a player-inventory slot with no menu, as in a world pickup, it is the vanilla group its index sits in.
 
-A container-panel group registers at init and is listed from the title screen. A group built with a menu (`CreatedSlots.onto`) is listed after the first menu that carries it. To list it from the title screen, its mod declares it at init with `SlotGroups.declare`.
+A `ParityGroup` registers at init and is listed from the title screen. A group built with a menu (`CreatedSlots.onto`) is listed after the first menu that carries it. To list it from the title screen, its mod declares it at init with `SlotGroups.declare`.
 
 Pick a vanilla category when the group is one of those things. A pocket group that declares `PLAYER_INVENTORY` appears in every inventory search, including searches run by mods with no knowledge of pockets. Mint a category when no vanilla one gives another mod the right answer: `new SlotGroupCategory("mymod", "pouch")`. A category name is a public contract once another mod depends on it. Renaming one is a breaking change.
 
@@ -176,6 +177,22 @@ The code that builds slots, stores state and judges writes is common, and runs o
 
 Only a `required` mod builds created slots ([Declaring sides](#declaring-sides)). A client on a server without SlotKit, or without the mod, builds none of that mod's slots and sends nothing SlotKit-only there, instead of desyncing.
 
+## Parity group
+
+A `ParityGroup` is a group of created slots on the player, registered once in common code with `ParityGroup.register(owner, spec)`. The `SlotSpec` holds the group's id, category, slot count, storage and rules. Both sides build the same slots from the same registration, which is what parity means here, and the join check compares each mod's parity groups and their slot counts ([Declaring sides](#declaring-sides)). The slots sit on the player's inventory menu and on every container menu, so a player reaches them from any screen.
+
+A parity group has no position and no look. The mod shows it in a MenuKit panel of its own, from the client initializer:
+
+- `SlotFlowElement.of(group)` lays a group's slots out at vanilla's 18 px pitch and wraps them to the panel's width. `SlotFlowElement.builder().addGroup(...)` puts several groups in one flow.
+- `SlotElement.builder().slot(group.id(), i).at(x, y)` places one slot by hand. A `SlotElement` can also show a slot the menu built itself, named by an `Address`.
+- `ClientSlots.isShown(group.id())` is false where the group's slots are not live, such as on a server without SlotKit, so a panel can hide with them.
+
+One element presents a slot at a time. On a screen with no element for it, the slot stays on the menu, parked where nothing draws or clicks it.
+
+**Active count.** `SlotSpec.activeCount(start)` lets the server decide how many of the group's slots are live for each player, changed with `group.setActiveCount(player, n)`. Slots past the count are inert on both sides: they sync to the client as empty and refuse clicks and shift-clicks. `SlotFlowElement` lays out only the live slots. The count belongs to the player, so it holds on every menu. It returns to the declared start on respawn and on a new login, and is not saved. Lowering the count leaves the items in storage. A mod that shrinks a group decides what happens to them.
+
+**Shift-click routes.** A route registered with `QuickMoveRoutes.register` answers which destinations a shift-clicked stack tries, in order, for the slot it came from. Routes are registered in common code and run on both sides, the client to predict the move. The first route with an answer wins. With no route, a group declared `shiftClickIn(true)` is tried around the menu's own routing, and a shift-click out of a created slot goes to the player. Every slot on the way still judges the move by its gate, the vetoes, `shiftClickIn` and its active count.
+
 ## Address
 
 An `Address` names one slot without holding a reference to it. The same address resolves after a menu reopens and on both client and server. `Address.createdSlot(group, index)` names a created slot, with the group from `CreatedSlots.groupId(panelId, groupId)` or `ParityGroup.idOf(owner, groupId)` (a registered group's `id()`). `Window.slot(address).set(key, value)` attaches behaviour by address. A veto reads a slot's address from its `SlotRef` with `address()`. `asString()`, `Address.parse` and `Address.CODEC` save one as text. Never save its parts.
@@ -198,7 +215,15 @@ A `SHARED` channel's rule refuses every client by default, so a shared channel n
 
 ## Storage
 
-A `Storage` is the item container behind a created slot group. `StorageAttachment.playerAttached(namespace, key, size)` builds one that persists on the player. `EphemeralStorage.of(size)` builds one that lasts for the menu session. SlotKit also provides block-scoped and item-scoped attachments.
+A `Storage` is the item container behind a created slot group. `StorageAttachment.playerAttached(namespace, key, size)` builds one that persists on the player. Only that player's client sees its contents, through the menu. `StorageAttachment.playerAttachedVisible(...)` is the same, and also sends the contents to every client tracking the player, for gear drawn on the player model. Another client reads them with `bind(thatPlayer)`. `EphemeralStorage.of(size)` builds one that lasts for the menu session. `blockScoped`, `entityAttached` and `itemContainer` keep contents on a block entity, an entity, or an item stack's container component.
+
+## Item sources
+
+`ItemSources` reaches the items a player carries, including those inside shulker boxes and bundles, to any depth. An `ItemScope` says where to look: the inventory's 36 main slots always, and the ender chest, shulker boxes and bundles when switched on. Armour, the offhand and the cursor are not part of it. Items are visited nearest first. Every top-level slot comes first, then everything one container deep, then two deep, and the ender chest follows in the same order.
+
+On the server, `walk` and `take` hand out an `ItemRef` for each item. A take, a put or a committed change writes back up through every container to the top-level slot. A ref whose slot or containers changed since it was read writes nothing.
+
+An `ItemPath` names one item by its top-level slot and its index inside each container on the way down. `find` lists matches with their paths on either side, read-only. A client sends a path in its own packet, and the server turns it back into a ref with `at`, which returns `null` when the item is no longer there. Check the item again on the server before acting on it. The [recipe](recipes.md#find-and-use-items-inside-shulker-boxes-and-bundles) shows both.
 
 ## Saved ids
 

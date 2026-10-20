@@ -74,13 +74,13 @@ new ScreenPanelAdapter(pockets).onMatching(ScreenMatcher.all());
 
 Result: nine real slots under a Sort button, in the top left gutter of the survival inventory, the creative inventory, and every container screen. Their contents persist on the player and sync through vanilla's slot protocol. The group is data, registered once in common code, and is on every menu. The panel is yours: its place, its look, what sits beside the slots and which screens show it, all MenuKit's. `SlotFlowElement.of(group)` (or `builder().addGroup(group)` for several groups in one flow) lays the slots out at vanilla's 18 px pitch, wrapping to the panel's width; `SlotElement.builder().slot(group.id(), i).at(x, y)` places one by hand. `ScreenMatcher.allExcept(Class...)` keeps the panel off named screens; the slots stay on those menus, parked where nothing draws or clicks them. `ClientSlots.isShown(id)` is false where the group's slots aren't live, so a styled panel hides with them.
 
-The owner id's namespace is your mod id. `define` throws at startup if it is not, or if your mod does not declare `required` ([the definition check](concepts.md#declaring-sides)). A player whose copy of your mod registers different slot groups is refused by a server running yours, with a message naming the mod.
+The owner id's namespace is your mod id. `register` throws at startup if it is not, or if your mod does not declare `required` ([the definition check](concepts.md#declaring-sides)). A player whose copy of your mod registers different slot groups is refused by a server running yours, with a message naming the mod.
 
 The category is required. It tells other mods what the group is. `SlotGroupCategories.of(menu)` lists the group under it next to the vanilla categories, on every menu the group sits on. A search that walks the player's inventory menu can then treat pockets as inventory and leave an elytra slot alone. Use a vanilla category when the group is one of those things, and declare your own (`new SlotGroupCategory("mymod", "equipment")`) when it is not. The name is a contract once another mod depends on it.
 
 `SlotSpec.shiftClickOut(false)`, `shiftClickIn(false)`, `collect(false)` and `dragFill(false)` keep a group out of the bulk shortcuts (shift-click, double-click collect, drag-fill). The slot stays storage, and the shortcuts skip it.
 
-`SlotSpec.accepts(Predicate<ItemStack>)` limits what a slot takes. `SlotSpec.revealWhen(BooleanSupplier)` hides the slots on the client until the supplier returns true. Death, keepInventory, Curse of Vanishing and Curse of Binding behave as they do for vanilla slots. `POCKETS.dropsOnDeath(DropRule.KEEP)` overrides the death rule. For gear other players see (an elytra slot, a cape), declare the storage with `StorageAttachment.playerAttachedVisible(...)` instead: its contents also go to every client tracking the player, so each client reads another player's slot with `bind(thatPlayer)` (since 2.0.0).
+`SlotSpec.accepts(Predicate<ItemStack>)` limits what a slot takes. `SlotSpec.revealWhen(BooleanSupplier)` hides the slots on the client until the supplier returns true. Death, keepInventory, Curse of Vanishing and Curse of Binding behave as they do for vanilla slots. `POCKETS.dropsOnDeath(DropRule.KEEP)` overrides the death rule. For gear other players see, declare the storage with `StorageAttachment.playerAttachedVisible(...)` ([above the offhand](#put-a-slot-above-the-offhand)).
 
 `SlotSpec.shiftClickIn(true)`, said explicitly, makes the group a shift-click target (since 1.1.0): in the player's inventory a shift-clicked stack tries its partial stacks, then its empty slots, before vanilla's routing, and each slot's gate decides. On other menus it is tried after the menu's own routing moved nothing, so a chest still takes a stack first. The menu's own routing never lands in these slots by accident (since 2.0.0). Shift-click out of one goes to the player on every menu: on the inventory screen the main inventory, then the hotbar; elsewhere the hotbar end first, as vanilla moves a container's stack. To send shift-clicks somewhere else, register a [route](#decide-where-a-shift-click-goes).
 
@@ -93,7 +93,12 @@ return created != null && created.panelId().equals("mymod:pockets");
 
 ## Put a slot above the offhand
 
-`SlotGroupPanelAdapter` places your panel around a slot group's box instead of the menu frame. Here the panel sits on the offhand, and the slot takes elytras and catches them on shift-click:
+`SlotGroupPanelAdapter` places your panel around a slot group's box instead of the menu frame. Here the panel sits on the offhand, and the slot takes elytras and catches them on shift-click. Other players see what's in it, so the storage is declared visible:
+
+```java
+public static final PlayerStorageAttachment<NonNullList<ItemStack>> ELYTRA =
+        StorageAttachment.playerAttachedVisible("mymod", "elytra", 1);
+```
 
 ```java
 ELYTRA_SLOT = ParityGroup.register("mymod:elytra",
@@ -115,6 +120,14 @@ new SlotGroupPanelAdapter(elytra, 0).on(SlotGroupCategory.PLAYER_OFFHAND);
 Result: one slot right above the offhand on the survival and creative inventories, and no slot on screens without an offhand. Panels on the same group share it and stack by region and priority. `TOP_CENTER` stacks upward and a lower priority sits nearer the group, so another mod's slot on `PLAYER_OFFHAND` at priority 10 goes between this one and the offhand, and a panel that isn't shown leaves no gap. (`TOP_ALIGN_LEFT` would stack them in a row to the right.) Mods building one column agree on priorities, nothing else. `onGroup(...)` takes specific groups, created ones included (`ParityGroup.idOf(owner, group)`).
 
 `gap(0)` keeps stacked slot panels on vanilla's 18 px pitch: the group's box is its slots' frames, and the host's default 2 px gap would set your slots off the grid. `SlotGroupPanelAdapter` logs a warning for a panel holding slots without it.
+
+`playerAttachedVisible` (since 2.0.0) sends the slot's contents to every client tracking the player, as well as to the player's own. A client drawing another player's wings reads them the same way it reads its own:
+
+```java
+ItemStack wings = ELYTRA.bind(otherPlayer).getStack(0);
+```
+
+Use it only for gear drawn on the player. With `playerAttached`, only the player's own client gets the contents.
 
 `emptyIcon` is the outline an empty slot shows, drawn by vanilla the way it draws the armour outlines. It takes a GUI sprite id; a mod's own sprite lives at `assets/<ns>/textures/gui/sprites/<path>.png`.
 
@@ -181,7 +194,7 @@ ItemRef ref = ItemSources.at(serverPlayer, path);
 if (ref != null && ref.stack().is(Items.COBBLESTONE)) { ItemStack moved = ref.take(64); /* put it where the client asked */ }
 ```
 
-The ender chest's contents are only known to a client while it's open, so a client finds nothing there otherwise.
+Vanilla sends a client its ender chest's contents only inside the chest's own menu, so a client-side `find` finds nothing there. Search the ender chest on the server.
 
 ## Show a vanilla slot in your own panel
 

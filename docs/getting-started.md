@@ -2,7 +2,7 @@
 
 This page adds SlotKit to a Fabric mod that already uses MenuKit. It does two things: a panel beside the player inventory, which needs SlotKit on the client only, and nine real slots, which need SlotKit on both sides. Stop after step 2 if your mod builds no slots.
 
-Prerequisites: a Fabric mod on Minecraft 26.3 with MenuKit 7 set up ([MenuKit's getting started](https://github.com/trevorschoeny/menukit/blob/main/docs/getting-started.md)), and a client entry point.
+Prerequisites: a Fabric mod on Minecraft 26.3 with MenuKit 7.3 set up ([MenuKit's getting started](https://github.com/trevorschoeny/menukit/blob/main/docs/getting-started.md)), and a client entry point.
 
 ## 1. Add the dependency
 
@@ -13,8 +13,8 @@ repositories {
     maven { url 'https://api.modrinth.com/maven' }
 }
 dependencies {
-    implementation 'maven.modrinth:menukit:7.0.0+26.3'
-    implementation 'maven.modrinth:xQUBXV8I:1.0.0+26.3'   // SlotKit
+    implementation 'maven.modrinth:menukit:7.3.0+26.3'
+    implementation 'maven.modrinth:xQUBXV8I:2.0.0+26.3'   // SlotKit
 }
 ```
 
@@ -23,7 +23,7 @@ dependencies {
 Declare both in `fabric.mod.json`, each against its own version:
 
 ```json
-"depends": { "menukit": ">=7.0.0 <8.0.0", "slotkit": ">=1.0.0 <2.0.0" }
+"depends": { "menukit": ">=7.3.0 <8.0.0", "slotkit": ">=2.0.0 <3.0.0" }
 ```
 
 Separate the bounds with a space. Fabric splits on spaces, so a comma leaves one malformed bound and the mod does not load. [Versioning](versioning.md) has the full contract. Import only from the `api` packages (`com.trevlar.slotkit.api.*`).
@@ -111,7 +111,7 @@ Result: nine slots render in the top left gutter of the survival inventory, the 
 
 Two rules come with real slots:
 
-- The group's owner id (`"mymod:pockets"`) is namespaced by your mod id. Here the mod id is `mymod`. `define` throws at startup when the namespace is not a loaded mod, or when that mod does not declare `required`. The message names the panel and the line to add.
+- The group's owner id (`"mymod:pockets"`) is namespaced by your mod id. Here the mod id is `mymod`. `register` throws at startup when the namespace is not a loaded mod, or when that mod does not declare `required`. The message names the group and the line to add.
 - A server running your mod admits only players who have SlotKit and your mod. Others are refused before the world loads, with a message naming both and linking each mod's `contact.homepage`. Set `contact.homepage` in your `fabric.mod.json` so the link is there.
 
 ## 4. Run
