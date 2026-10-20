@@ -4,11 +4,12 @@
   "version": "${version}",
   "name": "SlotKit",
   "icon": "assets/slotkit/icon.png",
-  "description": "Slots for Fabric mods: find and act on slots in any menu, and build real slots that persist and sync. Built on MenuKit.",
+  "description": "A Fabric library for finding and acting on the slots in any menu, and for building real slots that persist and sync.",
   "authors": ["trevorschoeny"],
   "contact": {
     "homepage": "https://modrinth.com/mod/slotkit",
-    "sources": "https://github.com/trevorschoeny/slotkit"
+    "sources": "https://github.com/trevorschoeny/slotkit",
+    "issues": "https://github.com/trevorschoeny/slotkit/issues"
   },
   "license": "MIT",
   "environment": "*",
