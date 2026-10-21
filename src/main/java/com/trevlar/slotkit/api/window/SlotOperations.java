@@ -1,5 +1,6 @@
 package com.trevlar.slotkit.api.window;
 
+import com.trevlar.menukit.api.panel.ModeScope;
 import com.trevlar.slotkit.window.ClickTags;
 import com.trevlar.slotkit.window.GroupIds;
 import com.trevlar.slotkit.api.group.SlotGroupCategory;
@@ -441,7 +442,9 @@ public final class SlotOperations {
 
     /**
      * Declares {@code value} as the default for {@code operation} on every slot in
-     * {@code category} that does not declare its own (the category rung). Reaches
+     * {@code category} that does not declare its own (the category rung), while the
+     * acting player's mode is in {@code scope}. A {@code SURVIVAL} or {@code CREATIVE}
+     * declaration wins over a {@code BOTH} one on the same category in its mode. Reaches
      * created slots by address and vanilla slots through {@link #allows}, which
      * knows the menu.
      *
@@ -449,11 +452,22 @@ public final class SlotOperations {
      * Order does not matter: membership resolves per query, so groups registered
      * before this call pick it up too.
      */
-    public static <V> void inherent(SlotGroupCategory category, BehaviorKey<V> operation, V value) {
+    public static <V> void inherent(ModeScope scope, SlotGroupCategory category, BehaviorKey<V> operation, V value) {
+        Objects.requireNonNull(scope, "scope");
         Objects.requireNonNull(category, "category");
         Objects.requireNonNull(operation, "operation");
         Objects.requireNonNull(value, "value");
-        WindowEngine.setGroup(mintGroupFor(category), operation, Decl.set(value));
+        WindowEngine.setGroup(scope, mintGroupFor(category), operation, Decl.set(value));
+    }
+
+    /**
+     * {@link #inherent(ModeScope, SlotGroupCategory, BehaviorKey, Object)} in both modes.
+     *
+     * @deprecated since 2.1.0, name the mode: {@code inherent(ModeScope.BOTH, category, operation, value)}.
+     */
+    @Deprecated(since = "2.1.0")
+    public static <V> void inherent(SlotGroupCategory category, BehaviorKey<V> operation, V value) {
+        inherent(ModeScope.BOTH, category, operation, value);
     }
 
     // The GroupKey for "every slot whose group declared this category", minted once per
@@ -508,18 +522,60 @@ public final class SlotOperations {
     private static final Set<GroupVeto> BROKEN = Collections.synchronizedSet(
             Collections.newSetFromMap(new IdentityHashMap<>()));
 
-    /** Registers a veto. Typically once, at your mod's init. */
-    public static void veto(Veto veto) {
-        com.trevlar.menukit.api.Declarations.requireOpen("SlotOperations.veto");
+    /**
+     * Registers a veto that applies while the acting player's mode is in {@code scope}.
+     * The mode is read on every question, so {@code /gamemode} with a screen open flips
+     * it on the next click. With no acting player (automation) only a {@code BOTH} veto
+     * applies. Typically once, at your mod's init.
+     */
+    public static void veto(ModeScope scope, Veto veto) {
         Objects.requireNonNull(veto, "veto");
-        VETOES.add(new PlainVeto(veto));
+        register(scope, new PlainVeto(veto));
     }
 
-    /** Registers a veto that is handed the slot's group. Typically once, at your mod's init. */
-    public static void veto(GroupVeto veto) {
-        com.trevlar.menukit.api.Declarations.requireOpen("SlotOperations.veto");
-        VETOES.add(Objects.requireNonNull(veto, "veto"));
+    /** {@link #veto(ModeScope, Veto)} for a veto that is handed the slot's group. */
+    public static void veto(ModeScope scope, GroupVeto veto) {
+        register(scope, Objects.requireNonNull(veto, "veto"));
         anyGroupVeto = true;
+    }
+
+    /**
+     * {@link #veto(ModeScope, Veto)} in both modes.
+     *
+     * @deprecated since 2.1.0, name the mode: {@code veto(ModeScope.BOTH, veto)}.
+     */
+    @Deprecated(since = "2.1.0")
+    public static void veto(Veto veto) {
+        veto(ModeScope.BOTH, veto);
+    }
+
+    /**
+     * {@link #veto(ModeScope, GroupVeto)} in both modes.
+     *
+     * @deprecated since 2.1.0, name the mode: {@code veto(ModeScope.BOTH, veto)}.
+     */
+    @Deprecated(since = "2.1.0")
+    public static void veto(GroupVeto veto) {
+        veto(ModeScope.BOTH, veto);
+    }
+
+    private static void register(ModeScope scope, GroupVeto veto) {
+        com.trevlar.menukit.api.Declarations.requireOpen("SlotOperations.veto");
+        Objects.requireNonNull(scope, "scope");
+        VETOES.add(scope == ModeScope.BOTH ? veto : new ScopedVeto(scope, veto));
+    }
+
+    /** A veto that only speaks while the acting player's mode is in its scope. */
+    private record ScopedVeto(ModeScope scope, GroupVeto veto) implements GroupVeto {
+        @Override
+        public boolean denies(SlotRef slot, @Nullable SlotGroupId group, BehaviorKey<?> operation) {
+            return scope.includes(slot.player()) && veto.denies(slot, group, operation);
+        }
+
+        @Override
+        public String toString() {
+            return veto + " (" + scope + ")";
+        }
     }
 
     /** A {@link Veto} run as a group veto, ignoring the group; logged under the consumer's own class. */
@@ -629,6 +685,6 @@ public final class SlotOperations {
             GroupKey categoryGroup = CATEGORY_GROUPS.get(ref.category());
             alsoMemberOf = categoryGroup != null ? List.of(group, categoryGroup) : List.of(group);
         }
-        return WindowEngine.resolve(address, operation, alsoMemberOf).asBoolean();
+        return WindowEngine.resolve(address, operation, alsoMemberOf, ref.player()).asBoolean();
     }
 }

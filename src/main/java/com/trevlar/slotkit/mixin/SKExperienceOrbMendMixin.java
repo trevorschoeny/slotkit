@@ -145,7 +145,7 @@ public class SKExperienceOrbMendMixin {
         // by far the common case, costs nothing extra.
         for (Slot slot : !WindowEngine.hasServerDeclarations() ? List.<Slot>of() : player.inventoryMenu.slots) {
             if (slot instanceof CreatedSlot mk) {
-                if (WindowEngine.resolve(mk.address(), BehaviorKeys.MENDING).asBoolean()) {
+                if (WindowEngine.resolve(mk.address(), BehaviorKeys.MENDING, player).asBoolean()) {
                     ItemStack stack = mk.getItem();
                     if (sk$mendable(stack)) {
                         pool.add(new EnchantedItemInUse(stack, null, player, item -> {}));

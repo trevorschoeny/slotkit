@@ -1,5 +1,7 @@
 package com.trevlar.slotkit.api.window;
 
+import com.trevlar.menukit.api.panel.ModeScope;
+
 /**
  * A typed handle on a slot, vanilla or created: the slot verbs, plus the generic
  * {@link WindowHandle#set}. The slot author's server rules are {@link #gate} and
@@ -21,8 +23,8 @@ public final class SlotHandle extends WindowHandle {
         return this;
     }
 
-    SlotHandle(Address address) {
-        super(address);
+    SlotHandle(ModeScope scope, Address address) {
+        super(scope, address);
     }
 
     /** Client-observed reaction when synced contents grow. UI feedback only; works on any server. */

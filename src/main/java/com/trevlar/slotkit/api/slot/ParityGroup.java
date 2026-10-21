@@ -186,7 +186,7 @@ public final class ParityGroup {
      * undeclared slot stays plain vanilla.
      *
      * <p>Set for the group, not per address: a consumer that overrides one slot with
-     * {@code Window.slot(Address.createdSlot(id, i)).set(KEY, value)} wins because it
+     * {@code Window.slot(scope, Address.createdSlot(id, i)).set(KEY, value)} wins because it
      * is more specific, not because its mod initialised last. Above the group sits the
      * category.
      */
@@ -199,7 +199,7 @@ public final class ParityGroup {
 
         GroupKey group = GroupKey.of(id);
         SlotGate gate = spec.gateValue();
-        if (gate != null) WindowEngine.setGroup(group, BehaviorKeys.GATING, Decl.set(gate));
+        if (gate != null) WindowEngine.setGroup(com.trevlar.menukit.api.panel.ModeScope.BOTH, group, BehaviorKeys.GATING, Decl.set(gate));
         set(group, BehaviorKeys.BINDING, spec.bindingValue());
         set(group, BehaviorKeys.MENDING, spec.mendingValue());
         set(group, BehaviorKeys.SHIFT_CLICK_OUT, spec.shiftClickOutValue());
@@ -210,7 +210,7 @@ public final class ParityGroup {
     }
 
     private static void set(GroupKey group, BehaviorKey<TriBool> key, @Nullable TriBool value) {
-        if (value != null) WindowEngine.setGroup(group, key, Decl.set(value));
+        if (value != null) WindowEngine.setGroup(com.trevlar.menukit.api.panel.ModeScope.BOTH, group, key, Decl.set(value));
     }
 
     private static synchronized void ensureProjectionSource() {

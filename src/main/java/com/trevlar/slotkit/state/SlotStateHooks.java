@@ -147,7 +147,7 @@ public final class SlotStateHooks {
                 ch -> SlotStateWire.decode(ch, payload.value(), player.registryAccess()),
                 () -> menuMatches,
                 () -> slot != null && slot.isActive() && resolved.isPresent() && menu.stillValid(player),
-                ch -> ch.canWrite().allows(player, SlotRef.of(menu, slot, player)),
+                ch -> ch.scope().includes(player) && ch.canWrite().allows(player, SlotRef.of(menu, slot, player)),
                 () -> SlotStateWrites.RATE.tryWrite(player.getUUID(), System.currentTimeMillis()));
 
         SlotStateWrites.Verdict verdict = judged.verdict();

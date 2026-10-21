@@ -273,7 +273,7 @@ public final class CreatedSlots {
             // 1. A standalone CreatedSlotGroup with storage only. Behaviour
             //    (gating, quick-move, binding, mending) resolves from the engine by
             //    each slot's address (vanilla by default), set by the consumer with
-            //    Window.slot(address).set(...).
+            //    Window.slot(scope, address).set(...).
             CreatedSlotGroup group = new CreatedSlotGroup(
                     groupId, category, storage,
                     /*shiftClickPriority*/ 100);

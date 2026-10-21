@@ -208,7 +208,7 @@ public final class CustomMenu {
          *
          * <p>Set slot behaviour by {@link com.trevlar.slotkit.api.window.Address} here;
          * the menu's created slots have addresses as soon as it is registered
-         * ({@code Window.slot(Address.createdSlot(SlotGroupId.created(panelId, groupId), i)).set(...)}).
+         * ({@code Window.slot(ModeScope.BOTH, Address.createdSlot(SlotGroupId.created(panelId, groupId), i)).set(...)}).
          * It runs at register() time on whichever side called it, since engine
          * declarations are plain data, just like setting behaviour by hand in common
          * init.
@@ -217,7 +217,7 @@ public final class CustomMenu {
          * CustomMenu.define(id, MyMenu::buildHandler)
          *     .arm(() -> {
          *         for (int i = 0; i < 2; i++) {
-         *             Window.slot(Address.createdSlot(SlotGroupId.created("side", "filtered"), i))
+         *             Window.slot(ModeScope.BOTH, Address.createdSlot(SlotGroupId.created("side", "filtered"), i))
          *                   .gate(diamondsOnly);
          *         }
          *     })

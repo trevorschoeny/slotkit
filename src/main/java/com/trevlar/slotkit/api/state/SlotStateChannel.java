@@ -1,5 +1,6 @@
 package com.trevlar.slotkit.api.state;
 
+import com.trevlar.menukit.api.panel.ModeScope;
 import com.trevlar.slotkit.api.window.PersistentContainerKey;
 import com.trevlar.slotkit.api.window.SlotRef;
 
@@ -56,6 +57,13 @@ import org.jetbrains.annotations.ApiStatus;
  *
  * <p>In short, use addresses for behaviour and for state in an open menu, and the
  * persistent keys whenever there is no open menu to resolve against.
+ *
+ * <h2>Mode scope</h2>
+ *
+ * A channel is in effect in its {@link #scope()}: while the viewing player's mode is
+ * outside it, reads give {@link #defaultValue} and a client's writes are neither shown
+ * nor sent (the server refuses them too). Stored values are kept, and show again when
+ * the mode comes back. Writes made by server code are stored whatever the mode.
  */
 public record SlotStateChannel<T>(
         Identifier id,
@@ -63,7 +71,8 @@ public record SlotStateChannel<T>(
         StreamCodec<RegistryFriendlyByteBuf, T> streamCodec,
         T defaultValue,
         Visibility visibility,
-        CanWrite canWrite) {
+        CanWrite canWrite,
+        ModeScope scope) {
 
     /**
      * Who may write this channel from a client. The server asks it for every
@@ -94,6 +103,14 @@ public record SlotStateChannel<T>(
         java.util.Objects.requireNonNull(defaultValue, "defaultValue");
         java.util.Objects.requireNonNull(visibility, "visibility");
         java.util.Objects.requireNonNull(canWrite, "canWrite");
+        java.util.Objects.requireNonNull(scope, "scope");
+    }
+
+    /** A channel in both modes, with an explicit writer rule. */
+    public SlotStateChannel(Identifier id, Codec<T> codec,
+            StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue,
+            Visibility visibility, CanWrite canWrite) {
+        this(id, codec, streamCodec, defaultValue, visibility, canWrite, ModeScope.BOTH);
     }
 
     /** A channel with its visibility's default writer rule ({@link CanWrite}). */

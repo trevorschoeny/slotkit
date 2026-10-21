@@ -1,5 +1,6 @@
 package com.trevlar.slotkit.api.window;
 
+import com.trevlar.menukit.api.panel.ModeScope;
 import com.trevlar.slotkit.window.PanelAddressing;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 
@@ -23,8 +24,24 @@ public final class Window {
     private Window() {}
 
     /** A handle on a slot already named by an {@link Address} (vanilla or created). */
+    /**
+     * A handle on the slot {@code address} names, declaring for {@code scope}: its gate,
+     * binding and operations apply while the acting player's mode is in that scope.
+     * {@code Window.slot(ModeScope.SURVIVAL, a).gate(g)} plus
+     * {@code Window.slot(ModeScope.BOTH, a).gate(h)} is "g in survival, h otherwise".
+     */
+    public static SlotHandle slot(ModeScope scope, Address address) {
+        return new SlotHandle(scope, address);
+    }
+
+    /**
+     * {@link #slot(ModeScope, Address)} in both modes.
+     *
+     * @deprecated since 2.1.0, name the mode: {@code Window.slot(ModeScope.BOTH, address)}.
+     */
+    @Deprecated(since = "2.1.0")
     public static SlotHandle slot(Address address) {
-        return new SlotHandle(address);
+        return new SlotHandle(ModeScope.BOTH, address);
     }
 
     /** The menu-bound view, for addressing a vanilla slot by its live menu index. */

@@ -1,6 +1,7 @@
 package com.trevlar.slotkit.api.state;
 
 
+import com.trevlar.menukit.api.panel.ModeScope;
 import com.trevlar.slotkit.core.CreatedSlotAdapter;
 import com.trevlar.slotkit.core.SlotAddresses;
 import com.trevlar.slotkit.api.window.PersistentContainerKey;
@@ -46,11 +47,44 @@ public final class SlotState {
 
     // Channel registration
 
-    /** Registers a PRIVATE channel. A second channel with the same id throws. */
+    /**
+     * Registers a PRIVATE channel in effect while the viewing player's mode is in
+     * {@code scope} (see {@link SlotStateChannel}). A second channel with the same id throws.
+     */
+    public static <T> SlotStateChannel<T> register(ModeScope scope,
+            Identifier id, Codec<T> codec,
+            StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue) {
+        return register(scope, id, codec, streamCodec, defaultValue, SlotStateChannel.Visibility.PRIVATE);
+    }
+
+    /** {@link #register(ModeScope, Identifier, Codec, StreamCodec, Object)} with explicit visibility. */
+    public static <T> SlotStateChannel<T> register(ModeScope scope,
+            Identifier id, Codec<T> codec,
+            StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue,
+            SlotStateChannel.Visibility visibility) {
+        return register(scope, id, codec, streamCodec, defaultValue, visibility,
+                visibility == SlotStateChannel.Visibility.SHARED
+                        ? SlotStateChannel.CanWrite.DENY : SlotStateChannel.CanWrite.ANY);
+    }
+
+    /** {@link #register(ModeScope, Identifier, Codec, StreamCodec, Object)} with visibility and its writer rule. */
+    public static <T> SlotStateChannel<T> register(ModeScope scope,
+            Identifier id, Codec<T> codec,
+            StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue,
+            SlotStateChannel.Visibility visibility, SlotStateChannel.CanWrite canWrite) {
+        return register(new SlotStateChannel<>(id, codec, streamCodec, defaultValue, visibility, canWrite, scope));
+    }
+
+    /**
+     * Registers a PRIVATE channel in both modes. A second channel with the same id throws.
+     *
+     * @deprecated since 2.1.0, name the mode: {@code register(ModeScope.BOTH, id, ...)}.
+     */
+    @Deprecated(since = "2.1.0")
     public static <T> SlotStateChannel<T> register(
             Identifier id, Codec<T> codec,
             StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue) {
-        return register(id, codec, streamCodec, defaultValue, SlotStateChannel.Visibility.PRIVATE);
+        return register(ModeScope.BOTH, id, codec, streamCodec, defaultValue);
     }
 
     /**
@@ -59,7 +93,10 @@ public final class SlotState {
      * every viewer, for features that span players like Inventory Plus's container
      * locks. SHARED only makes sense on multi-player, fixed-slot containers (a placed
      * shulker, chest or barrel); see {@link SlotStateChannel.Visibility}.
+     *
+     * @deprecated since 2.1.0, name the mode: {@code register(ModeScope.BOTH, id, ...)}.
      */
+    @Deprecated(since = "2.1.0")
     public static <T> SlotStateChannel<T> register(
             Identifier id, Codec<T> codec,
             StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue,
@@ -74,11 +111,14 @@ public final class SlotState {
      * player write their own value.
      *
      * <pre>{@code
-     * LOCKS = SlotState.register(id, Codec.BOOL, ByteBufCodecs.BOOL.cast(), false,
+     * LOCKS = SlotState.register(ModeScope.BOTH, id, Codec.BOOL, ByteBufCodecs.BOOL.cast(), false,
      *         SlotStateChannel.Visibility.SHARED,
      *         (player, slot) -> MyLocks.handles(slot.container()));
      * }</pre>
+     *
+     * @deprecated since 2.1.0, name the mode: {@code register(ModeScope.BOTH, id, ...)}.
      */
+    @Deprecated(since = "2.1.0")
     public static <T> SlotStateChannel<T> register(
             Identifier id, Codec<T> codec,
             StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue,
@@ -145,6 +185,7 @@ public final class SlotState {
     static <T> T read(SlotStateChannel<T> channel, Slot slot, @Nullable Player player) {
         slot = com.trevlar.slotkit.core.Slots.target(slot);   // a creative wrapper's own container index is its menu index
         Player viewer = resolvePlayer(slot, player);
+        if (!channel.scope().includes(viewer)) return channel.defaultValue();   // out of its mode
         if (isClientSide(viewer)) {
             return SlotStateClientCache.read(channel, slot);
         }
@@ -164,6 +205,7 @@ public final class SlotState {
         slot = com.trevlar.slotkit.core.Slots.target(slot);
         Player viewer = resolvePlayer(slot, player);
         if (isClientSide(viewer)) {
+            if (!channel.scope().includes(viewer)) return;   // out of its mode: the server would refuse it
             writeFromClient(channel, slot, viewer, value);
             return;
         }

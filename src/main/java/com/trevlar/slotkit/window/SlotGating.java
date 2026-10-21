@@ -9,6 +9,7 @@ import com.trevlar.slotkit.api.window.WindowEngine;
 import com.trevlar.slotkit.core.Slots;
 
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
@@ -39,7 +40,7 @@ import org.jspecify.annotations.Nullable;
  * vanilla interaction pays nothing: the slots nobody touches stay exactly vanilla.
  *
  * <p>Every caller is a SlotKit seam. Consumers declare a gate with
- * {@code Window.slot(address).gate(...)} and never call these.
+ * {@code Window.slot(scope, address).gate(...)} and never call these.
  */
 @ApiStatus.Internal
 public final class SlotGating {
@@ -61,7 +62,7 @@ public final class SlotGating {
         Address address = ClientSlotAddressing.addressOf(slot);
         if (address == null) return true;
         if (bindingDeniesPickup(address, slot, player)) return false;
-        SlotGate gate = WindowEngine.resolve(address, BehaviorKeys.GATING);
+        SlotGate gate = WindowEngine.resolve(address, BehaviorKeys.GATING, player);
         return gate == SlotGate.OPEN || gate.mayPickup(player, GatingContext.current());
     }
 
@@ -81,7 +82,7 @@ public final class SlotGating {
      */
     public static boolean mayPlaceOnMove(AbstractContainerMenu menu, Slot slot, ItemStack stack) {
         if (!WindowEngine.hasServerDeclarations()) return true;
-        SlotGate gate = WindowEngine.resolve(SlotRef.addressOf(menu, slot), BehaviorKeys.GATING);
+        SlotGate gate = WindowEngine.resolve(SlotRef.addressOf(menu, slot), BehaviorKeys.GATING, playerFor(slot));
         return gate == SlotGate.OPEN || gate.mayPlace(stack, GatingContext.current());
     }
 
@@ -103,7 +104,18 @@ public final class SlotGating {
 
     private static SlotGate gateOf(Slot slot) {
         Address address = ClientSlotAddressing.addressOf(slot);
-        return address == null ? SlotGate.OPEN : WindowEngine.resolve(address, BehaviorKeys.GATING);
+        return address == null ? SlotGate.OPEN : WindowEngine.resolve(address, BehaviorKeys.GATING, playerFor(slot));
+    }
+
+    /**
+     * Whose mode a gate on {@code slot} is judged in: the acting player during a click or a
+     * menu move, else the owner of a player-inventory slot. {@code null} otherwise, so only
+     * {@code BOTH} gates apply.
+     */
+    private static @Nullable Player playerFor(Slot slot) {
+        Player acting = ActingPlayer.current();
+        if (acting != null) return acting;
+        return Slots.target(slot).container instanceof Inventory inventory ? inventory.player : null;
     }
 
     private static SlotGate automationGate(Container container, int slotIndex) {
@@ -118,7 +130,7 @@ public final class SlotGating {
      * survival only. The rule vanilla gives armour slots, on any slot that asks.
      */
     private static boolean bindingDeniesPickup(Address address, Slot slot, @Nullable Player player) {
-        if (!WindowEngine.resolve(address, BehaviorKeys.BINDING).asBoolean()) return false;
+        if (!WindowEngine.resolve(address, BehaviorKeys.BINDING, player).asBoolean()) return false;
         if (player == null || player.hasInfiniteMaterials()) return false;
         return EnchantmentHelper.has(Slots.target(slot).getItem(), EnchantmentEffectComponents.PREVENT_ARMOR_CHANGE);
     }

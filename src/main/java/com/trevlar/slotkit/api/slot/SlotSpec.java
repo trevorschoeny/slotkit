@@ -59,7 +59,7 @@ import java.util.function.Supplier;
  * one level above any single slot. Behaviour is declared next to the slot group, with
  * no separate step to forget and no per-slot loop. To give one slot something else,
  * set it on that slot's address,
- * {@code Window.slot(Address.createdSlot(group.id(), i))};
+ * {@code Window.slot(scope, Address.createdSlot(group.id(), i))};
  * the slot's own value wins because it is more specific.
  *
  * <h3>Storage is a factory, not bound storage</h3>
