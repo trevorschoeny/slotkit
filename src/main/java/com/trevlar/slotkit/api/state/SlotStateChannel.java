@@ -63,7 +63,10 @@ import org.jetbrains.annotations.ApiStatus;
  * A channel is in effect in its {@link #scope()}: while the viewing player's mode is
  * outside it, reads give {@link #defaultValue} and a client's writes are neither shown
  * nor sent (the server refuses them too). Stored values are kept, and show again when
- * the mode comes back. Writes made by server code are stored whatever the mode.
+ * the mode comes back. Writes made by server code are stored whatever the mode. A read
+ * with no viewing player (server code with no player at hand, a hopper seam) has no mode
+ * to be in, so a {@code SURVIVAL} or {@code CREATIVE} channel reads its default there;
+ * pass the player, or use a {@code BOTH} channel for state automation reads.
  */
 public record SlotStateChannel<T>(
         Identifier id,

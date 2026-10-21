@@ -24,18 +24,22 @@ public final class WindowReactions {
     private WindowReactions() {}
 
     /** Fires the observed insert reaction for a gain of content at {@code address}. */
-    public static void fireInsert(Address address, ItemStack before, ItemStack after, ReactCause cause) {
-        fire(address, BehaviorKeys.ON_INSERT_OBSERVED, before, after, cause);
+    public static void fireInsert(Address address, ItemStack before, ItemStack after, ReactCause cause,
+                                  net.minecraft.world.entity.player.@org.jspecify.annotations.Nullable Player viewer) {
+        fire(address, BehaviorKeys.ON_INSERT_OBSERVED, before, after, cause, viewer);
     }
 
     /** Fires the observed take reaction for a loss of content at {@code address}. */
-    public static void fireTake(Address address, ItemStack before, ItemStack after, ReactCause cause) {
-        fire(address, BehaviorKeys.ON_TAKE_OBSERVED, before, after, cause);
+    public static void fireTake(Address address, ItemStack before, ItemStack after, ReactCause cause,
+                                net.minecraft.world.entity.player.@org.jspecify.annotations.Nullable Player viewer) {
+        fire(address, BehaviorKeys.ON_TAKE_OBSERVED, before, after, cause, viewer);
     }
 
     private static void fire(Address address, BehaviorKey<ReactiveHook> key,
-                             ItemStack before, ItemStack after, ReactCause cause) {
-        ReactiveHook hook = WindowEngine.resolve(address, key);
+                             ItemStack before, ItemStack after, ReactCause cause,
+                             net.minecraft.world.entity.player.@org.jspecify.annotations.Nullable Player viewer) {
+        // The viewer's mode picks the scoped reactions; with no viewer only BOTH applies.
+        ReactiveHook hook = WindowEngine.resolve(address, key, viewer);
         if (hook == ReactiveHook.NONE) return; // nobody reacts here
 
         ReactEvent event = ReactEvent.snapshot(address, before, after, cause);

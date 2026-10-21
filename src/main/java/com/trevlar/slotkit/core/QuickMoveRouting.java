@@ -213,7 +213,7 @@ public final class QuickMoveRouting {
      * menu built its own slots first, so a created slot is never one of them. A custom
      * menu's own groups are its slots, so there only parity slots count as appended.
      */
-    private static int firstAppendedSlot(AbstractContainerMenu menu) {
+    public static int firstAppendedSlot(AbstractContainerMenu menu) {
         boolean custom = menu instanceof com.trevlar.slotkit.api.menu.CustomContainerMenu;
         for (Slot s : menu.slots) {
             CreatedSlot c = CreatedSlotAccess.asMKCSlot(s);

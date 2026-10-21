@@ -46,10 +46,13 @@ public final class SlotAnchors {
                 g -> Anchor.of(id("group/", g.asString()), screen -> groupBox(screen, g)));
     }
 
-    /** An id readable in a log: {@code slotkit:<kind><sanitised name>}. */
+    /**
+     * An id readable in a log: {@code slotkit:<kind><sanitised name>_<hash>}. The hash of the
+     * raw name keeps two names that sanitise alike ("Pocket" and "pocket") apart.
+     */
     private static Identifier id(String kind, String name) {
         String path = name.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_./-]", "_");
-        return Identifier.fromNamespaceAndPath("slotkit", kind + path);
+        return Identifier.fromNamespaceAndPath("slotkit", kind + path + "_" + Integer.toHexString(name.hashCode()));
     }
 
     /**

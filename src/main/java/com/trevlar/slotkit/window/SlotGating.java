@@ -109,13 +109,25 @@ public final class SlotGating {
 
     /**
      * Whose mode a gate on {@code slot} is judged in: the acting player during a click or a
-     * menu move, else the owner of a player-inventory slot. {@code null} otherwise, so only
-     * {@code BOTH} gates apply.
+     * menu move, else the owner of a player-inventory slot, else on the client its own player
+     * (a drag's highlight asks outside a click, and must match what the server judges).
+     * {@code null} otherwise, so only {@code BOTH} gates apply.
      */
     private static @Nullable Player playerFor(Slot slot) {
         Player acting = ActingPlayer.current();
         if (acting != null) return acting;
-        return Slots.target(slot).container instanceof Inventory inventory ? inventory.player : null;
+        if (Slots.target(slot).container instanceof Inventory inventory) return inventory.player;
+        return CLIENT_VIEWER.get();
+    }
+
+    // The client's own player on the client's thread, else null. Set by the client
+    // initializer; null on a dedicated server and on the integrated server's thread.
+    private static java.util.function.Supplier<@Nullable Player> CLIENT_VIEWER = () -> null;
+
+    /** Library use: the client initializer's viewer, for gates asked outside a click. */
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public static void clientViewer(java.util.function.Supplier<@Nullable Player> viewer) {
+        CLIENT_VIEWER = viewer;
     }
 
     private static SlotGate automationGate(Container container, int slotIndex) {

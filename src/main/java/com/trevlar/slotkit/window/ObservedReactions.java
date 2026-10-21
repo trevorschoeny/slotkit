@@ -50,9 +50,10 @@ public final class ObservedReactions {
     /**
      * Runs one client tick: diffs {@code menu}'s slots against the snapshot and fires
      * observed reactions for changes. Pass {@code null} when no container menu is
-     * open (a no-op).
+     * open (a no-op). {@code viewer} is the client's player, whose mode picks which
+     * scoped reactions apply.
      */
-    public static void tick(@Nullable AbstractContainerMenu menu) {
+    public static void tick(@Nullable AbstractContainerMenu menu, net.minecraft.world.entity.player.@Nullable Player viewer) {
         if (menu == null) return;
         List<Slot> slots = menu.slots;
         List<ItemStack> snap = SNAPSHOTS.get(menu);
@@ -75,8 +76,8 @@ public final class ObservedReactions {
             boolean gotNew = !after.isEmpty()
                     && (before.isEmpty() || !ItemStack.isSameItemSameComponents(before, after)
                         || after.getCount() > before.getCount());
-            if (tookOld) WindowReactions.fireTake(address, before, after, ReactCause.SYNC);
-            if (gotNew) WindowReactions.fireInsert(address, before, after, ReactCause.SYNC);
+            if (tookOld) WindowReactions.fireTake(address, before, after, ReactCause.SYNC, viewer);
+            if (gotNew) WindowReactions.fireInsert(address, before, after, ReactCause.SYNC, viewer);
         }
         SNAPSHOTS.put(menu, snapshot(slots));
     }

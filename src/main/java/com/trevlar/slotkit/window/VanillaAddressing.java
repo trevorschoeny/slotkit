@@ -76,9 +76,20 @@ public final class VanillaAddressing {
         if (address.kind() != com.trevlar.slotkit.api.window.KindTag.VANILLA_SLOT) return null;
         if (!isContainerAddressed(address)) {
             if (!(address.owner() instanceof OwnerRef.RootOwner root)
-                    || !root.family().equals(WindowMint.familyOf(menu))
                     || !(address.token() instanceof Token.IndexToken(int index))) return null;
-            return index < menu.slots.size() ? menu.slots.get(index) : null;
+            if (root.family().equals(WindowMint.familyOf(menu))) {
+                return index < menu.slots.size() ? menu.slots.get(index) : null;
+            }
+            // On creative, an inventory-menu address (as addressOf mints for a wrapper, the
+            // crafting grid say) names the wrapper standing for that inventory-menu slot.
+            if (root.family().equals(WindowMint.inventoryFamily())) {
+                for (Slot slot : menu.slots) {
+                    Slot target = Slots.target(slot);
+                    if (target != slot && target.index == index
+                            && ContainerIdentity.scope(target.container, target.getContainerSlot()).isEmpty()) return slot;
+                }
+            }
+            return null;
         }
         // Scans menu.slots (each slot's address is cached per menu);
         // index it per menu if a panel ever hosts hundreds of container-addressed slots.

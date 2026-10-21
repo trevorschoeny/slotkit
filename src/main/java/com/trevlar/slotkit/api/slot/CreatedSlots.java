@@ -101,10 +101,11 @@ import java.util.function.BooleanSupplier;
  *
  * <h3>Known limitation</h3>
  *
- * Shift-click into these slots does not work by default, because vanilla's
- * {@code quickMoveStack} knows nothing about them. Direct click-to-place works in both
- * modes. Full shift-click routing is up to the consumer (who may override
- * {@code quickMoveStack} in their own mixin), or left for later.
+ * Shift-click into these slots does not work by default: a menu's own
+ * {@code quickMoveStack} ranges stop before the first slot SlotKit appended, so a
+ * consumer's own {@code moveItemStackTo} range that starts below these slots is cut
+ * short there too. Reach them with a route ({@code QuickMoveRoutes}) or
+ * {@code shiftClickIn(true)}. Direct click-to-place works in both modes.
  *
  * <h3>Recipe</h3>
  *

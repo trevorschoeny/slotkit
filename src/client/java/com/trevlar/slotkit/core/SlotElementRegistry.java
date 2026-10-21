@@ -87,6 +87,7 @@ public final class SlotElementRegistry {
             com.trevlar.slotkit.api.group.ResolvedSlotGroup> frameGroups;
 
     /** The group with {@code id} on {@code menu} this frame, or {@code null} when it isn't there. */
+    @org.jetbrains.annotations.ApiStatus.Internal
     public static com.trevlar.slotkit.api.group.@org.jspecify.annotations.Nullable ResolvedSlotGroup group(
             net.minecraft.world.inventory.AbstractContainerMenu menu, com.trevlar.slotkit.api.group.SlotGroupId id) {
         if (frameMenu != menu || frameGroups == null) {

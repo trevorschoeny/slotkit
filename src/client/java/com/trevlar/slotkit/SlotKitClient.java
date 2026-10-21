@@ -49,10 +49,14 @@ public class SlotKitClient implements ClientModInitializer {
         // Client-observed reactions (ON_*_OBSERVED): diff the open container menu's
         // synced contents and fire UI feedback. Slot interaction signals: which slot
         // the cursor is over, read from the screen's hoveredSlot.
+        com.trevlar.slotkit.window.SlotGating.clientViewer(() -> {
+            var mc = net.minecraft.client.Minecraft.getInstance();
+            return mc.isSameThread() ? mc.player : null;
+        });
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             AbstractContainerScreen<?> acs =
                     client.gui.screen() instanceof AbstractContainerScreen<?> s ? s : null;
-            com.trevlar.slotkit.window.ObservedReactions.tick(acs != null ? acs.getMenu() : null);
+            com.trevlar.slotkit.window.ObservedReactions.tick(acs != null ? acs.getMenu() : null, client.player);
             WindowSignals.tickHover(
                     acs != null ? acs.getMenu() : null,
                     acs != null ? ((AbstractContainerScreenAccessor) (Object) acs).sk$getHoveredSlot() : null);

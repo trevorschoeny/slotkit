@@ -61,4 +61,5 @@ The fix hooks one method inside IPN. If a later IPN version changes that method,
 - Hoppers and dispensers ask a slot's gate, not the vetoes. No automation operation exists, so a lock meant to stop automation needs its own seam.
 - Only the `api` packages are public. Everything else is internal and may change in any release.
 - `ItemSources` and `ItemRef` writes run on the server thread only. A walk goes at most 16 containers deep by default (`ItemScope.maxDepth`), and `ItemPath.STREAM_CODEC` refuses a path deeper than 16.
+- `Window` declarations are about a slot, not about a player. A player inventory address names that slot for every player, so a per-player rule is a veto that reads `ref.player()` or a `PRIVATE` slot-state channel. On a menu that shows another player's inventory beside the viewer's own (an admin view), both players' slot 4 have one address, so a rule on it reaches both, and an element showing it shows the first on the menu.
 - The dev runtime assigns a new offline player UUID per launch. Test player-scoped persistence across quit-to-title and re-enter within one launch.

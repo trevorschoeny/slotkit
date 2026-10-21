@@ -30,7 +30,9 @@ import java.util.Objects;
  *
  * <h3>Declare at init</h3>
  * The first placement on a slot or group declares its MenuKit anchor, which MenuKit allows
- * only before its declarations freeze at client start. Build panels at init.
+ * only before its declarations freeze at client start. Build panels at init. A custom
+ * menu's own panels ({@code ClientMenu.panel}) are built on each open and placed by the
+ * menu's screen, so they take screen placements only, not these.
  */
 public final class SlotPlacement {
 

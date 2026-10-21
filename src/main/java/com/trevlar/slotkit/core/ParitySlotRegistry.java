@@ -37,9 +37,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *       {@link ParityGroup}, whose factory calls {@link #applyTo}. Its
  *       {@code appliesTo} excludes {@code InventoryMenu} so the inventory menu
  *       isn't served twice.</li>
- *   <li>The creative item picker gets the slots with no extra work:
- *       {@code SKCreativeSlotItemPickerMixin} wraps whatever {@link CreatedSlot}s
- *       the {@code InventoryMenu} mixin already put on {@code player.inventoryMenu}.</li>
+ *   <li>Creative's inventory tab gets the slots with no extra work: vanilla wraps
+ *       every slot of {@code player.inventoryMenu}, the created ones included. Creative's
+ *       item tabs carry no SlotKit slots.</li>
  * </ul>
  *
  * <h3>Sync safety</h3>

@@ -21,7 +21,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * sort and move-all pull a SlotKit group's items into the chest beside it. This marks a
  * slot disabled for IPN's actions when it belongs to a SlotKit group other than the
  * container being acted on: over a group, every slot outside that group's container;
- * anywhere else, every SlotKit group. The menu's own slots and the player's are left to
+ * anywhere else, every group SlotKit appended to the menu (a custom menu's own groups
+ * are its slots, and stay IPN's). The menu's own slots and the player's are left to
  * IPN, so sorting a chest sorts the chest alone and restock still works.
  *
  * <p>The target is the predicate inside {@code AreaTypes.getDisabled(menu)} (IPN 2.3.8
@@ -43,7 +44,10 @@ public abstract class IpnSeparateContainersMixin {
         Slot hovered = Minecraft.getInstance().gui.screen() instanceof AbstractContainerScreen<?> screen
                 ? ((AbstractContainerScreenAccessor) screen).sk$getHoveredSlot() : null;
         boolean overGroup = hovered != null && CreatedSlot.of(hovered) != null;
-        boolean disabled = overGroup ? slot.container != hovered.container : CreatedSlot.of(slot) != null;
+        // Not over a group: only what SlotKit appended, so a custom menu's own groups (its slots) stay IPN's.
+        int firstAppended = com.trevlar.slotkit.core.QuickMoveRouting.firstAppendedSlot(menu);
+        boolean disabled = overGroup ? slot.container != hovered.container
+                : firstAppended >= 0 && slot.index >= firstAppended && CreatedSlot.of(slot) != null;
         if (disabled) cir.setReturnValue(true);
     }
 }

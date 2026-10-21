@@ -23,6 +23,8 @@ A `SlotGroupPanelAdapter` built on a panel with `SlotPlacement` placements needs
 
 Where a mod used two panels and its own creative check to put one slot in two places, one panel with a placement per mode replaces them ([recipe](recipes.md#put-a-slot-in-another-place-in-creative)). Where a mod took a player inventory slot's address from a live slot, `Address.playerInventory(n)` names it at init.
 
+One behavior changes. A player inventory slot's address no longer names the player, so `SlotRef.address()` for slot 4 is the same for every player. A rule declared at runtime with `Window.slot(scope, ref.address())` now applies to that slot for every player, where in 2.0 it applied to one. A rule for one player is a veto that reads `ref.player()`, or a `PRIVATE` slot-state channel, which stores one value per player.
+
 Behavior that changes in 2.1, with no change to the code:
 
 - Vetoes and the operation cascade hold in creative too. SlotKit judges creative's clicks on the client, on both tabs.

@@ -197,6 +197,9 @@ public final class SlotGroupCategories {
         return Collections.unmodifiableMap(out);
     }
 
+    // Collisions already logged, by menu class and category.
+    private static final Set<String> COLLISIONS_WARNED = java.util.concurrent.ConcurrentHashMap.newKeySet();
+
     /**
      * Every slot group on {@code menu}, each with its own identity and its own
      * slots. This is the anchor view, the one with geometry in it. A panel anchors to one
@@ -297,9 +300,11 @@ public final class SlotGroupCategories {
         for (Map.Entry<SlotGroupCategory, int[]> entry : ordered) {
             SlotGroupCategory category = entry.getKey();
             if (claimed.contains(category)) {
-                if (warnOnCollision) {
+                // Once per menu class and category: groups() runs every frame.
+                if (warnOnCollision && COLLISIONS_WARNED.add(menu.getClass().getName() + " " + category)) {
                     LOGGER.warn("[SlotGroupCategories] extension for {} tried to redefine " +
-                            "category {} the primary resolver claims; dropping it",
+                            "category {}, which an earlier resolver (the primary, or SlotKit's own " +
+                            "player slots) already claims; dropping it",
                             menu.getClass().getName(), category);
                 }
                 continue;

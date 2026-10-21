@@ -31,12 +31,12 @@ public final class WindowMint {
     private static final Identifier PLAYER_INVENTORY =
             Identifier.fromNamespaceAndPath("menukit", "player_inventory");
 
-    /** The stable family of a live menu. */
     /** The player inventory menu's family. */
     public static ScreenFamilyKey inventoryFamily() {
         return ScreenFamilyKey.of(PLAYER_INVENTORY);
     }
 
+    /** The stable family of a live menu. */
     public static ScreenFamilyKey familyOf(AbstractContainerMenu menu) {
         if (menu instanceof InventoryMenu) {
             return ScreenFamilyKey.of(PLAYER_INVENTORY);
