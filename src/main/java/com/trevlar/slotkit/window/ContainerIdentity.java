@@ -185,6 +185,9 @@ public final class ContainerIdentity {
     private static final int MAX_IDS = 4096;
     private static final Map<PersistentContainerKey, String> IDS = new ConcurrentHashMap<>();
 
+    /** The address scope of the viewing player's inventory. */
+    public static final String PLAYER_SCOPE = "player";
+
     /** A deterministic, side-stable string for a key. */
     public static String stableId(PersistentContainerKey key) {
         String id = IDS.get(key);
@@ -197,7 +200,10 @@ public final class ContainerIdentity {
 
     private static String buildId(PersistentContainerKey key) {
         return switch (key) {
-            case PersistentContainerKey.PlayerInventory p -> "player:" + p.playerId();
+            // A player's inventory only ever shows in that player's own menus, so its
+            // address names "the viewing player's inventory", the same for everyone.
+            // 2.0 addresses carried the UUID; Address.parse still reads them.
+            case PersistentContainerKey.PlayerInventory p -> PLAYER_SCOPE;
             case PersistentContainerKey.EnderChest e -> "ender:" + e.playerId();
             case PersistentContainerKey.BlockEntityKey b -> {
                 BlockPos pos = b.pos();

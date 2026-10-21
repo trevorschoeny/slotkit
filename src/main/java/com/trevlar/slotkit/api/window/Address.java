@@ -1,5 +1,7 @@
 package com.trevlar.slotkit.api.window;
 
+import com.trevlar.slotkit.window.VanillaAddressing;
+import com.trevlar.slotkit.window.ContainerIdentity;
 import com.trevlar.slotkit.window.Token;
 import com.trevlar.slotkit.window.KeyStrings;
 import com.trevlar.slotkit.window.OwnerRef;
@@ -111,6 +113,22 @@ public record Address(OwnerRef owner, Token token, KindTag kind) {
         return vanillaSlot(ScreenFamilyKey.of(BuiltInRegistries.MENU.getKey(type)), OwnerScope.primary(), index);
     }
 
+    /**
+     * Slot {@code index} of the viewing player's own inventory, the same slot on every
+     * screen that shows it, survival's and creative's included: 0 to 8 the hotbar, 9 to
+     * 35 the main grid, 36 to 39 armour (feet to head), 40 the offhand. Equal to
+     * {@code SlotRef.address()} for that slot, so a rule declared on it at init holds
+     * wherever the slot is. Since 2.1.0.
+     *
+     * @throws IllegalArgumentException for an index outside 0 to 40
+     */
+    public static Address playerInventory(int index) {
+        if (index < 0 || index > net.minecraft.world.entity.player.Inventory.SLOT_OFFHAND) {
+            throw new IllegalArgumentException("a player inventory index is 0 to 40, got " + index);
+        }
+        return vanillaSlot(VanillaAddressing.CONTAINER_FAMILY, OwnerScope.sub(ContainerIdentity.PLAYER_SCOPE), index);
+    }
+
     // A created slot's declaration id is groupId<NUL>index: a NUL never appears in
     // a mod's id, so no group id can end in something that looks like an index.
     private static final String CREATED_SEP = String.valueOf((char) 0);
@@ -209,7 +227,9 @@ public record Address(OwnerRef owner, Token token, KindTag kind) {
         String kind = c < 0 ? text : text.substring(0, c), value = c < 0 ? "" : text.substring(c + 1);
         return switch (kind) {
             case "tab" -> OwnerScope.tab(Identifier.parse(value));
-            case "sub" -> OwnerScope.sub(value);
+            // 2.0 named a player's inventory by its UUID; it is now the viewing player's.
+            case "sub" -> OwnerScope.sub(value.startsWith(ContainerIdentity.PLAYER_SCOPE + ":")
+                    ? ContainerIdentity.PLAYER_SCOPE : value);
             default -> throw new IllegalArgumentException("unknown scope " + text);
         };
     }
