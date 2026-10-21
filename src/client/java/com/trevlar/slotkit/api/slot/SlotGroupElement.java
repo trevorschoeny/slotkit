@@ -163,6 +163,12 @@ public final class SlotGroupElement extends AbstractPanelElement {
         }
     }
 
+    /** Culled with its section: every shown slot is held, so it parks. */
+    @Override
+    public void renderCulled(RenderContext ctx) {
+        if (SlotElementRegistry.claimGroup(group, this) == null) ChildDispatch.renderCulled(shown(), ctx);
+    }
+
     @Override
     public void onAttach(Screen screen) {
         attached = screen;

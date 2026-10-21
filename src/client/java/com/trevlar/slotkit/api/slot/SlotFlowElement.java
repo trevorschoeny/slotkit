@@ -195,6 +195,12 @@ public final class SlotFlowElement extends AbstractPanelElement {
         }
     }
 
+    /** Culled with its panel or a parent: every shown child slot is held, so it parks. */
+    @Override
+    public void renderCulled(RenderContext ctx) {
+        ChildDispatch.renderCulled(slots, ctx);
+    }
+
     // Forwarded to the children, so each slot joins the registry the screen hook
     // uses to resolve hover and click.
 

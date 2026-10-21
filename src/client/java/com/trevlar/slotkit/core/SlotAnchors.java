@@ -58,7 +58,8 @@ public final class SlotAnchors {
     /**
      * The slot's frame on this screen this frame, or {@code null} when it isn't there: not a
      * container screen, the slot not on the menu (armour on a creative item tab), not active,
-     * or parked because no panel presents it.
+     * parked because no panel presents it, or cut by the clip it's shown in (a row half
+     * scrolled out of a region), so a panel anchored on it doesn't draw outside the view.
      */
     public static @Nullable Reference slotBox(Screen screen, Address address) {
         if (!(screen instanceof AbstractContainerScreen<?> acs)) return null;
@@ -66,7 +67,11 @@ public final class SlotAnchors {
         if (slot == null || !slot.isActive() || slot.x == CreatedSlots.OFFSCREEN) return null;
         AbstractContainerScreenAccessor acc = (AbstractContainerScreenAccessor) acs;
         // The frame, not the 16x16 item box, as for a group: an offset of 18 is one pitch.
-        return new Reference(acc.sk$getLeftPos() + slot.x - 1, acc.sk$getTopPos() + slot.y - 1, 18, 18);
+        int x = acc.sk$getLeftPos() + slot.x - 1, y = acc.sk$getTopPos() + slot.y - 1;
+        Reference clip = com.trevlar.menukit.api.host.SlotClip.clipOf(slot);
+        if (clip != null && (x < clip.leftPos() || y < clip.topPos()
+                || x + 18 > clip.leftPos() + clip.imageWidth() || y + 18 > clip.topPos() + clip.imageHeight())) return null;
+        return new Reference(x, y, 18, 18);
     }
 
     /** The live slot (the creative wrapper where the menu holds one) {@code address} names on {@code menu}, or {@code null}. */

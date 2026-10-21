@@ -110,10 +110,11 @@ import java.util.Objects;
  * places it, and it parks only when none did. Two shown at once both write it, and
  * SlotKit warns, since the slot can only be in one place.
  *
- * <p>A vanilla slot parks only while its panel is shown (scrolled out of a
- * {@code ScrollContainer}, say). While its panel is hidden, or once the screen
- * closes, it goes back to where the menu put it ({@code SlotClip.panelShowing}), so
- * a mod that hides its panel hands the slot back to vanilla's layout.
+ * <p>A vanilla slot parks only while its element is shown but out of view (scrolled
+ * out of a {@code ScrollContainer} or a region, which MenuKit reports through
+ * {@code renderCulled}). While the element or its panel is hidden, or once the screen
+ * closes, it goes back to where the menu put it, so a mod that hides its panel hands
+ * the slot back to vanilla's layout.
  *
  * <p>MenuKit lays out every panel before vanilla's slot pass and draws each panel's
  * slots right after the panel (7.3.0), so a slot in an overlay or popover panel draws
@@ -150,6 +151,9 @@ public final class SlotElement extends AbstractPanelElement {
     private boolean presented = false;
     // Whether render placed the slot in the last finished frame, for hover between frames.
     private boolean placedLastFrame = false;
+    // Whether the element was shown but culled this frame (scrolled out of view): its
+    // slot is held, so it parks rather than going back to the menu's own place.
+    private boolean held = false;
 
     // Whether this element has warned that another shown panel holds its slot (once per screen).
     private boolean warnedShared = false;
@@ -276,16 +280,27 @@ public final class SlotElement extends AbstractPanelElement {
     @ApiStatus.Internal
     public void endFrame(AbstractContainerMenu menu, java.util.Set<Slot> shownThisFrame) {
         boolean wasPresented = presented;
+        boolean wasHeld = held;
         presented = false;
+        held = false;
         placedLastFrame = wasPresented;
         if (wasPresented) return;
         Slot slot = resolve(menu);
         if (slot == null || shownThisFrame.contains(slot)) return;   // another panel holding it showed it
         noteHome(slot);
-        // A vanilla slot whose panel is hidden (or not on this screen) goes back to its
-        // own place; one scrolled out of a shown panel parks, as a created slot always does.
-        if (hasHome && !SlotClip.panelShowing(slot)) place(slot, homeX, homeY);
+        // Held (shown, but culled out of view) parks. Otherwise the element is hidden or its
+        // panel isn't drawn: a vanilla slot goes back to its own place, a created one parks.
+        if (hasHome && !wasHeld) place(slot, homeX, homeY);
         else place(slot, PARKED, PARKED);
+    }
+
+    /**
+     * Shown but outside the clip this frame (a row scrolled out of a region): the slot is
+     * held, so at the frame's end it parks instead of going back to the menu's own place.
+     */
+    @Override
+    public void renderCulled(RenderContext ctx) {
+        held = true;
     }
 
     /**
