@@ -202,8 +202,10 @@ public final class SlotGroupCategories {
      * slots. This is the anchor view, the one with geometry in it. A panel anchors to one
      * of these; a group has a bounding box and a category does not.
      *
-     * <p>Resolution order: the primary resolver for {@code menu.getClass()} (if
-     * any), then each extension in registration order, then the created
+     * <p>Resolution order: the player's own inventory slots, by their inventory index
+     * (hotbar, main grid, armour, offhand, on every menu that shows them, modded ones
+     * included), then the primary resolver for {@code menu.getClass()} (if any), then
+     * each extension in registration order, then the created
      * groups on the menu. Each vanilla category yields one group; an
      * extension's category that collides is dropped with a warning, as
      * {@link #extend} describes. Each created contribution yields its own group.
@@ -219,9 +221,13 @@ public final class SlotGroupCategories {
 
         List<ResolvedSlotGroup> out = new ArrayList<>();
         Set<SlotGroupCategory> claimed = new HashSet<>();
-        if (primary != null) {
-            addVanillaGroups(menu, primary.resolve(menu), out, claimed, false);
-        }
+        // The player's own slots take their categories from their slot key, the same on
+        // every menu. The primary resolver adds the menu's own containers, and a player
+        // category it emits stands only where the key found none.
+        Map<SlotGroupCategory, int[]> vanilla = new java.util.LinkedHashMap<>(
+                com.trevlar.slotkit.core.PlayerSlots.groupsOn(menu));
+        if (primary != null) primary.resolve(menu).forEach(vanilla::putIfAbsent);
+        addVanillaGroups(menu, vanilla, out, claimed, false);
         // Extensions carry no id to sort by, so a collision between them must not be
         // settled by which registered first (that is load order): a category two
         // extensions both claim is dropped from both. The primary still wins over any.

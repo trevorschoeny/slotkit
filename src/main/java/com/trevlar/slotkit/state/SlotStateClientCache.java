@@ -30,6 +30,7 @@ public final class SlotStateClientCache {
 
     @SuppressWarnings("unchecked")
     public static <T> T read(SlotStateChannel<T> channel, Slot slot) {
+        slot = com.trevlar.slotkit.core.Slots.target(slot);
         synchronized (CACHE) {
             Map<Integer, Map<Identifier, Object>> byIndex = CACHE.get(slot.container);
             Map<Identifier, Object> byChannel = byIndex == null ? null : byIndex.get(slot.getContainerSlot());

@@ -143,6 +143,7 @@ public final class SlotState {
     // Internal read and write, called from SlotStateChannel
 
     static <T> T read(SlotStateChannel<T> channel, Slot slot, @Nullable Player player) {
+        slot = com.trevlar.slotkit.core.Slots.target(slot);   // a creative wrapper's own container index is its menu index
         Player viewer = resolvePlayer(slot, player);
         if (isClientSide(viewer)) {
             return SlotStateClientCache.read(channel, slot);
@@ -160,6 +161,7 @@ public final class SlotState {
 
     static <T> void write(SlotStateChannel<T> channel, Slot slot,
                            @Nullable Player player, T value) {
+        slot = com.trevlar.slotkit.core.Slots.target(slot);
         Player viewer = resolvePlayer(slot, player);
         if (isClientSide(viewer)) {
             writeFromClient(channel, slot, viewer, value);
@@ -426,8 +428,9 @@ public final class SlotState {
             net.minecraft.world.inventory.AbstractContainerMenu menu,
             PersistentContainerKey key, int containerSlotIndex) {
         for (Slot s : menu.slots) {
-            if (s.getContainerSlot() != containerSlotIndex) continue;
-            Container container = s.container;
+            Slot target = com.trevlar.slotkit.core.Slots.target(s);
+            if (target.getContainerSlot() != containerSlotIndex) continue;
+            Container container = target.container;
             Optional<PersistentContainerKey> resolved = SlotStateRegistry.resolve(container);
             if (resolved.isEmpty()) continue;
             if (resolved.get().equals(key)) return s;

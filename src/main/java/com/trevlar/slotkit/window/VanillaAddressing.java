@@ -42,6 +42,12 @@ public final class VanillaAddressing {
         if (id.isPresent()) {
             return Address.vanillaSlot(CONTAINER_FAMILY, OwnerScope.sub(id.get().scopeId()), id.get().localIndex());
         }
+        // A creative wrapper stands for a slot of the player's inventory menu (its crafting
+        // grid, say): name that slot, as survival's inventory does, not the wrapper, whose
+        // own index is 0 for every wrapper.
+        if (target != inMenuSlot) {
+            return Address.vanillaSlot(WindowMint.inventoryFamily(), WindowMint.scopeOf(menu), target.index);
+        }
         return Address.vanillaSlot(WindowMint.familyOf(menu), WindowMint.scopeOf(menu), inMenuSlot.index);
     }
 

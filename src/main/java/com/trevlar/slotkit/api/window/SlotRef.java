@@ -17,6 +17,7 @@ import org.jspecify.annotations.Nullable;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.WeakHashMap;
 
 /**
@@ -84,28 +85,33 @@ public record SlotRef(Container container, int containerSlot, @Nullable Slot slo
                 VanillaAddressing.addressOf(container, containerSlot).orElse(null));
     }
 
-    // A menu's slot list is fixed at construction (SlotKit appends its created
-    // slots there too), so its category map is computed once per menu instance and
-    // read for every slot a shift-click walks. Weak keys: a menu lives as long as
-    // its screen. Nothing invalidates it; if a menu ever gains slots after it
-    // opens, key this on (menu, slots.size()).
-    private static final Map<AbstractContainerMenu, Map<Slot, SlotGroupCategory>> CATEGORIES =
+    // A slot's category and address are computed once per Slot object, which is what
+    // every operation question and shift-click walk asks about. Keyed by the slot, not
+    // the menu: creative rebuilds its slot list on every tab switch, and a rebuilt
+    // wrapper is a new key. Weak keys: a slot lives as long as its menu.
+    private static final Map<Slot, Optional<SlotGroupCategory>> CATEGORIES =
+            Collections.synchronizedMap(new WeakHashMap<>());
+    private static final Map<Slot, Address> ADDRESSES =
             Collections.synchronizedMap(new WeakHashMap<>());
 
     private static @Nullable SlotGroupCategory categoryOf(AbstractContainerMenu menu, Slot slot) {
-        return CATEGORIES.computeIfAbsent(menu, SlotGroupCategories::categoriesBySlot).get(slot);
+        Optional<SlotGroupCategory> known = CATEGORIES.get(slot);
+        if (known == null) {
+            // One resolve answers every slot on the menu, so fill them all at once.
+            Map<Slot, SlotGroupCategory> all = SlotGroupCategories.categoriesBySlot(menu);
+            all.forEach((s, c) -> CATEGORIES.putIfAbsent(s, Optional.of(c)));
+            known = Optional.ofNullable(all.get(slot));
+            CATEGORIES.putIfAbsent(slot, known);
+        }
+        return known.orElse(null);
     }
-
-    // The same for a slot's Address: minting one resolves the container's identity
-    // and builds its scope id, and every operation question asks for it, so it is
-    // minted once per (menu, slot). Same lifetime and ceiling as CATEGORIES.
-    private static final Map<AbstractContainerMenu, Map<Slot, Address>> ADDRESSES =
-            Collections.synchronizedMap(new WeakHashMap<>());
 
     @org.jetbrains.annotations.ApiStatus.Internal
     public static Address addressOf(AbstractContainerMenu menu, Slot slot) {
-        Map<Slot, Address> perMenu = ADDRESSES.computeIfAbsent(menu,
-                m -> Collections.synchronizedMap(new java.util.IdentityHashMap<>()));
-        return perMenu.computeIfAbsent(slot, s -> ClientSlotAddressing.addressOf(menu, s));
+        Address known = ADDRESSES.get(slot);
+        if (known != null) return known;
+        Address minted = ClientSlotAddressing.addressOf(menu, slot);
+        ADDRESSES.putIfAbsent(slot, minted);
+        return minted;
     }
 }
