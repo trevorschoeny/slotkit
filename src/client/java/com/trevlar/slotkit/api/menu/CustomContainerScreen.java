@@ -154,17 +154,19 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         super(handler, inventory, title);
         // A container screen (it is an AbstractContainerScreen), so its panels draw
         // in the container look, as every inventory's do (ScreenKind.of).
-        this.host = OwnHost.of(this, ScreenKind.CONTAINER, OwnHost.TitleBand.IN_FRAME)
+        this.host = OwnHost.of(this, ScreenKind.PANEL, OwnHost.TitleBand.IN_FRAME)
                 .contentSize(this::contentSize)
                 // A slot-bearing main doesn't auto-fit its height, so a resize never
                 // pushes its slots under a scroll it can't show. A pure-element main can.
                 .autoFitMain(p -> menu.getGroupsFor(p.id()).isEmpty());
         this.panels = buildPanels(handler);
-        List<PanelPosition> positions = PanelPosition.standaloneDefaults(
-                panels.stream().map(Panel::getPosition).toList());
-        for (int i = 0; i < panels.size(); i++) {
-            Panel panel = panels.get(i);
-            host.add(panel, positions.get(i), panel.interiorPadding());
+        // Each panel goes on by its own placements, so a panel scoped to one mode follows
+        // /gamemode. A panel that declares main() goes on first: an unplaced one becomes the
+        // main panel only when none is declared, and otherwise stacks below the one before.
+        List<Panel> order = new ArrayList<>(panels);
+        order.sort(java.util.Comparator.comparing(p -> !declaresMain(p)));
+        for (Panel panel : order) {
+            host.add(panel, panel.interiorPadding());
             lastShown.put(panel.id(), panel.isVisible());
         }
         // Initial layout sets the image size before init() runs.
@@ -210,6 +212,11 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
             built.add(panel);
         }
         return List.copyOf(built);
+    }
+
+    private static boolean declaresMain(Panel panel) {
+        return panel.placements().values().stream()
+                .anyMatch(p -> p.position().mode() == PanelPosition.Mode.MAIN);
     }
 
     @Override

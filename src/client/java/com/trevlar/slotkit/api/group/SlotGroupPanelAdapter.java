@@ -5,47 +5,41 @@ import com.trevlar.menukit.api.panel.Anchor;
 import com.trevlar.menukit.api.panel.AnchorPanelAdapter;
 import com.trevlar.menukit.api.panel.Panel;
 import com.trevlar.menukit.api.panel.PanelStyle;
-import com.trevlar.menukit.api.panel.Reference;
 import com.trevlar.menukit.api.panel.WrapsPanelAdapter;
-import com.trevlar.slotkit.core.SlotGroupBox;
-import com.trevlar.slotkit.mixin.AbstractContainerScreenAccessor;
+import com.trevlar.slotkit.core.SlotAnchors;
 
-import net.minecraft.client.gui.screens.Screen;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
-import net.minecraft.resources.Identifier;
 
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
-import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Anchors a {@link Panel} to a slot group's box on container screens: a toolbar
- * above the player inventory, a readout beside the hotbar. Built on MenuKit's anchor
- * context: each targeted group is one {@link Anchor} whose box is that group's
- * slots on the open screen this frame, so panels on one group share a host and stack.
+ * Anchors a {@link Panel} to slot groups and slots on container screens: a toolbar
+ * above the player inventory, a readout beside the hotbar, a slot above the offhand.
+ * Built on MenuKit's anchors: each group or slot is one {@link Anchor} whose box is on
+ * the open screen this frame, so panels on one group share a host and stack.
  *
  * <pre>{@code
  * Panel toolbar = Panel.builder("mymod:toolbar")
  *         .add(...)
- *         .position(PanelPosition.region(OutsideRegion.TOP_ALIGN_RIGHT))
+ *         .in(ModeScope.BOTH, SlotPlacement.group(SlotGroupCategory.PLAYER_INVENTORY,
+ *                 PanelPosition.region(OutsideRegion.TOP_ALIGN_RIGHT)))
  *         .build();
- * new SlotGroupPanelAdapter(toolbar).on(SlotGroupCategory.PLAYER_INVENTORY);
+ * new SlotGroupPanelAdapter(toolbar);
  * }</pre>
  *
  * <h3>Placement is the panel's</h3>
- * The panel declares {@code region(OutsideRegion)} (around the group's box),
- * {@code center()} or {@code pixel(...)}. A group has no screen spots, so
- * {@code screenAnchor}, {@code main()} and unplaced panels are rejected at
- * construction.
+ * Since 2.1.0 the panel's placements say where it goes, one per mode scope:
+ * {@link com.trevlar.slotkit.api.slot.SlotPlacement#group} around a group's box,
+ * {@link com.trevlar.slotkit.api.slot.SlotPlacement#slot} at an offset from one slot.
+ * The two modes can differ entirely. The panel shows where its current mode's group or
+ * slot is on the open screen, and nowhere else. A group or slot has no screen spots, so
+ * {@code screenAnchor}, {@code main()} and unplaced panels are rejected at construction.
  *
- * <h3>Targeting is required</h3>
- * {@link #on} (a category's vanilla group) or {@link #onGroup} (specific groups,
- * created ones included), exactly once. Exact match: categories are flat tags. An
- * adapter with no targeting fails loudly at the first screen open. The panel appears
- * once per targeted group present on the screen.
+ * <h3>Targeting</h3>
+ * Nothing besides the placements. The deprecated {@link #on} and {@link #onGroup} put
+ * the panel's screen placements around each named group instead, in both modes, and
+ * show it once per targeted group present on the screen.
  *
  * <h3>Claims</h3>
  * A slot-group panel claims points by the same rule as every other panel: an opaque
@@ -60,11 +54,6 @@ public final class SlotGroupPanelAdapter {
 
     /** Default content padding for styled panels. */
     public static final int DEFAULT_PADDING = AnchorPanelAdapter.DEFAULT_PADDING;
-
-    // One anchor per group id: MenuKit refuses a second Anchor.of with the same id,
-    // and panels on one anchor share its host, which is what stacks them. Declared
-    // on first use, always before the freeze (adapters are declarations too).
-    private static final Map<SlotGroupId, Anchor> ANCHORS = new ConcurrentHashMap<>();
 
     private final AnchorPanelAdapter anchored;
 
@@ -100,7 +89,11 @@ public final class SlotGroupPanelAdapter {
      * only warns, once per panel; a panel without slots (a toolbar) keeps the host gap.
      */
     private static void warnIfSlotPanelKeepsHostGap(Panel panel) {
-        if (panel.getPosition().gap() != com.trevlar.menukit.api.panel.PanelPosition.HOST_GAP) return;
+        // Only a region stacks against the box with a gap; an at(...) placement sits at its offset.
+        boolean keepsGap = panel.placements().values().stream().anyMatch(p ->
+                p.position().mode() == com.trevlar.menukit.api.panel.PanelPosition.Mode.REGION
+                        && p.position().gap() == com.trevlar.menukit.api.panel.PanelPosition.HOST_GAP);
+        if (!keepsGap) return;
         for (var element : panel.getRawElements()) {
             if (element instanceof com.trevlar.slotkit.api.slot.SlotElement
                     || element instanceof com.trevlar.slotkit.api.slot.SlotFlowElement) {
@@ -112,7 +105,13 @@ public final class SlotGroupPanelAdapter {
         }
     }
 
-    /** Anchors to each category's vanilla group. Call exactly once. */
+    /**
+     * Anchors to each category's vanilla group, in both modes. Call at most once.
+     *
+     * @deprecated since 2.1.0, the group is part of the panel's placement:
+     *             {@code in(ModeScope.BOTH, SlotPlacement.group(category, position))}.
+     */
+    @Deprecated(since = "2.1.0")
     public SlotGroupPanelAdapter on(SlotGroupCategory... categories) {
         if (categories.length == 0) {
             throw new IllegalArgumentException("SlotGroupPanelAdapter for panel '" + getPanel().id()
@@ -125,8 +124,13 @@ public final class SlotGroupPanelAdapter {
 
     /**
      * Anchors to specific slot groups, including created ones (whose identity is
-     * their {@code (panelId, groupId)}). Call exactly once.
+     * their {@code (panelId, groupId)}), in both modes. Call at most once.
+     *
+     * @deprecated since 2.1.0, the group is part of the panel's placement:
+     *             {@code in(ModeScope.BOTH, SlotPlacement.group(group, position))}.
      */
+    @Deprecated(since = "2.1.0")
+    @SuppressWarnings("removal")   // MenuKit's AnchorPanelAdapter.on, which this keeps working
     public SlotGroupPanelAdapter onGroup(SlotGroupId... groups) {
         Declarations.requireOpen("SlotGroupPanelAdapter(" + getPanel().id() + ") targeting");
         if (targets != null) {
@@ -139,7 +143,7 @@ public final class SlotGroupPanelAdapter {
         }
         this.targets = List.of(groups);
         Anchor[] anchors = new Anchor[groups.length];
-        for (int i = 0; i < groups.length; i++) anchors[i] = anchorFor(groups[i]);
+        for (int i = 0; i < groups.length; i++) anchors[i] = SlotAnchors.group(groups[i]);
         anchored.on(anchors);
         return this;
     }
@@ -167,23 +171,5 @@ public final class SlotGroupPanelAdapter {
     /** Whether {@code group} is one of this adapter's targets. */
     public boolean matches(SlotGroupId group) {
         return targets != null && targets.contains(group);
-    }
-
-    /** The anchor for a group: one per id, declared on first use. */
-    private static Anchor anchorFor(SlotGroupId group) {
-        return ANCHORS.computeIfAbsent(group, g -> Anchor.of(anchorId(g), screen -> box(screen, g)));
-    }
-
-    /** An anchor id per group, readable in a log: {@code slotkit:group/<sanitised group id>}. */
-    private static Identifier anchorId(SlotGroupId group) {
-        String path = group.asString().toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9_./-]", "_");
-        return Identifier.fromNamespaceAndPath("slotkit", "group/" + path);
-    }
-
-    /** One slot group's box on this screen this frame ({@link SlotGroupBox#of}), or {@code null} off a container screen. */
-    private static @Nullable Reference box(Screen screen, SlotGroupId id) {
-        if (!(screen instanceof AbstractContainerScreen<?> acs)) return null;
-        AbstractContainerScreenAccessor acc = (AbstractContainerScreenAccessor) acs;
-        return SlotGroupBox.of(acs.getMenu(), acc.sk$getLeftPos(), acc.sk$getTopPos(), id);
     }
 }
