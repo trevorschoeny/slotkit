@@ -3,6 +3,7 @@ package com.trevlar.slotkit.api.slot;
 import com.trevlar.slotkit.api.group.SlotGroupId;
 
 import com.trevlar.menukit.api.element.AbstractPanelElement;
+import com.trevlar.menukit.api.element.ChildDispatch;
 import com.trevlar.menukit.api.element.PanelElement;
 import com.trevlar.menukit.api.element.RenderContext;
 
@@ -185,8 +186,11 @@ public final class SlotFlowElement extends AbstractPanelElement {
             // Each child renders itself (writes its real slot's x/y, draws the frame,
             // sets its tooltip) at an origin shifted to its cell. The child's own
             // childX/childY are 0, so that origin is its cell on screen; the flow
-            // does the positioning.
-            slot.render(ctx.at(originX + col * PITCH, originY + row * PITCH));
+            // does the positioning. Through MenuKit's dispatch, so a cell wholly outside
+            // the clip (a row scrolled out of a ScrollContainer) isn't placed and its
+            // slot parks: placed there, it would sit over whatever is below the clip and
+            // take its hover.
+            ChildDispatch.render(List.of(slot), ctx.at(originX + col * PITCH, originY + row * PITCH));
             k++;
         }
     }
