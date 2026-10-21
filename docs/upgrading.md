@@ -264,7 +264,7 @@ SlotKit reads every value MenuKit and Containers 6.x saved. Worlds, player files
 
 | Saved form | Unchanged |
 |---|---|
-| Address text from `Address.asString()`, read by `Address.parse` and `Address.CODEC` | Byte for byte, all four kinds, every scope and token form. |
+| Address text from `Address.asString()`, read by `Address.parse` and `Address.CODEC` | Byte for byte, all four kinds, every scope and token form. One form reads but is written differently from 2.1: a player inventory address that names the player by UUID reads as `Address.playerInventory(n)` and saves in that form. |
 | `SlotGroupId.asString()`, `SlotGroupSet.asString()` | Byte for byte. |
 | Slot group category ids | `menukit:player_inventory`, `menukit:chest_storage`, and the rest keep the `menukit:` namespace. |
 | Behavior key and reaction cause ids | Same ids. `MENDING` keeps `menukit:mending` under its new owner. |
