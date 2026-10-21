@@ -465,7 +465,7 @@ public final class SlotOperations {
      *
      * @deprecated since 2.1.0, name the mode: {@code inherent(ModeScope.BOTH, category, operation, value)}.
      */
-    @Deprecated(since = "2.1.0")
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public static <V> void inherent(SlotGroupCategory category, BehaviorKey<V> operation, V value) {
         inherent(ModeScope.BOTH, category, operation, value);
     }
@@ -544,7 +544,7 @@ public final class SlotOperations {
      *
      * @deprecated since 2.1.0, name the mode: {@code veto(ModeScope.BOTH, veto)}.
      */
-    @Deprecated(since = "2.1.0")
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public static void veto(Veto veto) {
         veto(ModeScope.BOTH, veto);
     }
@@ -554,7 +554,7 @@ public final class SlotOperations {
      *
      * @deprecated since 2.1.0, name the mode: {@code veto(ModeScope.BOTH, veto)}.
      */
-    @Deprecated(since = "2.1.0")
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public static void veto(GroupVeto veto) {
         veto(ModeScope.BOTH, veto);
     }

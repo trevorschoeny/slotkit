@@ -67,13 +67,21 @@ public final class SlotElementRegistry {
                 element.endFrame(menu, shown);
             }
         }
+    }
+
+    /**
+     * Forgets this frame's group resolutions. Runs every frame, attached elements or not:
+     * a group element that found no slots attaches none, and must still see the group
+     * when it appears on the same menu later.
+     */
+    static void endOfFrame() {
         frameMenu = null;
         frameGroups = null;
     }
 
     // SlotGroupCategories.groups(menu) runs the resolvers and allocates, so the elements
     // that name a group by id share one resolution per menu per frame. Cleared at the
-    // end of each frame (parkUnpresented). Render and input thread only.
+    // end of each frame (endOfFrame). Render and input thread only.
     private static net.minecraft.world.inventory.@org.jspecify.annotations.Nullable AbstractContainerMenu frameMenu;
     private static java.util.@org.jspecify.annotations.Nullable Map<com.trevlar.slotkit.api.group.SlotGroupId,
             com.trevlar.slotkit.api.group.ResolvedSlotGroup> frameGroups;

@@ -61,7 +61,7 @@ public final class WindowView {
      *
      * @deprecated since 2.1.0, name the mode: {@code slot(ModeScope.BOTH, address)}.
      */
-    @Deprecated(since = "2.1.0")
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public SlotHandle slot(Address address) {
         return slot(ModeScope.BOTH, address);
     }

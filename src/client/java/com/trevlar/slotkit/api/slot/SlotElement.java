@@ -307,13 +307,13 @@ public final class SlotElement extends AbstractPanelElement {
         return presented ? resolve(menu) : null;
     }
 
-    /** Warns, once per screen, that another shown panel also placed this element's slot. Library use. */
+    /** Warns, once per screen, that another shown element also placed this element's slot. Library use. */
     @ApiStatus.Internal
     public void warnShared(Screen screen) {
         if (warnedShared) return;
         warnedShared = true;
         org.slf4j.LoggerFactory.getLogger("SlotKit").warn(
-                "Two shown panels on {} hold the same slot ({}); it can only be in one place. "
+                "Two shown elements on {} hold the same slot ({}); it can only be in one place. "
                 + "Gate them with visibleWhen so one shows at a time.", screen.getClass().getSimpleName(), address != null ? address : categoryGroup + " #" + categoryIndex);
     }
 

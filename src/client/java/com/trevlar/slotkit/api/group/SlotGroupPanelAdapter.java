@@ -111,7 +111,7 @@ public final class SlotGroupPanelAdapter {
      * @deprecated since 2.1.0, the group is part of the panel's placement:
      *             {@code in(ModeScope.BOTH, SlotPlacement.group(category, position))}.
      */
-    @Deprecated(since = "2.1.0")
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public SlotGroupPanelAdapter on(SlotGroupCategory... categories) {
         if (categories.length == 0) {
             throw new IllegalArgumentException("SlotGroupPanelAdapter for panel '" + getPanel().id()
@@ -129,7 +129,7 @@ public final class SlotGroupPanelAdapter {
      * @deprecated since 2.1.0, the group is part of the panel's placement:
      *             {@code in(ModeScope.BOTH, SlotPlacement.group(group, position))}.
      */
-    @Deprecated(since = "2.1.0")
+    @Deprecated(since = "2.1.0", forRemoval = true)
     @SuppressWarnings("removal")   // MenuKit's AnchorPanelAdapter.on, which this keeps working
     public SlotGroupPanelAdapter onGroup(SlotGroupId... groups) {
         Declarations.requireOpen("SlotGroupPanelAdapter(" + getPanel().id() + ") targeting");

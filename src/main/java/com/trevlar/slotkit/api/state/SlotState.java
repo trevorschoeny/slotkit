@@ -80,7 +80,7 @@ public final class SlotState {
      *
      * @deprecated since 2.1.0, name the mode: {@code register(ModeScope.BOTH, id, ...)}.
      */
-    @Deprecated(since = "2.1.0")
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public static <T> SlotStateChannel<T> register(
             Identifier id, Codec<T> codec,
             StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue) {
@@ -96,7 +96,7 @@ public final class SlotState {
      *
      * @deprecated since 2.1.0, name the mode: {@code register(ModeScope.BOTH, id, ...)}.
      */
-    @Deprecated(since = "2.1.0")
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public static <T> SlotStateChannel<T> register(
             Identifier id, Codec<T> codec,
             StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue,
@@ -118,7 +118,7 @@ public final class SlotState {
      *
      * @deprecated since 2.1.0, name the mode: {@code register(ModeScope.BOTH, id, ...)}.
      */
-    @Deprecated(since = "2.1.0")
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public static <T> SlotStateChannel<T> register(
             Identifier id, Codec<T> codec,
             StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue,

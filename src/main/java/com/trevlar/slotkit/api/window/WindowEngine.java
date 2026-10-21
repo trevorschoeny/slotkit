@@ -109,7 +109,7 @@ public final class WindowEngine {
      *
      * @deprecated since 2.1.0, name the mode: {@code set(ModeScope.BOTH, address, key, decl)}.
      */
-    @Deprecated(since = "2.1.0")
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public static <V> void set(Address address, BehaviorKey<V> key, Decl<V> decl) {
         set(ModeScope.BOTH, address, key, decl);
     }
@@ -141,7 +141,7 @@ public final class WindowEngine {
      *
      * @deprecated since 2.1.0, name the mode: {@code setGroup(ModeScope.BOTH, group, key, decl)}.
      */
-    @Deprecated(since = "2.1.0")
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public static <V> void setGroup(GroupKey group, BehaviorKey<V> key, Decl<V> decl) {
         setGroup(ModeScope.BOTH, group, key, decl);
     }

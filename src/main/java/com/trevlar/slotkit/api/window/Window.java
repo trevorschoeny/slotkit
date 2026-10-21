@@ -23,7 +23,6 @@ public final class Window {
 
     private Window() {}
 
-    /** A handle on a slot already named by an {@link Address} (vanilla or created). */
     /**
      * A handle on the slot {@code address} names, declaring for {@code scope}: its gate,
      * binding and operations apply while the acting player's mode is in that scope.
@@ -39,7 +38,7 @@ public final class Window {
      *
      * @deprecated since 2.1.0, name the mode: {@code Window.slot(ModeScope.BOTH, address)}.
      */
-    @Deprecated(since = "2.1.0")
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public static SlotHandle slot(Address address) {
         return new SlotHandle(ModeScope.BOTH, address);
     }

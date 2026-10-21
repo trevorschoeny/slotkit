@@ -40,6 +40,7 @@ public final class CreatedSlotScreenHook implements SlotScreenHook {
 
     @Override
     public void endFrame(AbstractContainerScreen<?> screen) {
+        SlotElementRegistry.endOfFrame();
         if (!SlotElementRegistry.hasActive()) return;
         SlotElementRegistry.parkUnpresented(screen.getMenu());
     }
