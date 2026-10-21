@@ -36,6 +36,7 @@
     "SKCreativeClickMixin",
     "SKCreativeMenuIndexMixin",
     "SKCreativeSlotParkMixin",
+    "SKCreativeWrapperSlotMixin",
     "SKHasClickedOutsideContainerMixin",
     "SKHasClickedOutsideCreativeMixin",
     "SKHasClickedOutsideMixin",
