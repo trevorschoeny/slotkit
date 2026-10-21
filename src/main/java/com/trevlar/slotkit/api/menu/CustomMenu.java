@@ -45,7 +45,7 @@ import java.util.function.Predicate;
  * // client class there crashes a dedicated server.
  * ClientMenu.of(MyMod.CUSTOM)
  *     .screen(MyScreen::new)
- *     .panel("mymod:menu:main", p -> p.position(PanelPosition.main()).add(label));
+ *     .panel("mymod:menu:main", p -> p.in(ModeScope.BOTH, Placement.screen(PanelPosition.main())).add(label));
  *
  * // The handler factory receives the menu's own MenuType (no reach-back to the
  * // CUSTOM handle being assigned above, see HandlerFactory):

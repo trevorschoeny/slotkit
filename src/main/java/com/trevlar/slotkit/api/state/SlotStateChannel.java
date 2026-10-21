@@ -109,14 +109,24 @@ public record SlotStateChannel<T>(
         java.util.Objects.requireNonNull(scope, "scope");
     }
 
-    /** A channel in both modes, with an explicit writer rule. */
+    /**
+     * A channel in both modes, with an explicit writer rule.
+     *
+     * @deprecated since 2.1.0, name the mode: the canonical constructor, with a {@code ModeScope}.
+     */
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public SlotStateChannel(Identifier id, Codec<T> codec,
             StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue,
             Visibility visibility, CanWrite canWrite) {
         this(id, codec, streamCodec, defaultValue, visibility, canWrite, ModeScope.BOTH);
     }
 
-    /** A channel with its visibility's default writer rule ({@link CanWrite}). */
+    /**
+     * A channel in both modes with its visibility's default writer rule ({@link CanWrite}).
+     *
+     * @deprecated since 2.1.0, name the mode: the canonical constructor, with a {@code ModeScope}.
+     */
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public SlotStateChannel(Identifier id, Codec<T> codec,
             StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue, Visibility visibility) {
         this(id, codec, streamCodec, defaultValue, visibility,
@@ -146,7 +156,10 @@ public record SlotStateChannel<T>(
      * Creates a PRIVATE channel, the default. Kept so existing
      * {@code new SlotStateChannel<>(id, codec, streamCodec, default)} calls (and the
      * four-argument {@link SlotState#register}) keep working unchanged.
+     *
+     * @deprecated since 2.1.0, name the mode: the canonical constructor, with a {@code ModeScope}.
      */
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public SlotStateChannel(Identifier id, Codec<T> codec,
             StreamCodec<RegistryFriendlyByteBuf, T> streamCodec, T defaultValue) {
         this(id, codec, streamCodec, defaultValue, Visibility.PRIVATE);

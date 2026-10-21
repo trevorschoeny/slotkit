@@ -77,6 +77,21 @@ public final class SlotElementRegistry {
     static void endOfFrame() {
         frameMenu = null;
         frameGroups = null;
+        groupClaims.clear();
+    }
+
+    // Which element showed each group this frame: one group is shown by one element at a time.
+    private static final java.util.Map<com.trevlar.slotkit.api.group.SlotGroupId, Object> groupClaims = new java.util.HashMap<>();
+
+    /**
+     * Claims {@code group} for {@code element} this frame. Returns the element that already
+     * holds it, or {@code null} when {@code element} now does (or already did).
+     */
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public static @org.jspecify.annotations.Nullable Object claimGroup(
+            com.trevlar.slotkit.api.group.SlotGroupId group, Object element) {
+        Object holder = groupClaims.putIfAbsent(group, element);
+        return holder == null || holder == element ? null : holder;
     }
 
     // SlotGroupCategories.groups(menu) runs the resolvers and allocates, so the elements

@@ -166,7 +166,15 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
         List<Panel> order = new ArrayList<>(panels);
         order.sort(java.util.Comparator.comparing(p -> !declaresMain(p)));
         for (Panel panel : order) {
-            host.add(panel, panel.interiorPadding());
+            try {
+                host.add(panel, panel.interiorPadding());
+            } catch (IllegalArgumentException e) {
+                // A look placed on a slot or group (SlotPlacement): a screen's own host takes
+                // screen placements only. Leave the panel out rather than crash the client.
+                LOGGER.error("Custom menu panel '{}' can't be placed on this screen ({}). A ClientMenu.panel "
+                        + "takes screen placements only (Placement.screen), not SlotPlacement.", panel.id(), e.getMessage());
+                continue;
+            }
             lastShown.put(panel.id(), panel.isVisible());
         }
         // Initial layout sets the image size before init() runs.
@@ -205,7 +213,14 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
                     b.add(SlotFlowElement.of(SlotGroupId.created(id, group.id()), group.getStorage().size()));
                 }
             } else {
-                look.accept(b);
+                try {
+                    look.accept(b);
+                } catch (IllegalStateException | IllegalArgumentException e) {
+                    // A look that places on a slot or group declares an anchor on each open,
+                    // after MenuKit's declarations froze. Show the panel unplaced rather than crash.
+                    LOGGER.error("Custom menu panel '{}': its ClientMenu.panel look failed ({}). A custom menu's "
+                            + "panels take screen placements only, not SlotPlacement.", id, e.getMessage());
+                }
             }
             Panel panel = b.visible(true).build();
             panel.visibleWhen(() -> handler.isPanelVisible(id));

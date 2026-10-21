@@ -37,8 +37,8 @@ import java.util.Objects;
  * created group past its active count draws only its open slots.
  *
  * <p>A panel may hold several of these, for one mod's groups or several mods'; each
- * stays its own container. One group is shown by one panel at a time on a screen. Two
- * shown panels holding the same group both write its slots, and SlotKit warns.
+ * stays its own container. One group is shown by one element at a time on a screen: a
+ * second element showing the same group draws nothing and logs an error once.
  *
  * <p>Since 2.1.0.
  */
@@ -56,6 +56,8 @@ public final class SlotGroupElement extends AbstractPanelElement {
     private @Nullable Screen attached;
     // How wide the rows may get: the panel's budget, at most the declared columns.
     private int budget = Integer.MAX_VALUE;
+    // Whether this element has logged that another element already shows its group.
+    private boolean warnedTwice = false;
 
     private SlotGroupElement(Builder b) {
         super(b);
@@ -138,6 +140,17 @@ public final class SlotGroupElement extends AbstractPanelElement {
 
     @Override
     public void render(RenderContext ctx) {
+        // One group, one element per screen: a second one draws nothing, and says so once.
+        Object holder = SlotElementRegistry.claimGroup(group, this);
+        if (holder != null) {
+            if (!warnedTwice) {
+                warnedTwice = true;
+                org.slf4j.LoggerFactory.getLogger("SlotKit").error(
+                        "Slot group {} is shown by two elements on one screen; only the first draws it. "
+                        + "Show a group in one panel at a time (gate the others with visibleWhen).", group);
+            }
+            return;
+        }
         int c = cols();
         int originX = ctx.originX() + getChildX();
         int originY = ctx.originY() + getChildY();
@@ -153,6 +166,7 @@ public final class SlotGroupElement extends AbstractPanelElement {
     @Override
     public void onAttach(Screen screen) {
         attached = screen;
+        warnedTwice = false;
         for (SlotElement s : slots) s.onAttach(screen);
     }
 

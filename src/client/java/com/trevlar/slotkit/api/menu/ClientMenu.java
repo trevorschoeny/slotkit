@@ -28,10 +28,10 @@ import java.util.function.Consumer;
  * ClientMenu.of(MyMod.CUSTOM)
  *     .screen(MyScreen::new)                                // optional; default CustomContainerScreen
  *     .panel("mymod:menu:main", p -> p
- *             .position(PanelPosition.main())
+ *             .in(ModeScope.BOTH, Placement.screen(PanelPosition.main()))
  *             .add(TextLabel.builder().text(title).at(64, 0).build()))
  *     .panel("mymod:menu:side", p -> p
- *             .position(PanelPosition.region(OutsideRegion.RIGHT_ALIGN_TOP))
+ *             .in(ModeScope.BOTH, Placement.screen(PanelPosition.region(OutsideRegion.RIGHT_ALIGN_TOP)))
  *             .toggleKey(InputConstants.KEY_T));            // works when the side panel is toggleable()
  *
  * ClientMenu.of(MyMod.CUSTOM).requestOpen();                // later: ask the server to open it

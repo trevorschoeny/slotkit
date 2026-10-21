@@ -128,7 +128,7 @@ import java.util.function.BooleanSupplier;
  * // register() above added the synced slot data; this draws the slots:
  * Panel panel = Panel.builder("inventory-plus:pockets")
  *         .add(SlotFlowElement.of(CreatedSlots.groupId("inventory-plus:pockets", "pockets"), 3))
- *         .position(PanelPosition.region(OutsideRegion.RIGHT_ALIGN_TOP))
+ *         .in(ModeScope.BOTH, Placement.screen(PanelPosition.region(OutsideRegion.RIGHT_ALIGN_TOP)))
  *         .build();
  * new ScreenPanelAdapter(panel).on(InventoryScreen.class);
  * }</pre>

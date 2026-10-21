@@ -33,7 +33,7 @@ import java.util.function.Consumer;
  *
  * How each panel looks (its elements, style, placement, toggle key) is declared on the
  * client with MenuKit's {@code Panel.Builder}:
- * {@code ClientMenu.of(MENU).panel("mymod:menu:main", p -> p.position(PanelPosition.main()).add(...))}.
+ * {@code ClientMenu.of(MENU).panel("mymod:menu:main", p -> p.in(ModeScope.BOTH, Placement.screen(PanelPosition.main())).add(...))}.
  *
  * <h3>Namespace your panel ids</h3>
  * A created slot's address is keyed by (panel id, group id, index) and is global, not

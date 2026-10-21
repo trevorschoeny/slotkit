@@ -36,7 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * // Client initializer: the mod's own MenuKit panel shows them.
  * Panel panel = Panel.builder("mymod:pockets")
  *         .add(SlotFlowElement.of(POCKETS))
- *         .position(PanelPosition.region(OutsideRegion.LEFT_ALIGN_TOP))
+ *         .in(ModeScope.BOTH, Placement.screen(PanelPosition.region(OutsideRegion.LEFT_ALIGN_TOP)))
  *         .build()
  *         .visibleWhen(() -> ClientSlots.isShown(POCKETS.id()));
  * new ScreenPanelAdapter(panel).onMatching(ScreenMatcher.all());

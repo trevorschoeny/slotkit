@@ -36,6 +36,10 @@ import java.util.List;
  * slot is on the open screen, and nowhere else. A group or slot has no screen spots, so
  * {@code screenAnchor}, {@code main()} and unplaced panels are rejected at construction.
  *
+ * <p>{@code new AnchorPanelAdapter(panel)} places such a panel too. This adapter is the
+ * slot-aware form: it also warns when a panel holding slots on a group's region leaves its
+ * gap unset (only with the deprecated targeting today).
+ *
  * <h3>Targeting</h3>
  * Nothing besides the placements. The deprecated {@link #on} and {@link #onGroup} put
  * the panel's screen placements around each named group instead, in both modes, and
@@ -162,13 +166,31 @@ public final class SlotGroupPanelAdapter {
     /** The content padding inside the panel's edge. */
     public int getPadding() { return anchored.getPadding(); }
 
-    /** The declared target groups, or {@code null} before targeting. */
+    /**
+     * The declared target groups, or {@code null} before targeting. Only {@link #on} and {@link #onGroup} declare targets; a panel placed by
+     * its placements has none.
+     *
+     * @deprecated since 2.1.0, with {@code on} and {@code onGroup}.
+     */
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public @Nullable List<SlotGroupId> getTargets() { return targets; }
 
-    /** Whether targeting was declared. */
+    /**
+     * Whether targeting was declared. Only {@link #on} and {@link #onGroup} declare targets; a panel placed by
+     * its placements has none.
+     *
+     * @deprecated since 2.1.0, with {@code on} and {@code onGroup}.
+     */
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public boolean isTargetingDeclared() { return targets != null; }
 
-    /** Whether {@code group} is one of this adapter's targets. */
+    /**
+     * Whether {@code group} is one of this adapter's targets. Only {@link #on} and {@link #onGroup} declare targets; a panel placed by
+     * its placements has none.
+     *
+     * @deprecated since 2.1.0, with {@code on} and {@code onGroup}.
+     */
+    @Deprecated(since = "2.1.0", forRemoval = true)
     public boolean matches(SlotGroupId group) {
         return targets != null && targets.contains(group);
     }
