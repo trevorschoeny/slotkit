@@ -11,6 +11,7 @@ import net.minecraft.world.inventory.Slot;
 
 import org.jetbrains.annotations.ApiStatus;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Pseudo;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
@@ -25,17 +26,20 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  *
  * <p>The target is the predicate inside {@code AreaTypes.getDisabled(menu)} (IPN 2.3.8
  * for 26.3). Applied only when IPN is loaded ({@link IpnMixinPlugin}), and
- * {@code require = 0}, so a changed IPN makes this a no-op, never a crash.
+ * {@code require = 0}, so a changed IPN makes this a no-op, never a crash. It runs at the
+ * predicate's head and only ever adds slots: IPN's compiled predicate reuses its menu
+ * argument's local for another value, so an injection at its return can't read the menu.
  */
 @ApiStatus.Internal
+@Pseudo
 @Mixin(targets = "org.anti_ad.mc.ipnext.inventory.AreaTypes", remap = false)
 public abstract class IpnSeparateContainersMixin {
 
     @Inject(method = "_get_disabled_$lambda$0(Lnet/minecraft/world/inventory/AbstractContainerMenu;Lnet/minecraft/world/inventory/Slot;)Z",
-            at = @At("RETURN"), cancellable = true, require = 0, remap = false)
+            at = @At("HEAD"), cancellable = true, require = 0, remap = false)
     private static void slotkit$separateContainers(AbstractContainerMenu menu, Slot slot,
                                                    CallbackInfoReturnable<Boolean> cir) {
-        if (cir.getReturnValueZ() || slot.container instanceof Inventory) return;
+        if (slot.container instanceof Inventory) return;
         Slot hovered = Minecraft.getInstance().gui.screen() instanceof AbstractContainerScreen<?> screen
                 ? ((AbstractContainerScreenAccessor) screen).sk$getHoveredSlot() : null;
         boolean overGroup = hovered != null && CreatedSlot.of(hovered) != null;
