@@ -8,17 +8,17 @@ The contract covers the public API: every type in a package named `api` (`com.tr
 
 Everything else is internal: the other packages (each marked `@ApiStatus.Internal` on the package), mixins, network payloads, and any member marked `@ApiStatus.Internal`. Internal code can change or disappear in any release, a patch included. A mod that calls it can break without warning. A task that seems to need an internal type is a gap in the API, and the fix is a public replacement. Open an issue for it.
 
-Behaviour counts too. A change to what a public method does that could break a caller is a breaking change, the same as removing it.
+Behavior counts too. A change to what a public method does that could break a caller is a breaking change, the same as removing it.
 
 ## What each part means
 
-A **major** bump means something public was removed or renamed, or its behaviour changed in a way that can break a caller. Code built against the previous major may not link.
+A **major** bump means something public was removed or renamed, or its behavior changed in a way that can break a caller. Code built against the previous major may not link.
 
-A **minor** bump adds API. Code built against an earlier minor of the same major keeps working.
+A **minor** bump adds API. Code built against an earlier minor of the same major keeps working. A minor release can deprecate a member, as 2.1.0 deprecated the slot declarations that name no game mode (no mode scope). A deprecated member keeps working through the rest of its major.
 
-A **patch** bump fixes behaviour without changing the API.
+A **patch** bump fixes behavior without changing the API.
 
-The `+26.3` suffix is the Minecraft target. It is build metadata and takes no part in version comparison. A range written against `2.0.0` still matches `2.0.0+26.4` when SlotKit is rebuilt for a newer Minecraft.
+The `+26.3` suffix is the Minecraft target. It is build metadata and takes no part in version comparison. A range written against `2.1.0` still matches `2.1.0+26.4` when SlotKit is rebuilt for a newer Minecraft.
 
 ## What to declare
 
@@ -26,20 +26,20 @@ Pin each Kit against its own version, to the major.minor the mod was built again
 
 ```json
 "depends": {
-  "menukit": ">=7.3.0 <8.0.0",
-  "slotkit": ">=2.0.0 <3.0.0"
+  "menukit": ">=7.4.0 <8.0.0",
+  "slotkit": ">=2.1.0 <3.0.0"
 }
 ```
 
 A minor release can add API. A mod can call something a later minor added while declaring only the major's first release as its floor. That mod loads on the older SlotKit and crashes with `NoSuchMethodError` the first time it calls the new method. Set the lower bound to the version the mod was built and tested against, not the oldest one believed to still work.
 
-SlotKit 2.0.0 needs MenuKit `>=7.3.0 <8.0.0`. Your mod's `menukit` range sits inside that.
+SlotKit 2.1.0 needs MenuKit `>=7.4.0 <8.0.0`. Your mod's `menukit` range sits inside that.
 
 ## Two mistakes
 
 ### A comma between the bounds
 
-Fabric splits the bounds on a space. A comma is not a separator, so `">=2.0.0,<3.0.0"` is read as one bound with a malformed version, and the mod does not load. Use a space.
+Fabric splits the bounds on a space. A comma is not a separator, so `">=2.1.0,<3.0.0"` is read as one bound with a malformed version, and the mod does not load. Use a space.
 
 ### A missing upper bound
 

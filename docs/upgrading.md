@@ -1,5 +1,35 @@
 # Upgrading
 
+## From SlotKit 2.0 to 2.1
+
+SlotKit 2.1 adds a mode scope to every declaration about a slot: `SURVIVAL`, `CREATIVE` or `BOTH`, MenuKit's `ModeScope`, read from the acting player on each check ([mode scope](concepts.md#mode-scope)). It also adds slot anchors, per-mode placements, `Address.playerInventory(n)` and `SlotGroupElement`. 2.1 needs MenuKit 7.4.0. Change the dependencies to `menukit` `>=7.4.0 <8.0.0` and `slotkit` `>=2.1.0 <3.0.0` ([versioning](versioning.md#what-to-declare)).
+
+Nothing breaks. Code built against 2.0 compiles and runs on 2.1. Each form below still works, means `BOTH`, and is deprecated. Saved data needs no migration, and a player inventory address 2.0 saved, which named the player by UUID, parses as `Address.playerInventory(n)`.
+
+| 2.0 | 2.1 |
+|---|---|
+| `SlotOperations.veto(veto)` | `SlotOperations.veto(ModeScope.BOTH, veto)` |
+| `SlotOperations.inherent(category, operation, value)` | `SlotOperations.inherent(ModeScope.BOTH, category, operation, value)` |
+| `Window.slot(address)` | `Window.slot(ModeScope.BOTH, address)` |
+| `Window.view(menu).slot(address)` | `Window.view(menu).slot(ModeScope.BOTH, address)` |
+| `SlotState.register(id, codec, streamCodec, defaultValue, ...)` | `SlotState.register(ModeScope.BOTH, id, codec, streamCodec, defaultValue, ...)` |
+| `WindowEngine.set(address, key, decl)` and `setGroup(group, key, decl)` | `WindowEngine.set(ModeScope.BOTH, address, key, decl)` and `setGroup(ModeScope.BOTH, group, key, decl)` |
+| `.position(position)` on the panel and `new SlotGroupPanelAdapter(panel).on(category)` | `.in(ModeScope.BOTH, SlotPlacement.group(category, position))` on the panel and `new AnchorPanelAdapter(panel)` |
+| `new SlotGroupPanelAdapter(panel).onGroup(groupId)` | `.in(ModeScope.BOTH, SlotPlacement.group(groupId, position))` and `new AnchorPanelAdapter(panel)` |
+| `new SlotGroupPanelAdapter(panel).on(a, b, c)`, one panel on several groups | One panel per group, each with its own `SlotPlacement.group` ([recipe](recipes.md#put-a-panel-next-to-the-player-inventory-on-every-screen)) |
+| MenuKit's `.position(position)` on any other panel, a custom menu's included | `.in(ModeScope.BOTH, Placement.screen(position))` |
+
+A `SlotGroupPanelAdapter` built on a panel with `SlotPlacement` placements needs no `on(...)`, so `new SlotGroupPanelAdapter(panel)` keeps working in place of `new AnchorPanelAdapter(panel)`. MenuKit's own deprecated forms, `position(...)` and `AnchorPanelAdapter.on(...)` among them, are on [MenuKit's upgrading page](https://github.com/trevorschoeny/menukit/blob/main/docs/upgrading-7.md#to-740).
+
+Where a mod used two panels and its own creative check to put one slot in two places, one panel with a placement per mode replaces them ([recipe](recipes.md#put-a-slot-in-another-place-in-creative)). Where a mod took a player inventory slot's address from a live slot, `Address.playerInventory(n)` names it at init.
+
+Behavior that changes in 2.1, with no change to the code:
+
+- Vetoes and the operation cascade hold in creative too. SlotKit judges creative's clicks on the client, on both tabs.
+- Creative's item tabs carry no SlotKit slots. A parity group is not on them, as vanilla shows only the hotbar there, and `ClientSlots.isShown` is false.
+- A menu's own shift-click routing stops before every slot SlotKit appended, groups added with `CreatedSlots.onto` included, so a chest's item goes to the player's inventory ([separate containers](concepts.md#separate-containers)).
+- With Inventory Profiles Next installed, its sort and move-all act on one container at a time ([limits](limits.md#inventory-profiles-next)).
+
 ## From SlotKit 1.x to 2.0
 
 SlotKit 2.0 builds no panels. A mod registers its slot groups as data and shows them in MenuKit panels of its own, next to anything else it puts there. 2.0 needs MenuKit 7.3. Saved data needs no migration: a group's id is derived exactly as before, so its contents, slot state and every setting another mod keyed to it carry over.
@@ -18,11 +48,13 @@ SlotKit 2.0 builds no panels. A mod registers its slot groups as data and shows 
 | `p.group(id, category, storage, priority, columns[, rowGapAfter, rowGapSize])` on a custom menu | `p.group(id, category, storage, priority)`; place the slots in the panel |
 | A custom menu panel with no `ClientMenu.panel(...)` | Declare one, with its slots: `.add(SlotFlowElement.of(SlotGroupId.created(panelId, groupId), count))` |
 
+The table gives the 2.0 forms. 2.1 deprecates some of them, and [2.0 to 2.1](#from-slotkit-20-to-21) has their replacements.
+
 Pass the 1.x panel id as the group's owner id, unchanged, so its id stays the same. To keep a styled panel hidden where its slots aren't (a server without SlotKit), add `visibleWhen(() -> ClientSlots.isShown(group.id()))`. New in 2.0: a `SlotElement` can show a vanilla slot ([recipe](recipes.md#show-a-vanilla-slot-in-your-own-panel)).
 
 ## From MenuKit: Containers or MenuKit 6
 
-This section moves a mod to SlotKit 1.0.0 from MenuKit: Containers 6.x, or from the slot code MenuKit 6 carried (`api.slot`, `api.window`, `SlotGroupPanelAdapter`). SlotKit is Containers renamed, plus that slot code. Then follow [1.x to 2.0](#from-slotkit-1x-to-20).
+This section moves a mod to SlotKit 1.0.0 from MenuKit: Containers 6.x, or from the slot code MenuKit 6 carried (`api.slot`, `api.window`, `SlotGroupPanelAdapter`). SlotKit is Containers renamed, plus that slot code. Then follow [1.x to 2.0](#from-slotkit-1x-to-20) and [2.0 to 2.1](#from-slotkit-20-to-21).
 
 Do MenuKit's 7.0.0 upgrade first: [MenuKit's upgrading page](https://github.com/trevorschoeny/menukit/blob/main/docs/upgrading-7.md). It also tells you whether your mod needs SlotKit at all.
 
@@ -233,7 +265,7 @@ SlotKit reads every value MenuKit and Containers 6.x saved. Worlds, player files
 | Address text from `Address.asString()`, read by `Address.parse` and `Address.CODEC` | Byte for byte, all four kinds, every scope and token form. |
 | `SlotGroupId.asString()`, `SlotGroupSet.asString()` | Byte for byte. |
 | Slot group category ids | `menukit:player_inventory`, `menukit:chest_storage`, and the rest keep the `menukit:` namespace. |
-| Behaviour key and reaction cause ids | Same ids. `MENDING` keeps `menukit:mending` under its new owner. |
+| Behavior key and reaction cause ids | Same ids. `MENDING` keeps `menukit:mending` under its new owner. |
 | Slot-state attachments | `menukit:slot_state_player_inventory` and its four siblings, same layout inside. |
 | Keyed storage NBT keys | `menukit:scope`, `menukit:owner`. |
 | Your own storage and channel ids | Used as you wrote them, never prefixed or rewritten. |
