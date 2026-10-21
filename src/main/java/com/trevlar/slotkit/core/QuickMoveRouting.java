@@ -27,7 +27,7 @@ import java.util.function.BiFunction;
  * Shift-click on every menu, at the {@code quickMoveStack} calls in vanilla's
  * {@code doClick} ({@code SKQuickMoveRouteMixin}, both sides): the routes a mod
  * registered ({@link QuickMoveRoutes}), SlotKit's default for parity slots, and the
- * clamp that keeps a menu's own routing out of the parity slots appended to it.
+ * clamp that keeps a menu's own routing out of every slot SlotKit appended to it.
  */
 @ApiStatus.Internal
 public final class QuickMoveRouting {
@@ -35,14 +35,14 @@ public final class QuickMoveRouting {
     private QuickMoveRouting() {}
 
     // Set while a menu's own quickMoveStack runs on SlotKit's behalf: its
-    // moveItemStackTo ranges stop at the first parity slot (SKQuickMoveRouteMixin).
+    // moveItemStackTo ranges stop at the first appended slot (SKQuickMoveRouteMixin).
     // Per thread, since an integrated server and its client click on two threads.
     private static final ThreadLocal<Integer> CLAMP = new ThreadLocal<>();
 
     /** The end a {@code moveItemStackTo(start, end)} call may reach while clamped. */
     public static int clampEnd(int start, int end) {
-        Integer firstParity = CLAMP.get();
-        return firstParity != null && start < firstParity ? Math.min(end, firstParity) : end;
+        Integer firstAppended = CLAMP.get();
+        return firstAppended != null && start < firstAppended ? Math.min(end, firstAppended) : end;
     }
 
     /**
@@ -106,10 +106,15 @@ public final class QuickMoveRouting {
         return menu instanceof InventoryMenu ? TARGETS_THEN_VANILLA : VANILLA_THEN_TARGETS;
     }
 
-    /** The menu's own quickMoveStack, its ranges stopped short of the parity slots. */
+    /**
+     * The menu's own quickMoveStack, its ranges stopped short of every slot SlotKit
+     * appended. A menu's own ranges stay inside its own slots, except vanilla's "into the
+     * player" range, which runs to {@code slots.size()}: clamped, a chest's item goes to
+     * the player inventory, as without SlotKit, never into an appended group.
+     */
     private static ItemStack clamped(AbstractContainerMenu menu, Player player, int index,
                                      BiFunction<Player, Integer, ItemStack> vanilla) {
-        int first = firstParitySlot(menu);
+        int first = firstAppendedSlot(menu);
         if (first < 0) return vanilla.apply(player, index);
         Integer before = CLAMP.get();
         CLAMP.set(first);
@@ -202,10 +207,17 @@ public final class QuickMoveRouting {
         return out;
     }
 
-    private static int firstParitySlot(AbstractContainerMenu menu) {
+    /**
+     * The first slot SlotKit appended to this menu, or -1. On a vanilla or modded menu
+     * that is any created slot (parity, projected, or {@code CreatedSlots.onto}): the
+     * menu built its own slots first, so a created slot is never one of them. A custom
+     * menu's own groups are its slots, so there only parity slots count as appended.
+     */
+    private static int firstAppendedSlot(AbstractContainerMenu menu) {
+        boolean custom = menu instanceof com.trevlar.slotkit.api.menu.CustomContainerMenu;
         for (Slot s : menu.slots) {
             CreatedSlot c = CreatedSlotAccess.asMKCSlot(s);
-            if (c != null && ParitySlotRegistry.isParity(c.panelId())) return s.index;
+            if (c != null && (!custom || ParitySlotRegistry.isParity(c.panelId()))) return s.index;
         }
         return -1;
     }

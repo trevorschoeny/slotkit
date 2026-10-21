@@ -54,6 +54,10 @@ import java.util.concurrent.ConcurrentHashMap;
  *       lists the group in the slot group registry under its category.</li>
  * </ol>
  *
+ * <p>On every menu the group has its own {@code Container}, shared with no other group
+ * and none of the menu's own slots, so other mods treat it as a container of its own
+ * (see {@link CreatedSlot}). Since 2.1.0.
+ *
  * <h3>What it doesn't do: the panel</h3>
  * SlotKit builds no panel. Where the slots appear, how the panel looks, what sits
  * next to them and which screens show it are the mod's, declared with MenuKit's

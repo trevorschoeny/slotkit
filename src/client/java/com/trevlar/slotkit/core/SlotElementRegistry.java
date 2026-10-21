@@ -67,6 +67,28 @@ public final class SlotElementRegistry {
                 element.endFrame(menu, shown);
             }
         }
+        frameMenu = null;
+        frameGroups = null;
+    }
+
+    // SlotGroupCategories.groups(menu) runs the resolvers and allocates, so the elements
+    // that name a group by id share one resolution per menu per frame. Cleared at the
+    // end of each frame (parkUnpresented). Render and input thread only.
+    private static net.minecraft.world.inventory.@org.jspecify.annotations.Nullable AbstractContainerMenu frameMenu;
+    private static java.util.@org.jspecify.annotations.Nullable Map<com.trevlar.slotkit.api.group.SlotGroupId,
+            com.trevlar.slotkit.api.group.ResolvedSlotGroup> frameGroups;
+
+    /** The group with {@code id} on {@code menu} this frame, or {@code null} when it isn't there. */
+    public static com.trevlar.slotkit.api.group.@org.jspecify.annotations.Nullable ResolvedSlotGroup group(
+            net.minecraft.world.inventory.AbstractContainerMenu menu, com.trevlar.slotkit.api.group.SlotGroupId id) {
+        if (frameMenu != menu || frameGroups == null) {
+            java.util.Map<com.trevlar.slotkit.api.group.SlotGroupId, com.trevlar.slotkit.api.group.ResolvedSlotGroup> m =
+                    new java.util.HashMap<>();
+            for (var g : com.trevlar.slotkit.api.group.SlotGroupCategories.groups(menu)) m.putIfAbsent(g.id(), g);
+            frameMenu = menu;
+            frameGroups = m;
+        }
+        return frameGroups.get(id);
     }
 
     /**

@@ -20,8 +20,8 @@ import org.spongepowered.asm.mixin.injection.ModifyVariable;
  * with no mixin per menu class.
  *
  * <p>While SlotKit runs a menu's own {@code quickMoveStack}, a
- * {@code moveItemStackTo} range that starts below the first parity slot ends at it,
- * so a menu's routing never reaches the parity slots appended to it.
+ * {@code moveItemStackTo} range that starts below the first slot SlotKit appended ends
+ * at it, so a menu's routing never reaches a slot group appended to it.
  */
 @Mixin(AbstractContainerMenu.class)
 public abstract class SKQuickMoveRouteMixin {

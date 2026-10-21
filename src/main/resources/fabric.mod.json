@@ -17,7 +17,7 @@
     "main": ["com.trevlar.slotkit.SlotKit"],
     "client": ["com.trevlar.slotkit.SlotKitClient"]
   },
-  "mixins": ["slotkit.mixins.json"],
+  "mixins": ["slotkit.mixins.json", "slotkit.ipn.mixins.json"],
   "depends": {
     "fabricloader": ">=0.15.0",
     "fabric-api": "*",

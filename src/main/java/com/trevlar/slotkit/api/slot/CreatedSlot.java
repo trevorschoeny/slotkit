@@ -33,6 +33,17 @@ import org.jspecify.annotations.Nullable;
  *   <li>{@code isActive}: false when the panel is hidden, otherwise super</li>
  * </ul>
  *
+ * <h3>Each group is its own container</h3>
+ *
+ * Every slot group on a menu has its own {@link net.minecraft.world.Container}, stable
+ * for the menu's life: all of a group's slots share it, no two groups share one (even
+ * over the same storage), and none is shared with the menu's own slots. Vanilla and
+ * other mods that tell containers apart by {@code slot.container} (sorting,
+ * shift-click, move-all) treat each group as its own container. A menu's own
+ * shift-click routing stops before every slot SlotKit appended, so a group takes a
+ * shift-click only through its own route. {@code SlotGroupCategories.groups(menu)} is
+ * the public way to ask which group a slot is in. Since 2.1.0.
+ *
  * <p>A mod that mixes into {@code Slot.mayPlace} to add a global filter sees its
  * filter run on created slots through the {@code super.mayPlace} call, and the most
  * restrictive answer wins. A mod iterating slots sees inert created slots as empty,

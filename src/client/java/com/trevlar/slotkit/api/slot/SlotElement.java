@@ -6,6 +6,7 @@ import com.trevlar.slotkit.core.CreatedSlotAccess;
 import com.trevlar.slotkit.core.CreatedSlotAdapter;
 import com.trevlar.slotkit.core.CreatedSlotInput;
 import com.trevlar.slotkit.core.SlotElementRegistry;
+import com.trevlar.slotkit.api.group.ResolvedSlotGroup;
 import com.trevlar.slotkit.api.group.SlotGroupId;
 
 import com.trevlar.menukit.api.element.AbstractPanelElement;
@@ -138,7 +139,12 @@ public final class SlotElement extends AbstractPanelElement {
 
     /** The created slot's panel, or {@code null} for a vanilla slot. */
     private final @Nullable String panelId;
-    private final Address address;
+    // The vanilla slot's address, or null when the slot is named by a category group.
+    private final @Nullable Address address;
+    // A category group and an index in it, resolved on each menu: "slot 5 of the chest's
+    // storage, whatever chest this is". Null for the other two forms.
+    private final SlotGroupId.@Nullable Category categoryGroup;
+    private final int categoryIndex;
 
     /** Whether a panel placed this element's slot this frame. Render thread only. */
     private boolean presented = false;
@@ -157,6 +163,8 @@ public final class SlotElement extends AbstractPanelElement {
         super(b);
         this.panelId = b.group != null ? b.group.panelId() : null;
         this.address = b.group != null ? Address.createdSlot(b.group, b.index) : b.address;
+        this.categoryGroup = b.category;
+        this.categoryIndex = b.index;
         this.width = SlotRendering.DEFAULT_SIZE;
         this.authoredWidth = SlotRendering.DEFAULT_SIZE;
         this.height = SlotRendering.DEFAULT_SIZE;
@@ -184,7 +192,7 @@ public final class SlotElement extends AbstractPanelElement {
     @ApiStatus.Internal
     public @Nullable Slot hostedVanillaSlot(AbstractContainerMenu menu) {
         if (panelId != null || !placedLastFrame) return null;
-        return VanillaAddressing.resolve(menu, address);
+        return resolve(menu);
     }
 
     /** The element's size is the slot's frame and never shrinks. */
@@ -238,6 +246,7 @@ public final class SlotElement extends AbstractPanelElement {
         // ITEM_INSET inside the 18x18 frame). Vanilla's hover resolution and slot
         // pass, which follow layer 1 in the same extractContents call, then find and
         // draw it here.
+        noteHome(slot);
         AbstractContainerScreenAccessor acc = (AbstractContainerScreenAccessor) acs;
         place(slot,
                 screenX + SlotRendering.ITEM_INSET - acc.sk$getLeftPos(),
@@ -272,6 +281,7 @@ public final class SlotElement extends AbstractPanelElement {
         if (wasPresented) return;
         Slot slot = resolve(menu);
         if (slot == null || shownThisFrame.contains(slot)) return;   // another panel holding it showed it
+        noteHome(slot);
         // A vanilla slot whose panel is hidden (or not on this screen) goes back to its
         // own place; one scrolled out of a shown panel parks, as a created slot always does.
         if (hasHome && !SlotClip.panelShowing(slot)) place(slot, homeX, homeY);
@@ -304,15 +314,29 @@ public final class SlotElement extends AbstractPanelElement {
         warnedShared = true;
         org.slf4j.LoggerFactory.getLogger("SlotKit").warn(
                 "Two shown panels on {} hold the same slot ({}); it can only be in one place. "
-                + "Gate them with visibleWhen so one shows at a time.", screen.getClass().getSimpleName(), address);
+                + "Gate them with visibleWhen so one shows at a time.", screen.getClass().getSimpleName(), address != null ? address : categoryGroup + " #" + categoryIndex);
     }
 
-    /** The live in-menu slot the address names on {@code menu}, whatever its state. */
+    /** The live in-menu slot this element names on {@code menu}, whatever its state. */
     @ApiStatus.Internal
     public @Nullable Slot resolve(AbstractContainerMenu menu) {
+        if (categoryGroup != null) {
+            ResolvedSlotGroup group = SlotElementRegistry.group(menu, categoryGroup);
+            return group != null && categoryIndex < group.slots().size() ? group.slots().get(categoryIndex) : null;
+        }
         return panelId != null
                 ? CreatedSlotAdapter.INSTANCE.resolve(menu, address)
                 : VanillaAddressing.resolve(menu, address);
+    }
+
+    // A vanilla slot's own place, read the first time this element sees it on a screen
+    // and before it moves it. A category group can appear after the panel attached
+    // (its menu resolves later), so attach alone would miss it.
+    private void noteHome(Slot slot) {
+        if (hasHome || panelId != null || slot.x == PARKED) return;
+        hasHome = true;
+        homeX = slot.x;
+        homeY = slot.y;
     }
 
     private static @Nullable AbstractContainerMenu currentMenu() {
@@ -337,11 +361,7 @@ public final class SlotElement extends AbstractPanelElement {
         hasHome = false;
         if (screen instanceof AbstractContainerScreen<?> acs) {
             Slot mine = resolve(acs.getMenu());
-            if (mine != null && panelId == null && mine.x != PARKED) {
-                hasHome = true;
-                homeX = mine.x;
-                homeY = mine.y;
-            }
+            if (mine != null) noteHome(mine);
         }
         SlotElementRegistry.add(this);
     }
@@ -359,6 +379,7 @@ public final class SlotElement extends AbstractPanelElement {
     /** Builds a {@link SlotElement}. One of the {@code slot} methods is required. */
     public static final class Builder extends AbstractPanelElement.Builder<SlotElement, Builder> {
         private SlotGroupId.@org.jspecify.annotations.Nullable Created group;
+        private SlotGroupId.@org.jspecify.annotations.Nullable Category category;
         private int index = -1;
         private @Nullable Address address;
 
@@ -374,6 +395,28 @@ public final class SlotElement extends AbstractPanelElement {
             this.group = Objects.requireNonNull(group, "group");
             if (index < 0) throw new IllegalArgumentException("index must not be negative, got " + index);
             this.index = index;
+            this.address = null;
+            this.category = null;
+            return this;
+        }
+
+        /**
+         * Slot {@code index} of any group, found on whatever menu is open. A created
+         * group's id behaves as {@link #slot(SlotGroupId.Created, int)}. A category
+         * group's id ({@code SlotGroupId.category(CHEST_STORAGE)}) resolves on each menu
+         * to that group in {@code SlotGroupCategories.groups(menu)}, so one element
+         * names the same slot on a single chest, a double chest and a barrel. The element
+         * isn't shown on a menu without the group, or where the group is shorter. The
+         * slot keeps everything vanilla gives it, as with {@link #slot(Address)}.
+         * Since 2.1.0.
+         */
+        public Builder slot(SlotGroupId group, int index) {
+            Objects.requireNonNull(group, "group");
+            if (group instanceof SlotGroupId.Created created) return slot(created, index);
+            if (index < 0) throw new IllegalArgumentException("index must not be negative, got " + index);
+            this.category = (SlotGroupId.Category) group;
+            this.index = index;
+            this.group = null;
             this.address = null;
             return this;
         }
@@ -392,12 +435,13 @@ public final class SlotElement extends AbstractPanelElement {
             }
             this.address = address;
             this.group = null;
+            this.category = null;
             return this;
         }
 
         @Override
         public SlotElement build() {
-            require(group != null || address != null, "slot(group, index) or slot(address) is required");
+            require(group != null || address != null || category != null, "slot(group, index) or slot(address) is required");
             return new SlotElement(this);
         }
     }

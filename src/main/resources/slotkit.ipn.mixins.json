@@ -1,0 +1,13 @@
+{
+  "required": false,
+  "minVersion": "0.8",
+  "package": "com.trevlar.slotkit.compat.ipn",
+  "plugin": "com.trevlar.slotkit.compat.ipn.IpnMixinPlugin",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "IpnSeparateContainersMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 0
+  }
+}

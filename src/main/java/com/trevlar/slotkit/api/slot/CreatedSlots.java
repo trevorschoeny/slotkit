@@ -49,6 +49,17 @@ import java.util.function.BooleanSupplier;
  * skips them for rendering and hover. The reveal predicate below shows and hides the
  * whole group at runtime.
  *
+ * <h3>Each group is its own container</h3>
+ *
+ * Every slot group on a menu has its own {@link net.minecraft.world.Container}, stable
+ * for the menu's life: all of a group's slots share it, no two groups share one (even
+ * over the same storage), and none is shared with the menu's own slots. Vanilla and
+ * other mods that tell containers apart by {@code slot.container} (sorting,
+ * shift-click, move-all) treat each group as its own container. A menu's own
+ * shift-click routing stops before every slot SlotKit appended, so a group takes a
+ * shift-click only through its own route. {@code SlotGroupCategories.groups(menu)} is
+ * the public way to ask which group a slot is in. Since 2.1.0.
+ *
  * <h3>Reveal on hover, and which side sees what</h3>
  *
  * {@code revealWhen(BooleanSupplier)} drives the panel's visibility from a
