@@ -4,6 +4,8 @@ import com.trevlar.slotkit.window.ClickOperations;
 import com.trevlar.slotkit.window.ClickTags;
 
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -27,6 +29,10 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  *       records its tag just before the packet goes, so the integrated server can
  *       claim it ({@link ClickTags}). Only the send itself records, so a click
  *       vanilla drops (a stale menu id) leaves nothing behind.</li>
+ *   <li><b>Creative.</b> A click sent on creative's menu goes through the creative
+ *       screen's own {@code slotClicked}, which applies it on the client and syncs the
+ *       slots the way creative does. Sent as a container click, the server would apply
+ *       it to its own inventory menu by the wrong index, then put the client back.</li>
  * </ul>
  */
 @Mixin(MultiPlayerGameMode.class)
@@ -38,6 +44,17 @@ public abstract class SKClickSendMixin {
                                         Player player, CallbackInfo ci) {
         AbstractContainerMenu menu = player.containerMenu;
         if (menu == null || menu.containerId != containerId) return; // vanilla logs and drops it
+        // Creative's menu isn't the server's: its indexes are the screen's own, and the
+        // server only takes the slot contents creative sends. So a click a mod sends there
+        // runs creative's own click path, as the player's would, and is judged there.
+        if (menu instanceof CreativeModeInventoryScreen.ItemPickerMenu
+                && Minecraft.getInstance().gui.screen() instanceof CreativeModeInventoryScreen creative
+                && creative.getMenu() == menu) {
+            Slot slot = slotId >= 0 && slotId < menu.slots.size() ? menu.getSlot(slotId) : null;
+            ((CreativeScreenInvoker) creative).sk$slotClicked(slot, slotId, button, input);
+            ci.cancel();
+            return;
+        }
         if (ClickOperations.refuses(menu, slotId, button, input, player)) ci.cancel();
     }
 

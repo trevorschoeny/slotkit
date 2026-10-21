@@ -31,8 +31,10 @@
   ],
   "client": [
     "AbstractContainerScreenAccessor",
+    "CreativeScreenInvoker",
     "SKClickSendMixin",
     "SKCreativeClickMixin",
+    "SKCreativeMenuIndexMixin",
     "SKCreativeSlotParkMixin",
     "SKHasClickedOutsideContainerMixin",
     "SKHasClickedOutsideCreativeMixin",
