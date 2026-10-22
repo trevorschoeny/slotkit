@@ -53,7 +53,7 @@ public final class SlotGating {
     public static boolean mayPlaceAt(Slot slot, ItemStack stack) {
         if (!WindowEngine.hasServerDeclarations()) return true;
         SlotGate gate = gateOf(slot);
-        return gate == SlotGate.OPEN || gate.mayPlace(stack, GatingContext.current());
+        return gate == SlotGate.OPEN || GatingContext.judging(slot, () -> gate.mayPlace(stack, GatingContext.current()));
     }
 
     /** Whether {@code player} may take from {@code slot}: Curse of Binding first, then the gate. */
@@ -63,14 +63,15 @@ public final class SlotGating {
         if (address == null) return true;
         if (bindingDeniesPickup(address, slot, player)) return false;
         SlotGate gate = WindowEngine.resolve(address, BehaviorKeys.GATING, player);
-        return gate == SlotGate.OPEN || gate.mayPickup(player, GatingContext.current());
+        return gate == SlotGate.OPEN || GatingContext.judging(slot, () -> gate.mayPickup(player, GatingContext.current()));
     }
 
     /** The per-item stack cap for {@code slot}, clamped to {@code vanillaMax}. */
     public static int maxStackAt(Slot slot, ItemStack stack, int vanillaMax) {
         if (!WindowEngine.hasServerDeclarations()) return vanillaMax;
         SlotGate gate = gateOf(slot);
-        return gate == SlotGate.OPEN ? vanillaMax : Math.min(gate.maxStackSize(stack, vanillaMax), vanillaMax);
+        return gate == SlotGate.OPEN ? vanillaMax
+                : Math.min(GatingContext.judging(slot, () -> gate.maxStackSize(stack, vanillaMax)), vanillaMax);
     }
 
     // The merge pass of a shift-click, with the menu in hand.
@@ -83,7 +84,7 @@ public final class SlotGating {
     public static boolean mayPlaceOnMove(AbstractContainerMenu menu, Slot slot, ItemStack stack) {
         if (!WindowEngine.hasServerDeclarations()) return true;
         SlotGate gate = WindowEngine.resolve(SlotRef.addressOf(menu, slot), BehaviorKeys.GATING, playerFor(slot));
-        return gate == SlotGate.OPEN || gate.mayPlace(stack, GatingContext.current());
+        return gate == SlotGate.OPEN || GatingContext.judging(slot, () -> gate.mayPlace(stack, GatingContext.current()));
     }
 
     // Automation: container and index, no menu, no player.

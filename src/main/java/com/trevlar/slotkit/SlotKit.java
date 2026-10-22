@@ -48,6 +48,10 @@ public class SlotKit implements ModInitializer {
         com.trevlar.slotkit.state.SlotStateHooks.registerCommon();
         com.trevlar.slotkit.state.SlotStateHooks.registerServer();
         com.trevlar.slotkit.core.ActiveCounts.registerCommon();
+        // On-demand group instances the server adds to and removes from an open menu.
+        net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.clientboundPlay().register(
+                com.trevlar.slotkit.network.GroupInstanceS2CPayload.TYPE,
+                com.trevlar.slotkit.network.GroupInstanceS2CPayload.STREAM_CODEC);
 
         // The one generic open request every CustomMenu shares. The server checks it:
         // the menu must declare validWhen, and it must hold for the player.

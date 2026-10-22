@@ -68,7 +68,11 @@ public final class GroupKey {
                 GroupIds.of("group", g.asString()),
                 switch (g) {
                     case com.trevlar.slotkit.api.group.SlotGroupId.Created c ->
-                            address -> c.equals(com.trevlar.slotkit.api.group.SlotGroups.groupOf(address));
+                            address -> {
+                                var in = com.trevlar.slotkit.api.group.SlotGroups.groupOf(address);
+                                // An on-demand instance is also a member of its kind's group.
+                                return c.equals(in) || c.equals(com.trevlar.slotkit.api.slot.OnDemandGroup.kindOf(in));
+                            };
                     case com.trevlar.slotkit.api.group.SlotGroupId.Category k -> address -> false;
                 },
                 PRECEDENCE_GROUP));

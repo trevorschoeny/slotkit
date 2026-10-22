@@ -88,6 +88,10 @@ public class SlotKitClient implements ClientModInitializer {
                 (payload, ctx) -> com.trevlar.slotkit.core.ActiveCounts.applyOnClient(payload));
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents.DISCONNECT.register(
                 (handler, client) -> com.trevlar.slotkit.core.ActiveCounts.clearClient());
+        // On-demand group instances on the open menu, before any of their slots' contents.
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+                com.trevlar.slotkit.network.GroupInstanceS2CPayload.TYPE,
+                (payload, ctx) -> com.trevlar.slotkit.api.slot.OnDemandGroup.applyOnClient(payload, ctx.player()));
 
         // Answer the server's hello. With no hello, turn created slots off.
         HandshakeClient.register();

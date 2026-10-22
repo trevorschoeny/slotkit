@@ -1,5 +1,6 @@
 package com.trevlar.slotkit.core;
 
+import com.trevlar.slotkit.api.slot.OnDemandGroup;
 import com.trevlar.slotkit.api.slot.ParityGroup;
 import com.trevlar.slotkit.api.slot.CreatedSlot;
 import com.trevlar.slotkit.api.slot.CreatedSlots;
@@ -71,6 +72,9 @@ public final class ParitySlotRegistry {
      * is stable and never collides.
      */
     public static synchronized void register(String slotPanelId, SlotSpec spec) {
+        if (OnDemandGroup.slotCounts().containsKey(slotPanelId)) {
+            throw new IllegalStateException("A slot group " + slotPanelId + " is already registered, on demand");
+        }
         for (Entry e : RECIPES) {
             if (e.slotPanelId().equals(slotPanelId)) {
                 throw new IllegalStateException("A parity slot group " + slotPanelId + " is already registered");
@@ -94,13 +98,17 @@ public final class ParitySlotRegistry {
     public static java.util.SortedMap<String, Integer> slotCounts() {
         java.util.SortedMap<String, Integer> counts = new java.util.TreeMap<>();
         for (Entry e : RECIPES) counts.put(e.slotPanelId(), e.spec().count());
+        counts.putAll(OnDemandGroup.slotCounts());
         return counts;
     }
 
-    /** Whether {@code slotPanelId} is a parity group's: what shift-click routing keeps vanilla out of. */
+    /**
+     * Whether {@code slotPanelId} is a parity group's, or an on-demand instance's (the same
+     * appended slots to a menu): what shift-click routing keeps vanilla out of.
+     */
     public static boolean isParity(String slotPanelId) {
         for (Entry e : RECIPES) if (e.slotPanelId().equals(slotPanelId)) return true;
-        return false;
+        return OnDemandGroup.isInstance(slotPanelId);
     }
 
     /** Whether no parity recipe is registered, so the build hooks can skip work. */

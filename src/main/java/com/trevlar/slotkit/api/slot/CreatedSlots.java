@@ -201,6 +201,7 @@ public final class CreatedSlots {
         private BooleanSupplier revealWhen = null;            // null => always client-visible
         private java.util.function.IntSupplier activeCount = null;   // null => no active count
         private String displayLabel = null;                  // null => capitalized groupId
+        private int replacing = -1;                           // -1 => append
 
         Builder(AbstractContainerMenu menu, Player player) {
             this.menu = menu;
@@ -232,6 +233,16 @@ public final class CreatedSlots {
         @org.jetbrains.annotations.ApiStatus.Internal
         public Builder activeCount(java.util.function.IntSupplier count) {
             this.activeCount = count;
+            return this;
+        }
+
+        /**
+         * Library use: put the slots in place of the ones at {@code flatStart} onward (an
+         * on-demand instance reusing a removed one's), instead of appending them.
+         */
+        @org.jetbrains.annotations.ApiStatus.Internal
+        public Builder replacing(int flatStart) {
+            this.replacing = flatStart;
             return this;
         }
 
@@ -319,16 +330,26 @@ public final class CreatedSlots {
             StorageContainerAdapter adapter = new StorageContainerAdapter(storage);
             AbstractContainerMenuInvoker inv = (AbstractContainerMenuInvoker) menu;
 
-            int flatStart = menu.slots.size();
+            int flatStart = replacing >= 0 ? replacing : menu.slots.size();
             List<CreatedSlot> mkSlots = new ArrayList<>();
             for (int local = 0; local < storage.size(); local++) {
                 CreatedSlot slot = new CreatedSlot(
                         adapter, local, OFFSCREEN, OFFSCREEN, group, panel, groupId, local);
                 if (activeCount != null) slot.activeCount(activeCount);
-                inv.sk$addSlot(slot);
+                if (replacing < 0) {
+                    inv.sk$addSlot(slot);
+                } else {
+                    // In place, at the same index on both sides. The server forgets what it
+                    // last sent there, so the next sync sends the new slot's contents to a
+                    // client whose new slot starts empty.
+                    int at = flatStart + local;
+                    slot.index = at;
+                    menu.slots.set(at, slot);
+                    if (!player.level().isClientSide()) menu.setRemoteSlot(at, net.minecraft.world.item.ItemStack.EMPTY);
+                }
                 mkSlots.add(slot);
             }
-            int flatEnd = menu.slots.size();
+            int flatEnd = flatStart + mkSlots.size();
             group.setFlatIndexRange(flatStart, flatEnd);
 
             // Display names, client only: the server never reads them. Keyed by the

@@ -220,6 +220,11 @@ public final class SlotGroups {
      */
     @org.jetbrains.annotations.ApiStatus.Internal
     public static void declareDerived(SlotGroupId id, SlotGroupCategory category) {
+        // An on-demand instance: found from its slots' addresses, listed only as its kind.
+        if (id instanceof SlotGroupId.Created c && com.trevlar.slotkit.api.slot.OnDemandGroup.kindOf(c) != null) {
+            CREATED_BY_ADDRESS.putIfAbsent(createdKey(PanelAddressing.regKey(c.panelId()), c.groupId()), c);
+            return;
+        }
         record(id, category, null);
     }
 
@@ -278,13 +283,13 @@ public final class SlotGroups {
 
     /** The category {@code id} declared, or {@code null} if it was never declared. */
     public static @Nullable SlotGroupCategory categoryOf(SlotGroupId id) {
-        Declared d = DECLARED.get(id);
+        Declared d = DECLARED.get(com.trevlar.slotkit.api.slot.OnDemandGroup.kindOrSelf(id));
         return d == null ? null : d.category();
     }
 
     /** The set {@code id} belongs to, or {@code null}. */
     public static @Nullable SlotGroupSet setOf(SlotGroupId id) {
-        Declared d = DECLARED.get(id);
+        Declared d = DECLARED.get(com.trevlar.slotkit.api.slot.OnDemandGroup.kindOrSelf(id));
         return d == null ? null : d.set();
     }
 
@@ -350,7 +355,7 @@ public final class SlotGroups {
 
     /** The translation key a group's name lives under; see the class doc. */
     public static String langKey(SlotGroupId id) {
-        return switch (id) {
+        return switch (com.trevlar.slotkit.api.slot.OnDemandGroup.kindOrSelf(id)) {
             case SlotGroupId.Category v -> "slot_group." + v.category().namespace() + "." + v.category().path();
             case SlotGroupId.Created c -> "slot_group." + keyPart(c.panelId()) + "." + keyPart(c.groupId());
         };

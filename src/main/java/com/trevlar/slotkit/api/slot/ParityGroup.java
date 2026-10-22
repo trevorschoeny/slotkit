@@ -175,13 +175,13 @@ public final class ParityGroup {
     /** The empty-slot outline {@code group} declared, or {@code null}. Library use. */
     @ApiStatus.Internal
     public static @Nullable Identifier emptyIconOf(SlotGroupId group) {
-        return EMPTY_ICONS.get(group);
+        return EMPTY_ICONS.get(OnDemandGroup.kindOrSelf(group));
     }
 
     /** Whether {@code group} declared {@code SlotSpec.shiftClickIn(true)}. Library use. */
     @ApiStatus.Internal
     public static boolean isShiftClickTarget(SlotGroupId group) {
-        return SHIFT_CLICK_TARGETS.contains(group);
+        return SHIFT_CLICK_TARGETS.contains(OnDemandGroup.kindOrSelf(group));
     }
 
     /**
@@ -194,7 +194,7 @@ public final class ParityGroup {
      * is more specific, not because its mod initialized last. Above the group sits the
      * category.
      */
-    private static void armInlineBehavior(SlotGroupId.Created id, SlotSpec spec) {
+    static void armInlineBehavior(SlotGroupId.Created id, SlotSpec spec) {
         // Declared whether or not the spec declares behavior: the category recorded
         // on the group is what lets the category's own values reach its slots, and
         // registering at init lists the group from the title screen.

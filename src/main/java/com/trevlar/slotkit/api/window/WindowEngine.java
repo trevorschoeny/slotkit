@@ -30,7 +30,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * <h2>The cascade</h2>
  *
  * <ol>
- *   <li><b>Per address</b>: a declaration on the thing itself.</li>
+ *   <li><b>Per address</b>: a declaration on the thing itself, then, for a slot of an
+ *       on-demand group's instance, on the same slot of its kind.</li>
  *   <li><b>Owner chain</b> (client tier only): a declaration on an ancestor, the
  *       panel a slot or element hangs under, nearest first. "Set opacity once on
  *       the panel" flows to everything inside.</li>
@@ -179,6 +180,9 @@ public final class WindowEngine {
         Store s = store(key);
         Decl<V> own = declAt(s, address, key, mode);
         if (own instanceof Decl.Set<V> set) return set.value();
+        // An on-demand instance's slot: then the same slot of its kind, which every instance shares.
+        Address kind = com.trevlar.slotkit.api.slot.OnDemandGroup.kindAddress(address);
+        if (kind != null && declAt(s, kind, key, mode) instanceof Decl.Set<V> set) return set.value();
         if (key.tier() == Tier.CLIENT) {
             // The owner chain is the client tier's: panels are client things, and a
             // server declaration is only ever made on the slot itself or a group.

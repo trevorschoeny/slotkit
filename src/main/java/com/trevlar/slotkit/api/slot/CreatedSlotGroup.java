@@ -50,6 +50,16 @@ public class CreatedSlotGroup {
     private int flatIndexStart = -1;
     private int flatIndexEnd = -1;
 
+    // The on-demand instance these slots are, or null for any other group.
+    private OnDemandGroup.@Nullable Instance onDemandInstance;
+
+    /** The on-demand instance this group is, or {@code null}. Library use; read {@code OnDemandGroup.instanceOf(slot)}. */
+    @ApiStatus.Internal
+    public OnDemandGroup.@Nullable Instance onDemandInstance() { return onDemandInstance; }
+
+    @ApiStatus.Internal
+    public void onDemandInstance(OnDemandGroup.Instance instance) { this.onDemandInstance = instance; }
+
     // Directional pairing for shift-click routing
     private final List<CreatedSlotGroup> pairedWith = new ArrayList<>();
 
