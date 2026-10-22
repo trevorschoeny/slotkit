@@ -305,13 +305,15 @@ public final class SlotElement extends AbstractPanelElement {
 
     /**
      * The live in-menu slot this element shows on {@code menu} (the creative wrapper
-     * on creative), or {@code null} when it isn't on this menu or its panel is hidden
-     * (inert, which looks the same as absent).
+     * on creative), or {@code null} when it isn't on this menu, its panel is hidden
+     * (inert, which looks the same as absent), or the menu turned the slot off
+     * ({@code Slot.isActive()} false, as a menu that pages its rows does).
      */
     private @Nullable Slot presented(@Nullable AbstractContainerMenu menu) {
         if (menu == null) return null;
         Slot slot = resolve(menu);
-        if (slot == null || panelId == null) return slot; // a vanilla slot is never inert
+        if (slot == null) return null;
+        if (panelId == null) return slot.isActive() ? slot : null;
         CreatedSlot mk = CreatedSlotAccess.asMKCSlot(slot);
         return (mk == null || mk.isInert()) ? null : slot;
     }
