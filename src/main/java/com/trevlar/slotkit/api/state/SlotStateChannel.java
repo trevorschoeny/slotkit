@@ -26,14 +26,14 @@ import org.jetbrains.annotations.ApiStatus;
  * {@code /data get}. {@link #streamCodec} is the compact binary form sent over the
  * network.
  *
- * <h2>State lives in the open menu; behaviour does not</h2>
+ * <h2>State lives in the open menu; behavior does not</h2>
  *
  * The {@link Address} methods here ({@link #get(Address)}, {@link #set(Address, Object)}
- * and their explicit-viewer versions) work differently from how slot behaviour is set
+ * and their explicit-viewer versions) work differently from how slot behavior is set
  * up, on purpose:
  *
  * <ul>
- *   <li>Behaviour (gating, binding, mending, quick-move) is declared by address at
+ *   <li>Behavior (gating, binding, mending, quick-move) is declared by address at
  *       init and applies as soon as a slot with that address appears. It lives in the
  *       engine, independent of any open menu.</li>
  *   <li>State read or written by address resolves against the viewer's currently
@@ -55,7 +55,7 @@ import org.jetbrains.annotations.ApiStatus;
  *       with no viewer, for hopper or dropper automation.</li>
  * </ul>
  *
- * <p>In short, use addresses for behaviour and for state in an open menu, and the
+ * <p>In short, use addresses for behavior and for state in an open menu, and the
  * persistent keys whenever there is no open menu to resolve against.
  *
  * <h2>Mode scope</h2>

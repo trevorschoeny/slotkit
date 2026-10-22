@@ -32,7 +32,7 @@ import java.util.function.Predicate;
 
 /**
  * Widens vanilla's XP-orb repair pool, so a damaged Mending item repairs from XP just
- * like worn armour does when it sits in a slot opted in through the
+ * like worn armor does when it sits in a slot opted in through the
  * {@code BehaviorKeys.MENDING} key (by address, group or category), or comes from a consumer source
  * ({@link MendingCandidates}). Like death drops and binding, this is a vanilla
  * mechanic the library extends to registered slots.
@@ -50,7 +50,7 @@ import java.util.function.Predicate;
  * <h3>Vanilla is untouched when nobody opts in</h3>
  * If the entity isn't a server player, or no registered slot opts in and no consumer
  * registers a candidate, the redirect returns vanilla's result unchanged. Vanilla
- * equipped items keep their exact selection and break behaviour through the original
+ * equipped items keep their exact selection and break behavior through the original
  * {@code getRandomItemWith} call.
  *
  * <h3>Fair selection</h3>
@@ -141,7 +141,7 @@ public class SKExperienceOrbMendMixin {
         //  * a vanilla inventory slot, resolved by its address, group or category. The
         //    item is the real inventory stack, so vanilla's in-place repair persists and
         //    syncs on its own (commit is null, as for equipped gear).
-        // The scan is skipped when no behaviour is set anywhere, so normal XP pickup,
+        // The scan is skipped when no behavior is set anywhere, so normal XP pickup,
         // by far the common case, costs nothing extra.
         for (Slot slot : !WindowEngine.hasServerDeclarations() ? List.<Slot>of() : player.inventoryMenu.slots) {
             if (slot instanceof CreatedSlot mk) {
@@ -177,7 +177,7 @@ public class SKExperienceOrbMendMixin {
             }
         }
 
-        // Nothing opted in, so vanilla behaviour is left untouched.
+        // Nothing opted in, so vanilla behavior is left untouched.
         if (extras == 0) return vanilla;
 
         // Add every equipped mendable item as its own pool entry. Vanilla's

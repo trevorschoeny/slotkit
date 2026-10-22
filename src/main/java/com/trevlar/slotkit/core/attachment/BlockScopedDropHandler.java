@@ -15,7 +15,7 @@ import net.minecraft.world.level.block.entity.BlockEntity;
  * {@code com.trevlar.slotkit.mixin.SKBlockDropMixin} on block removal,
  * only when the block is actually removed and not just changing state.
  *
- * <p>This gives storage attachments the same drop-on-break behaviour as a vanilla
+ * <p>This gives storage attachments the same drop-on-break behavior as a vanilla
  * container. Consumers who want the contents lost instead declare their attachment
  * with {@code StorageAttachment.custom(...)} rather than {@code blockScoped(...)},
  * since the custom path bypasses this registry.

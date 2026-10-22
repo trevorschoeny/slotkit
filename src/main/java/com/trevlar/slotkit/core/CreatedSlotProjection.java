@@ -31,11 +31,11 @@ import java.util.function.Predicate;
  * library has to own a player-lifecycle hook ({@code ServerPlayer.initMenu} on the
  * server, {@code ScreenEvents.AFTER_INIT} on the client) and so a registry of what to
  * project. It is kept as narrow as possible: a registry of slot factories the library
- * only invokes (data plus a deterministic build function), never a behaviour callback
+ * only invokes (data plus a deterministic build function), never a behavior callback
  * that decides how interaction works. The slots it builds are ordinary
  * {@link CreatedSlot}s, so rendering, clicks into the storage, creative and sync all
  * take the same vanilla-slot paths the {@code InventoryMenu} slot uses. The library
- * adds slots to a foreign menu's list and invents no behaviour.
+ * adds slots to a foreign menu's list and invents no behavior.
  *
  * <h3>Sync safety</h3>
  *

@@ -18,7 +18,7 @@ import org.jspecify.annotations.Nullable;
  * resolves to its menu-independent created address. A vanilla slot resolves to its
  * container identity, or else its menu address. The client's observers, the
  * operation seams, the vetoes and the slot-level gate all use this one rule, so a
- * behaviour set on a slot's address is found whichever path reaches it.
+ * behavior set on a slot's address is found whichever path reaches it.
  *
  * <p>Internal plumbing: consumers mint created-slot addresses by identity
  * ({@code Address.createdSlot(group, index)}), never from a live slot.

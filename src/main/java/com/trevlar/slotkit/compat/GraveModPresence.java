@@ -27,7 +27,7 @@ import java.util.Set;
  * {@code gravestones}.
  *
  * <p>A wrong or missing id only means that grave mod's players get vanilla despawn
- * (the old behaviour), never a crash. So the list errs toward more ids: a false
+ * (the old behavior), never a crash. So the list errs toward more ids: a false
  * positive only makes dropped items last longer, while a false negative lets them
  * expire beside a real grave.
  */

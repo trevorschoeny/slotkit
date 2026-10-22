@@ -282,7 +282,7 @@ public final class CreatedSlots {
             // listed from the title screen declares it at init as well.
             com.trevlar.slotkit.api.group.SlotGroups.declareDerived(groupId(panelId, groupId), category);
 
-            // 1. A standalone CreatedSlotGroup with storage only. Behaviour
+            // 1. A standalone CreatedSlotGroup with storage only. Behavior
             //    (gating, quick-move, binding, mending) resolves from the engine by
             //    each slot's address (vanilla by default), set by the consumer with
             //    Window.slot(scope, address).set(...).

@@ -25,7 +25,7 @@ import java.util.Objects;
  *
  * <h3>Presence</h3>
  * A slot or group placement shows where that slot or group is on the open menu this frame,
- * and nowhere else. Armour isn't on a creative item tab, so a panel placed on an armour slot
+ * and nowhere else. Armor isn't on a creative item tab, so a panel placed on an armor slot
  * doesn't draw there, with no tab check in the mod.
  *
  * <h3>Declare at init</h3>

@@ -181,7 +181,7 @@ public class CustomContainerMenu extends AbstractContainerMenu {
 
     /**
      * A player's request to toggle panel {@code buttonId} (vanilla's container button
-     * packet). Honoured only for a panel declared {@code toggleable()}; any other
+     * packet). Honored only for a panel declared {@code toggleable()}; any other
      * request is refused, so a client cannot show a panel the server hides.
      */
     @Override

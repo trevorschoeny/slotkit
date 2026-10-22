@@ -25,7 +25,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * second time.
  *
  * <p>Costs nothing when nothing is gated: {@link SlotGating} returns before minting
- * an address unless some server behaviour has been declared.
+ * an address unless some server behavior has been declared.
  */
 @Mixin(Slot.class)
 public class SKSlotGateMixin {

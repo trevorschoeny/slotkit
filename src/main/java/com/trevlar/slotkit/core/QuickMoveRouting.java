@@ -146,7 +146,7 @@ public final class QuickMoveRouting {
         switch (dest) {
             case Dest.ToPlayer p -> {
                 // Main inventory and hotbar in vanilla's order for this menu: on the
-                // inventory screen main first, as vanilla moves armour out; on any other
+                // inventory screen main first, as vanilla moves armor out; on any other
                 // menu walked backwards, hotbar end first, as it moves a container's stack.
                 Inventory inv = player.getInventory();
                 for (Slot s : menu.slots) {

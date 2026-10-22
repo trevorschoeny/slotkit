@@ -14,7 +14,7 @@ import org.spongepowered.asm.mixin.Shadow;
  * {@code getContainerSlot()} on a wrapper for hotbar slot 0 says 36. Every read and
  * write of the wrapper already goes to its target, so that number is only ever seen
  * by code looking a player slot up by its inventory index, as a mod finding the slot
- * to click does, and there it names the wrong slot (the crafting grid or armour for
+ * to click does, and there it names the wrong slot (the crafting grid or armor for
  * the hotbar).
  */
 @ApiStatus.Internal

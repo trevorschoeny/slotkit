@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 /**
  * Drops the contents of {@code blockScoped} storage attachments as item entities
  * when a block entity is removed, before it is destroyed. Consumers using
- * {@code StorageAttachment.blockScoped(...)} get the same drop-on-break behaviour as
+ * {@code StorageAttachment.blockScoped(...)} get the same drop-on-break behavior as
  * a vanilla container with no extra work.
  *
  * <p>Targets {@link BlockEntity#preRemoveSideEffects(BlockPos, BlockState)} at

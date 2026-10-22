@@ -17,7 +17,7 @@ import net.minecraft.server.level.ServerPlayer;
  * {@code ClientPlayConnectionEvents.JOIN}; there is no extra event.
  *
  * <pre>{@code
- * // Grey out a shared setting the server can't hold.
+ * // Gray out a shared setting the server can't hold.
  * toggle.disabledWhen(() -> !Presence.serverHasChannel(MY_CHANNEL_ID));
  * }</pre>
  *

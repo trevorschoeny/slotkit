@@ -47,16 +47,16 @@ import java.util.function.Supplier;
  * a {@code SlotSpec} into the real slots (every menu, both sides). The mod's own panel
  * shows them ({@code SlotFlowElement.of(group)}, client).
  *
- * <h3>Behaviour methods set it once for the whole group</h3>
+ * <h3>Behavior methods set it once for the whole group</h3>
  *
  * Gating, shift-click, collect, drag-fill, binding and mending live in the window
  * engine, the same for a vanilla slot and a created slot. The methods here
  * ({@link #gate}, {@link #accepts}, {@link #binding}, {@link #mending},
  * {@link #shiftClickOut}, {@link #shiftClickIn}, {@link #collect}, {@link #dragFill})
- * don't add a second place to store behaviour. They record what the consumer asked
+ * don't add a second place to store behavior. They record what the consumer asked
  * for, and {@link ParityGroup#register} sets it in the engine once, on
  * the group's own key ({@code GroupKey.of(group.id())}),
- * one level above any single slot. Behaviour is declared next to the slot group, with
+ * one level above any single slot. Behavior is declared next to the slot group, with
  * no separate step to forget and no per-slot loop. To give one slot something else,
  * set it on that slot's address,
  * {@code Window.slot(scope, Address.createdSlot(group.id(), i))};
@@ -87,7 +87,7 @@ public final class SlotSpec {
     private @Nullable Supplier<Component> tooltip = null; // hover tooltip on each slot in the group; null => none
     private @Nullable Identifier emptyIcon = null;       // outline sprite on an empty slot; null => none
 
-    // The behaviour the consumer declared, which register() sets in the engine on the
+    // The behavior the consumer declared, which register() sets in the engine on the
     // group's key. null leaves the engine default (gating OPEN, shift-click
     // both ways, binding and mending FALSE), so an undeclared slot is plain vanilla.
     private @Nullable SlotGate gate = null;
@@ -107,7 +107,7 @@ public final class SlotSpec {
     /**
      * Starts a slot-group spec. Position is not declared: the group's slots flow and
      * wrap to the owning panel's width through {@link SlotFlowElement}, so a spec only
-     * says what a group is (storage, count, reveal, behaviour), never where it sits.
+     * says what a group is (storage, count, reveal, behavior), never where it sits.
      *
      * <p>The category is required, and it is the group's identity. It is how other
      * mods find these slots ({@code SlotGroupCategories.of(menu)} lists created
@@ -204,7 +204,7 @@ public final class SlotSpec {
     }
 
     /**
-     * The outline drawn on each empty slot of this group, as vanilla draws the armour
+     * The outline drawn on each empty slot of this group, as vanilla draws the armor
      * and offhand outlines: a GUI sprite id, returned from the slot's
      * {@code getNoItemIcon}, so vanilla draws it in its own slot pass, under any item
      * and in creative too. {@code Identifier.withDefaultNamespace("container/slot/shield")}
@@ -216,7 +216,7 @@ public final class SlotSpec {
         return this;
     }
 
-    // Behaviour methods. Each records a value that ParityGroup.register()
+    // Behavior methods. Each records a value that ParityGroup.register()
     // sets in the engine once for this group; see the class doc.
 
     /**
@@ -343,7 +343,7 @@ public final class SlotSpec {
     @ApiStatus.Internal
     public @Nullable Function<Player, Storage> storageFactory() { return storageFactory; }
 
-    // Declared behaviour (null leaves the engine default for that key).
+    // Declared behavior (null leaves the engine default for that key).
     @Nullable SlotGate gateValue()                 { return gate; }
     @Nullable TriBool bindingValue()               { return binding; }
     @Nullable TriBool mendingValue()               { return mending; }

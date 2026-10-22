@@ -114,7 +114,7 @@ public final class ContainerIdentity {
     /** The persistent container {@code container} is, when it has one. */
     public static Optional<PersistentContainerKey> resolve(Container container) {
         if (container == null) return Optional.empty();
-        // A storage that carries its own key is recognised first, so a slot backed by
+        // A storage that carries its own key is recognized first, so a slot backed by
         // it is addressed by that key.
         if (container instanceof com.trevlar.slotkit.api.storage.StorageContainerAdapter adapter
                 && adapter.getStorage() instanceof com.trevlar.slotkit.api.storage.KeyedStorage keyed) {

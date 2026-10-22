@@ -19,7 +19,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * custom_data key, the one job a data fixer would do (see {@link PortableSlotState}).
  * The component type is no longer registered, so without this an item saved with it
  * fails to decode and vanishes with its contents. Wraps the patch codec once, as the
- * class initialises, before anything reads the field. Permanent: old saves keep the
+ * class initializes, before anything reads the field. Permanent: old saves keep the
  * old form for as long as worlds exist.
  */
 @ApiStatus.Internal

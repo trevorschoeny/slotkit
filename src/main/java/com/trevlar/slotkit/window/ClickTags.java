@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
  * <h2>Why</h2>
  *
  * A client-side inventory mod performs its operations by sending vanilla clicks:
- * a restock equips armour with a shift-click, a sort shuffles with plain clicks.
+ * a restock equips armor with a shift-click, a sort shuffles with plain clicks.
  * Each of those clicks lands on a vanilla seam that judges it as the gesture it
  * looks like. If a player's lock refuses shift-click but allows restock, the
  * restock's shift-click is refused as a shift-click, and the mod breaks for

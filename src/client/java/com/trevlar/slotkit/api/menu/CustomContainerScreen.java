@@ -282,7 +282,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
      * Resolves this frame's placements through the host and takes the main frame as
      * the screen's image (leftPos, topPos, imageWidth, imageHeight), so a vanilla
      * container's {@code leftPos + slot.x} math holds. With no main panel (only
-     * chrome and overlays), vanilla's 176x100 minimum stays, centred.
+     * chrome and overlays), vanilla's 176x100 minimum stays, centered.
      */
     private void computeLayout() {
         OwnHost.Layout layout = host.layout();
@@ -373,7 +373,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
 
     /**
      * Asks the server to show or hide a panel (vanilla's container button packet). The
-     * server honours it only for a panel declared {@code toggleable()} and the change
+     * server honors it only for a panel declared {@code toggleable()} and the change
      * arrives with the next sync; the client never changes it on its own.
      * Listeners hear {@code onPanelToggle} when the server's answer arrives.
      */
@@ -412,7 +412,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
 
     /**
      * Registers each panel's toggle key (declared on its look). The key asks the server,
-     * which honours it only for a {@code toggleable()} panel.
+     * which honors it only for a {@code toggleable()} panel.
      */
     private void registerPanelToggleKeys() {
         for (Panel panel : panels) {
@@ -505,7 +505,7 @@ public class CustomContainerScreen extends AbstractContainerScreen<CustomContain
     // gets the drag and end callbacks.
 
     /**
-     * A custom drag behaviour for created slots. The screen sends drag events to the
+     * A custom drag behavior for created slots. The screen sends drag events to the
      * active mode, and only one mode is active at a time.
      */
     public interface DragMode {

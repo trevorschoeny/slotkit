@@ -3,8 +3,8 @@ package com.trevlar.slotkit.api.window;
 import net.minecraft.resources.Identifier;
 
 /**
- * The library's built-in {@link BehaviorKey}s, one constant per behaviour. The
- * engine is generic, so a mod adds a behaviour by declaring a key of its own.
+ * The library's built-in {@link BehaviorKey}s, one constant per behavior. The
+ * engine is generic, so a mod adds a behavior by declaring a key of its own.
  *
  * <ul>
  *   <li>Client tier: the observed reactions.</li>
@@ -36,7 +36,7 @@ public final class BehaviorKeys {
     /**
      * Whether Curse of Binding is enforced on this slot: a bound item cannot be
      * taken out while the player is alive, survival only, the rule vanilla gives
-     * armour slots. Default {@link TriBool#FALSE}.
+     * armor slots. Default {@link TriBool#FALSE}.
      */
     public static final BehaviorKey<TriBool> BINDING = BehaviorKey.of(
             id("binding"), TriBool.class, TriBool.FALSE, Tier.SERVER,

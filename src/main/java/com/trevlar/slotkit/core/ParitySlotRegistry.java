@@ -46,7 +46,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * Both hooks build through {@link CreatedSlots} with the same recipes in the same
  * order (sorted by slot panel id, so the order matches on both sides whatever order
- * mods initialised in), and the {@code storage} factory gives the same size per
+ * mods initialized in), and the {@code storage} factory gives the same size per
  * player on both sides. So the appended slot blocks are byte-identical, as
  * {@link CreatedSlotProjection} requires. {@link #applyTo} runs at most once per menu
  * instance: the inventory mixin fires once per construction, and
@@ -129,7 +129,7 @@ public final class ParitySlotRegistry {
                     .group(spec.groupId())
                     .category(spec.category())
                     .storage(storage);
-            // Creation carries no behaviour: gating, quick-move, binding and mending
+            // Creation carries no behavior: gating, quick-move, binding and mending
             // are set later through the window by the slot's address.
             if (spec.label() != null) b.label(spec.label());     // MenuKit naming (client-guarded in register)
             if (spec.revealWhen() != null) b.revealWhen(spec.revealWhen());

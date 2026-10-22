@@ -57,7 +57,7 @@ public final class SlotAnchors {
 
     /**
      * The slot's frame on this screen this frame, or {@code null} when it isn't there: not a
-     * container screen, the slot not on the menu (armour on a creative item tab), not active,
+     * container screen, the slot not on the menu (armor on a creative item tab), not active,
      * parked because no panel presents it, or cut by the clip it's shown in (a row half
      * scrolled out of a region), so a panel anchored on it doesn't draw outside the view.
      */

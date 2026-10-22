@@ -25,7 +25,7 @@ import org.spongepowered.asm.mixin.Shadow;
  *
  * <h3>Correct the answer, don't pre-empt it</h3>
  *
- * Both methods are wrapped, not cancelled at HEAD. The original runs first, with
+ * Both methods are wrapped, not canceled at HEAD. The original runs first, with
  * every other mod's injections in it, and SlotKit looks only at the slot it chose.
  * If that slot is allowed, the answer stands untouched; only a refused slot makes
  * SlotKit re-scan in vanilla's order for the next one it allows. A HEAD cancel here

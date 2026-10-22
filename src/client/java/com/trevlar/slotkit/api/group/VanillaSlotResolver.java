@@ -27,7 +27,7 @@ import java.util.Optional;
  * <p>{@code containerIndex} is the slot's index in the player {@link Inventory},
  * the value {@code Slot.getContainerSlot()} reports for a raw player slot:
  * {@code 0 to 8} for the hotbar, {@code 9 to 35} for the main inventory, and the
- * player's equipment indices for armour and offhand. Any player-inventory slot
+ * player's equipment indices for armor and offhand. Any player-inventory slot
  * works, not just the hotbar.
  *
  * <p>It works on any screen whose menu shows the player inventory: the survival

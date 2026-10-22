@@ -43,7 +43,7 @@ public interface SlotGate {
         return vanillaMax;
     }
 
-    /** The permissive default, vanilla behaviour: the library default for {@link BehaviorKeys#GATING}. */
+    /** The permissive default, vanilla behavior: the library default for {@link BehaviorKeys#GATING}. */
     SlotGate OPEN = new SlotGate() {
         @Override public boolean mayPlace(ItemStack stack, GatingContext context) { return true; }
         @Override public boolean mayPickup(Player player, GatingContext context) { return true; }

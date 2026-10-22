@@ -20,9 +20,9 @@ import java.util.function.BiConsumer;
  * and layout.
  *
  * <p>The group owns its slots' structure (storage, layout, pairing, priority) but not
- * their behaviour. Accepting, removing, stack limits, quick-move, binding and
+ * their behavior. Accepting, removing, stack limits, quick-move, binding and
  * mending all resolve from the {@code WindowEngine}, keyed by each slot's
- * {@link CreatedSlot#address()}. So a group declares its structure once and behaviour
+ * {@link CreatedSlot#address()}. So a group declares its structure once and behavior
  * is set by address, defaulting to plain vanilla. Slots carry only identity, and the
  * group only structure.
  *

@@ -206,7 +206,7 @@ public final class SlotGroupCategories {
      * of these; a group has a bounding box and a category does not.
      *
      * <p>Resolution order: the player's own inventory slots, by their inventory index
-     * (hotbar, main grid, armour, offhand, on every menu that shows them, modded ones
+     * (hotbar, main grid, armor, offhand, on every menu that shows them, modded ones
      * included), then the primary resolver for {@code menu.getClass()} (if any), then
      * each extension in registration order, then the created
      * groups on the menu. Each vanilla category yields one group; an

@@ -53,7 +53,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * a registry. Every created slot is a {@link CreatedSlot}, so this covers all of them
  * with no per-feature knowledge. Only the library knows a slot is registered, so the
  * library has to own this. It routes the consumer's own slot and decides no consumer
- * behaviour.
+ * behavior.
  */
 @ApiStatus.Internal
 @Mixin(ServerGamePacketListenerImpl.class)
@@ -68,7 +68,7 @@ public class SKCreativeSetSlotMixin {
         // HEAD inject) is PacketUtils.ensureRunningOnSameThread, which reschedules
         // the initial network-thread call onto the main thread and aborts it. This
         // inject runs before that, so on the off-thread call it must return without
-        // cancelling, letting vanilla reschedule, and act only on the main-thread
+        // canceling, letting vanilla reschedule, and act only on the main-thread
         // call. That keeps the storage write and broadcastChanges off the network
         // thread.
         MinecraftServer server = this.player.level().getServer();

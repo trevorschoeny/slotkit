@@ -58,7 +58,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  *
  * Declarations and resolution may race (the client thread and the integrated
  * server both use the engine). The maps are concurrent, the group lists are
- * copy-on-write, group creation is serialised, and every {@link Decl} is
+ * copy-on-write, group creation is serialized, and every {@link Decl} is
  * immutable, so a resolve racing a write sees the old value or the new one.
  */
 public final class WindowEngine {

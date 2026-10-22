@@ -15,7 +15,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
  * {@link com.trevlar.slotkit.api.slot.CreatedSlots} can append registered
  * slots to a vanilla menu it does not subclass.
  *
- * <p>Access only: it exposes an existing vanilla method, injects no behaviour,
+ * <p>Access only: it exposes an existing vanilla method, injects no behavior,
  * registers no hook and owns no code path. The slot is added by whoever calls the
  * helper; this invoker only lets the helper reach a {@code protected} method from
  * outside the menu's class hierarchy. Same pattern as

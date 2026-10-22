@@ -13,7 +13,7 @@ import net.minecraft.world.item.enchantment.EnchantmentHelper;
  *   <li>DEFAULT behaves like vanilla with no setup. Each stack resolves in vanilla's
  *       order: {@code keepInventory} gives KEEP, otherwise Curse of Vanishing gives
  *       DESTROY, otherwise DROP. A consumer who declares nothing gets vanilla
- *       behaviour under both gamerule settings.</li>
+ *       behavior under both gamerule settings.</li>
  *   <li>KEEP (soulbound): the item survives death whatever {@code keepInventory}
  *       says, carried across respawn by the attachment's {@code copyOnDeath}.</li>
  *   <li>DROP: always drops at the death location, even with {@code keepInventory}

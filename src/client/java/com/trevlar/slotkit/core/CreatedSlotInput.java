@@ -107,7 +107,7 @@ public final class CreatedSlotInput {
      * panels for the current screen so an opted-out slot neither wins hover nor
      * blocks the slot behind it.
      *
-     * <p>Recognises slots directly and through the creative {@code SlotWrapper}
+     * <p>Recognizes slots directly and through the creative {@code SlotWrapper}
      * ({@code CreatedSlotAccess.asMKCSlot}). On a hit it returns the slot actually in
      * {@code menu.slots}: the raw {@code CreatedSlot} on the survival inventory, the
      * {@code SlotWrapper} on the creative screen. The caller (vanilla's

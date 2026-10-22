@@ -185,7 +185,7 @@ public final class SlotGroups {
         return null;
     }
 
-    /** Vanilla's layout of the player's own inventory: hotbar, main grid, armour, offhand. */
+    /** Vanilla's layout of the player's own inventory: hotbar, main grid, armor, offhand. */
     private static @Nullable SlotGroupId playerInventoryGroup(int index) {
         if (index < 0) return null;
         SlotGroupCategory category;

@@ -36,7 +36,7 @@ import org.jspecify.annotations.Nullable;
  *   <li>Hoppers and dispensers, which reach a slot by container and index.</li>
  * </ul>
  *
- * <p>When nobody has declared any server behaviour, every method returns at once and
+ * <p>When nobody has declared any server behavior, every method returns at once and
  * vanilla interaction pays nothing: the slots nobody touches stay exactly vanilla.
  *
  * <p>Every caller is a SlotKit seam. Consumers declare a gate with
@@ -139,7 +139,7 @@ public final class SlotGating {
     /**
      * Curse of Binding: with {@link BehaviorKeys#BINDING} set, a bound item
      * ({@code PREVENT_ARMOR_CHANGE}) cannot be taken out while the player is alive,
-     * survival only. The rule vanilla gives armour slots, on any slot that asks.
+     * survival only. The rule vanilla gives armor slots, on any slot that asks.
      */
     private static boolean bindingDeniesPickup(Address address, Slot slot, @Nullable Player player) {
         if (!WindowEngine.resolve(address, BehaviorKeys.BINDING, player).asBoolean()) return false;

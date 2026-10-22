@@ -38,7 +38,7 @@ import java.util.function.Consumer;
  * <h3>Namespace your panel ids</h3>
  * A created slot's address is keyed by (panel id, group id, index) and is global, not
  * scoped by the menu, so two mods naming a panel {@code "main"} would share addresses
- * and set behaviour on each other's slots. Name panels per mod: {@code "mymod:menu:main"}.
+ * and set behavior on each other's slots. Name panels per mod: {@code "mymod:menu:main"}.
  */
 public final class SlotLayout {
 

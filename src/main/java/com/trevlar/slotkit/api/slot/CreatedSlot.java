@@ -20,7 +20,7 @@ import org.jspecify.annotations.Nullable;
  * {@link CreatedSlotGroup}.
  *
  * <p>It behaves like a vanilla slot. Every override calls {@code super}, so
- * vanilla's behaviour and other mods' mixins still apply. It is also presented like
+ * vanilla's behavior and other mods' mixins still apply. It is also presented like
  * one: its position is vanilla's own {@code Slot.x/y}, vanilla's slot pass draws it,
  * and vanilla's {@code getHoveredSlot} finds it (see {@code ContainerScreenLayers} in
  * MenuKit). A third party's {@code extractSlot} mixin, or any code that walks
@@ -122,12 +122,12 @@ public class CreatedSlot extends Slot {
     /** The CreatedSlotGroup this slot belongs to. */
     public CreatedSlotGroup getGroup() { return group; }
 
-    // All of this slot's behaviour lives in the engine, keyed by this address, never
+    // All of this slot's behavior lives in the engine, keyed by this address, never
     // on the slot. The identity fields are final, so the address never changes and is
     // cached lazily. Computing it twice is harmless; the value is equal either way.
     private Address cachedAddress;
 
-    /** This slot's created {@link Address}, the same in every menu. Behaviour is resolved by it. */
+    /** This slot's created {@link Address}, the same in every menu. Behavior is resolved by it. */
     public Address address() {
         Address a = cachedAddress;
         if (a == null) {
@@ -160,7 +160,7 @@ public class CreatedSlot extends Slot {
     }
 
     // Each override calls super so other mods' mixins into Slot still run. SlotKit
-    // adds to vanilla behaviour and never replaces it.
+    // adds to vanilla behavior and never replaces it.
 
     /**
      * Whether this stack can be placed here. An inert slot refuses. Otherwise this is

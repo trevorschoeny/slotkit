@@ -15,7 +15,7 @@ import java.util.Map;
 /**
  * The category of a player inventory slot, from its slot key alone. A player's
  * inventory index means the same thing on every menu: 0 to 8 the hotbar, 9 to 35 the
- * main grid, 36 to 39 armour, 40 the offhand. So the category is never read from a
+ * main grid, 36 to 39 armor, 40 the offhand. So the category is never read from a
  * menu's layout, which is what used to go wrong on creative's tabs, where the slot
  * list changes with every tab switch.
  */

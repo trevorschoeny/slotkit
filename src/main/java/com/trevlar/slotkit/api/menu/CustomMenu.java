@@ -27,7 +27,7 @@ import java.util.function.Predicate;
  * the four or so pieces a consumer used to write by hand for every custom
  * {@link CustomContainerMenu}: its own {@code MenuType} registration, its own
  * client-to-server open payload and receiver, its own {@code MenuScreens.register},
- * and its own open call. Modelled on {@code ParityGroup.register(...)}.
+ * and its own open call. Modeled on {@code ParityGroup.register(...)}.
  *
  * <h3>Recipe</h3>
  *
@@ -85,7 +85,7 @@ import java.util.function.Predicate;
  * <h3>Who may open it, and for how long</h3>
  *
  * {@link Builder#validWhen} is the menu's context predicate. A client's request to
- * open the menu is honoured only when the menu declares one and it holds for that
+ * open the menu is honored only when the menu declares one and it holds for that
  * player; the open menu closes when it stops holding (vanilla's {@code stillValid},
  * checked on the server every tick). Without one, the menu opens only from the
  * server ({@link #open}) and stays open while the player is alive.
@@ -98,7 +98,7 @@ import java.util.function.Predicate;
  * {@code CreatedSlotAdapter.addressOf}). So the panel ids the handler declares
  * (through {@link CustomContainerMenu#builder}) must be namespaced per mod, such as
  * {@code "mymod:menu:main"}, just as container-parity panel ids are. Otherwise two
- * mods that both name a panel {@code "main"} collide and set behaviour on each
+ * mods that both name a panel {@code "main"} collide and set behavior on each
  * other's slots. The same id is used for layout references and for addresses in
  * {@link Builder#arm}.
  */
@@ -172,7 +172,7 @@ public final class CustomMenu {
         private final Identifier id;
         private final HandlerFactory handlerFactory;
         private Component title;                                        // null => default translation key
-        private @Nullable Runnable arm = null;                          // sets slot behaviour; run by register()
+        private @Nullable Runnable arm = null;                          // sets slot behavior; run by register()
         private @Nullable Predicate<Player> validWhen = null;           // null => server opens only
 
         Builder(Identifier id, HandlerFactory handlerFactory) {
@@ -189,7 +189,7 @@ public final class CustomMenu {
 
         /**
          * Who may open this menu, and for how long. A client's open request
-         * ({@code ClientMenu.of(menu).requestOpen()}) is honoured only when this is
+         * ({@code ClientMenu.of(menu).requestOpen()}) is honored only when this is
          * declared and holds for the requesting player, checked on the server; the
          * open menu closes when it stops holding (vanilla's {@code stillValid}, every
          * tick). A menu tied to a block checks the player's distance to it here.
@@ -202,15 +202,15 @@ public final class CustomMenu {
         }
 
         /**
-         * Sets slot behaviour for this menu. {@code register()} runs it after the
-         * {@link MenuType} and id exist, so a custom menu's slot behaviour is declared in
+         * Sets slot behavior for this menu. {@code register()} runs it after the
+         * {@link MenuType} and id exist, so a custom menu's slot behavior is declared in
          * the same chain as the menu and can't be forgotten in a separate step.
          *
-         * <p>Set slot behaviour by {@link com.trevlar.slotkit.api.window.Address} here;
+         * <p>Set slot behavior by {@link com.trevlar.slotkit.api.window.Address} here;
          * the menu's created slots have addresses as soon as it is registered
          * ({@code Window.slot(ModeScope.BOTH, Address.createdSlot(SlotGroupId.created(panelId, groupId), i)).set(...)}).
          * It runs at register() time on whichever side called it, since engine
-         * declarations are plain data, just like setting behaviour by hand in common
+         * declarations are plain data, just like setting behavior by hand in common
          * init.
          *
          * <pre>{@code
@@ -259,7 +259,7 @@ public final class CustomMenu {
             DEFINITIONS.add(handle);
             BY_ID.put(id, handle);
 
-            // Slot behaviour is set last, once the MenuType and id exist and the menu's
+            // Slot behavior is set last, once the MenuType and id exist and the menu's
             // created slots have addresses (see Builder.arm).
             if (arm != null) {
                 arm.run();

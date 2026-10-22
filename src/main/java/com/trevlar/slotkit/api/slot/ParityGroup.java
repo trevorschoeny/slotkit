@@ -50,7 +50,7 @@ import java.util.concurrent.ConcurrentHashMap;
  *       ({@link CreatedSlotProjection}, both sides);</li>
  *   <li>covers the creative item picker (its wrapper wraps whatever created slots sit
  *       on {@code player.inventoryMenu});</li>
- *   <li>arms the behaviour the {@link SlotSpec} declared, for the whole group, and
+ *   <li>arms the behavior the {@link SlotSpec} declared, for the whole group, and
  *       lists the group in the slot group registry under its category.</li>
  * </ol>
  *
@@ -80,7 +80,7 @@ public final class ParityGroup {
     // Groups whose spec declared shiftClickIn(true): the shift-click targets on the
     // player's inventory menu, and after a menu's own routing elsewhere
     // (QuickMoveRouting). Opt-in, so a group that never said so keeps vanilla's
-    // behaviour there.
+    // behavior there.
     private static final Set<SlotGroupId> SHIFT_CLICK_TARGETS = ConcurrentHashMap.newKeySet();
 
     // Each group's SlotSpec.emptyIcon, read once by every CreatedSlot it builds.
@@ -100,7 +100,7 @@ public final class ParityGroup {
      * @param owner the id the group's identity is built from, namespaced by the
      *              defining mod ({@code "mymod:pockets"}); in 1.x this was the
      *              container panel id
-     * @param spec  the group: its slots, storage and behaviour
+     * @param spec  the group: its slots, storage and behavior
      * @throws IllegalStateException after MenuKit's declarations froze, when the spec
      *         has no storage, when the owner's mod doesn't declare SlotKit on both
      *         sides, or when the same group is registered twice
@@ -185,17 +185,17 @@ public final class ParityGroup {
     }
 
     /**
-     * Publishes the spec's category for the group and sets whatever behaviour the spec
+     * Publishes the spec's category for the group and sets whatever behavior the spec
      * declared, at the group level. A null value leaves the engine default, so an
      * undeclared slot stays plain vanilla.
      *
      * <p>Set for the group, not per address: a consumer that overrides one slot with
      * {@code Window.slot(scope, Address.createdSlot(id, i)).set(KEY, value)} wins because it
-     * is more specific, not because its mod initialised last. Above the group sits the
+     * is more specific, not because its mod initialized last. Above the group sits the
      * category.
      */
     private static void armInlineBehavior(SlotGroupId.Created id, SlotSpec spec) {
-        // Declared whether or not the spec declares behaviour: the category recorded
+        // Declared whether or not the spec declares behavior: the category recorded
         // on the group is what lets the category's own values reach its slots, and
         // registering at init lists the group from the title screen.
         com.trevlar.slotkit.api.group.SlotGroups.declare(id, spec.category());

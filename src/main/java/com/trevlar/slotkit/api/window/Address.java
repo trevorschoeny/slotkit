@@ -116,7 +116,7 @@ public record Address(OwnerRef owner, Token token, KindTag kind) {
     /**
      * Slot {@code index} of the viewing player's own inventory, the same slot on every
      * screen that shows it, survival's and creative's included: 0 to 8 the hotbar, 9 to
-     * 35 the main grid, 36 to 39 armour (feet to head), 40 the offhand. Equal to
+     * 35 the main grid, 36 to 39 armor (feet to head), 40 the offhand. Equal to
      * {@code SlotRef.address()} for that slot, so a rule declared on it at init holds
      * wherever the slot is. Since 2.1.0.
      *
