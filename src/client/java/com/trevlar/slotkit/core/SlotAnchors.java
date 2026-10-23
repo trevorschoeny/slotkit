@@ -2,6 +2,9 @@ package com.trevlar.slotkit.core;
 
 import com.trevlar.menukit.api.panel.Anchor;
 import com.trevlar.menukit.api.panel.Reference;
+import com.trevlar.slotkit.api.group.ResolvedSlotGroup;
+import com.trevlar.slotkit.api.group.SlotGroupCategories;
+import com.trevlar.slotkit.api.group.SlotGroupCategory;
 import com.trevlar.slotkit.api.group.SlotGroupId;
 import com.trevlar.slotkit.api.slot.CreatedSlots;
 import com.trevlar.slotkit.api.window.Address;
@@ -33,6 +36,7 @@ public final class SlotAnchors {
 
     private static final Map<Address, Anchor> SLOTS = new ConcurrentHashMap<>();
     private static final Map<SlotGroupId, Anchor> GROUPS = new ConcurrentHashMap<>();
+    private static final Map<String, Anchor> SHOWN = new ConcurrentHashMap<>();
 
     /** The anchor whose box is the slot {@code address} names: its 18x18 frame. */
     public static Anchor slot(Address address) {
@@ -44,6 +48,33 @@ public final class SlotAnchors {
     public static Anchor group(SlotGroupId group) {
         return GROUPS.computeIfAbsent(group,
                 g -> Anchor.of(id("group/", g.asString()), screen -> groupBox(screen, g)));
+    }
+
+    /**
+     * The anchor whose box is the {@code index}-th group of {@code category} showing on the
+     * open menu this frame, counted in {@code SlotGroupCategories.groups} order (vanilla's
+     * group first, created ones in menu order), skipping groups with no box (hidden, parked,
+     * inert). Lets a category's panels follow groups that come and go while the screen is up.
+     */
+    public static Anchor shownGroup(SlotGroupCategory category, int index) {
+        return SHOWN.computeIfAbsent(category + "#" + index, k -> Anchor.of(id("category/", k),
+                screen -> shown(screen, category, index) instanceof Shown s ? s.box() : null));
+    }
+
+    /** A group showing on a screen, with its box. */
+    public record Shown(ResolvedSlotGroup group, Reference box) {}
+
+    /** The {@code index}-th group of {@code category} with a box on {@code screen} this frame, or {@code null}. */
+    public static @Nullable Shown shown(@Nullable Screen screen, SlotGroupCategory category, int index) {
+        if (!(screen instanceof AbstractContainerScreen<?> acs)) return null;
+        AbstractContainerScreenAccessor acc = (AbstractContainerScreenAccessor) acs;
+        int seen = 0;
+        for (ResolvedSlotGroup g : SlotGroupCategories.groups(acs.getMenu())) {
+            if (!g.category().equals(category)) continue;
+            Reference box = SlotGroupBox.of(g, acc.sk$getLeftPos(), acc.sk$getTopPos());
+            if (box != null && seen++ == index) return new Shown(g, box);
+        }
+        return null;
     }
 
     /**

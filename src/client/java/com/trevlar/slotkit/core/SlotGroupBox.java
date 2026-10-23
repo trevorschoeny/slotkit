@@ -36,22 +36,26 @@ public final class SlotGroupBox {
      */
     public static @Nullable Reference of(AbstractContainerMenu menu, int leftPos, int topPos, SlotGroupId id) {
         for (ResolvedSlotGroup group : SlotGroupCategories.groups(menu)) {
-            if (!group.id().equals(id) || group.slots().isEmpty()) continue;
-            int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
-            int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
-            for (Slot slot : group.slots()) {
-                // Parked (scrolled out of a region, not presented) and inactive slots (past an
-                // active count) aren't on screen, so they don't stretch the box.
-                if (slot.x == com.trevlar.slotkit.api.slot.CreatedSlots.OFFSCREEN || !slot.isActive()) continue;
-                // A slot's frame is its item box grown by 1 px on every side.
-                minX = Math.min(minX, slot.x - 1);
-                minY = Math.min(minY, slot.y - 1);
-                maxX = Math.max(maxX, slot.x + 17);
-                maxY = Math.max(maxY, slot.y + 17);
-            }
-            if (minX == Integer.MAX_VALUE) return null;   // none of its slots is on screen
-            return new Reference(leftPos + minX, topPos + minY, maxX - minX, maxY - minY);
+            if (group.id().equals(id)) return of(group, leftPos, topPos);
         }
         return null;
+    }
+
+    /** {@link #of(AbstractContainerMenu, int, int, SlotGroupId)} for a group already resolved. */
+    public static @Nullable Reference of(ResolvedSlotGroup group, int leftPos, int topPos) {
+        int minX = Integer.MAX_VALUE, minY = Integer.MAX_VALUE;
+        int maxX = Integer.MIN_VALUE, maxY = Integer.MIN_VALUE;
+        for (Slot slot : group.slots()) {
+            // Parked (scrolled out of a region, not presented) and inactive slots (past an
+            // active count) aren't on screen, so they don't stretch the box.
+            if (slot.x == com.trevlar.slotkit.api.slot.CreatedSlots.OFFSCREEN || !slot.isActive()) continue;
+            // A slot's frame is its item box grown by 1 px on every side.
+            minX = Math.min(minX, slot.x - 1);
+            minY = Math.min(minY, slot.y - 1);
+            maxX = Math.max(maxX, slot.x + 17);
+            maxY = Math.max(maxY, slot.y + 17);
+        }
+        if (minX == Integer.MAX_VALUE) return null;   // none of its slots is on screen
+        return new Reference(leftPos + minX, topPos + minY, maxX - minX, maxY - minY);
     }
 }

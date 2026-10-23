@@ -155,6 +155,16 @@ public record SlotGroupCategory(String namespace, String path) {
     public static final SlotGroupCategory MOUNT_STORAGE =
             new SlotGroupCategory("menukit", "mount_storage");
 
+    // Shared, with no vanilla menu behind it
+
+    /**
+     * A bundle's contents, shown as slots by a mod that opens bundles. Vanilla
+     * has no menu for it, so it isn't in {@link #vanilla()} and no resolver emits it; a mod's
+     * created group declares it, so other mods (a sort button) treat any mod's bundle alike.
+     */
+    public static final SlotGroupCategory BUNDLE_STORAGE =
+            new SlotGroupCategory("menukit", "bundle_storage");
+
     /**
      * Every category SlotKit ships for vanilla's own slot groups. SlotKit declares
      * these into the registry at init, so {@code SlotGroupCategories.all()} lists

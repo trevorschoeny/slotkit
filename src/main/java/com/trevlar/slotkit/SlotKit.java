@@ -98,6 +98,7 @@ public class SlotKit implements ModInitializer {
      */
     private static void declareVanillaVocabulary() {
         SlotGroupCategory.vanilla().forEach(c -> SlotGroups.declare(SlotGroupId.category(c), c));
+        com.trevlar.slotkit.api.group.SlotGroupCategories.declare(SlotGroupCategory.BUNDLE_STORAGE);
         com.trevlar.slotkit.core.VanillaSlotGroupResolvers.registerAll();
         SlotGroupCategory[] outputs = {
                 SlotGroupCategory.CRAFTING_OUTPUT, SlotGroupCategory.CRAFTER_RESULT, SlotGroupCategory.FURNACE_OUTPUT,

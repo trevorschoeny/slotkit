@@ -64,7 +64,11 @@ public final class SlotPlacement {
         return Placement.around(SlotAnchors.group(Objects.requireNonNull(group, "group")), position);
     }
 
-    /** {@link #group(SlotGroupId, PanelPosition)} on a category's vanilla group. */
+    /**
+     * {@link #group(SlotGroupId, PanelPosition)} on a category's vanilla group. For a panel
+     * on every group of the category, created ones too, see
+     * {@link com.trevlar.slotkit.api.group.CategoryPanels}.
+     */
     public static Placement group(SlotGroupCategory category, PanelPosition position) {
         return group(SlotGroupId.category(Objects.requireNonNull(category, "category")), position);
     }
