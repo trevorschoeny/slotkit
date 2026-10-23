@@ -7,8 +7,9 @@ import net.minecraft.network.codec.StreamCodec;
 import java.util.List;
 
 /**
- * Where one item is, as both sides can name it: a top-level slot in the inventory or the
- * ender chest, then the index inside each container on the way down. A shulker box's
+ * Where one item is, as both sides can name it: a top-level slot in the inventory, the
+ * ender chest or a supplied container ({@link ItemRef.Source#CONTAINER}, such as an open
+ * chest), then the index inside each container on the way down. A shulker box's
  * index is its slot (0 to 26); a bundle's is the item's position in its contents, in the
  * order the bundle lists them.
  *
@@ -23,7 +24,8 @@ import java.util.List;
  * }</pre>
  *
  * @param source the top-level container
- * @param slot   the top-level slot (0 to 35 in the inventory, hotbar 0 to 8; 0 to 26 in the ender chest)
+ * @param slot   the top-level slot (0 to 35 in the inventory, hotbar 0 to 8; 0 to 26 in the
+ *               ender chest; the container's own slot index in a supplied container)
  * @param inside the index inside each container, outermost first; empty for a top-level item
  */
 public record ItemPath(ItemRef.Source source, int slot, List<Integer> inside) {

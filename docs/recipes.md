@@ -263,6 +263,10 @@ if (ref != null && ref.stack().is(Items.COBBLESTONE)) { ItemStack moved = ref.ta
 
 Vanilla sends a client its ender chest's contents only inside the chest's own menu, so a client-side `find` finds nothing there. Search the ender chest on the server.
 
+Since 2.1.0, the chest a player has open is a source too. Pass its container to `walk`, `find` or `at`: on the client, the container behind the open screen's menu; on the server, the one behind the player's menu, never one the client names. Paths have source `CONTAINER`, and ordering across sources is yours.
+
+To keep a menu open on a nested item, bind it with `ItemSources.live(container, path)` (or `live(player, path)`), build the mod's storage over `live.stack()`, and wrap it with `live.storage(...)` so each write goes up the chain. Have the menu's `stillValid` return `!live.isStale()`: when the item moves or anything else changes it, vanilla refuses further clicks and closes the menu, and nothing is lost because every change was already written.
+
 ## Show a vanilla slot in your own panel
 
 Since 2.0.0. A `SlotElement` can present a slot the menu built itself. Here a furnace's fuel slot moves into a labeled panel beside the furnace:

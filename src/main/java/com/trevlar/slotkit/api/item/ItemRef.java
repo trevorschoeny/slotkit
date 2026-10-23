@@ -18,8 +18,12 @@ import net.minecraft.world.item.ItemStack;
  */
 public interface ItemRef {
 
-    /** Where a top-level slot is. */
-    enum Source { INVENTORY, ENDER_CHEST }
+    /**
+     * Where a top-level slot is: the player's inventory, their ender chest, or a
+     * {@code Container} the caller supplies (an open chest or barrel), which the
+     * {@code Container} overloads of {@link ItemSources} walk and resolve.
+     */
+    enum Source { INVENTORY, ENDER_CHEST, CONTAINER }
 
     /**
      * The item. A top-level item is the live stack in its slot, so a change in place
@@ -57,7 +61,7 @@ public interface ItemRef {
     /** 0 for a top-level slot, 1 for an item inside a container there, and so on. */
     int depth();
 
-    /** Whether the top-level slot is in the inventory or the ender chest. */
+    /** Whether the top-level slot is in the inventory, the ender chest or a supplied container. */
     Source source();
 
     /** Where this item is, as a path both sides can name (see {@link ItemPath}). */

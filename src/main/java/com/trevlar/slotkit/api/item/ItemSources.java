@@ -48,7 +48,16 @@ import java.util.function.Predicate;
  * component object changes) shows the change on its next read, so a screen showing the
  * same shulker stays in step.
  *
- * <p>Server side only, on the server thread.
+ * <h3>Other containers</h3>
+ * The {@code Container} overloads of {@code walk}, {@code find} and {@code at} do the same
+ * from a container the caller supplies, such as the chest a player has open; their paths
+ * have source {@link ItemRef.Source#CONTAINER}. Ordering across sources is the caller's.
+ *
+ * <h3>Menus on a nested item</h3>
+ * {@link #live} binds a {@link LiveItem} to an item at a path, for a menu that stays open
+ * on it across many writes and closes when it goes stale.
+ *
+ * <p>Server side only, on the server thread, except {@code find}.
  */
 public final class ItemSources {
 
@@ -110,9 +119,83 @@ public final class ItemSources {
      * reference is as fresh as a walk's, so a take writes back up the chain.
      */
     public static @Nullable ItemRef at(ServerPlayer player, ItemPath path) {
-        if (path.depth() > ANYWHERE.maxDepth()) return null;
+        if (path.source() == ItemRef.Source.CONTAINER) return null;   // the player can't name that container
         Container container = path.source() == ItemRef.Source.INVENTORY ? player.getInventory() : player.getEnderChestInventory();
-        int slots = path.source() == ItemRef.Source.INVENTORY ? 36 : container.getContainerSize();
+        return resolve(container, slotsOf(container, path.source()), path);
+    }
+
+    // A supplied container (an open chest, a barrel)
+
+    /**
+     * Visits each item in {@code container} and, with the scope's flags, the containers
+     * inside them, nearest first, until the visitor returns false. Every slot of the
+     * container is a top-level slot, in index order; the refs' source is
+     * {@link ItemRef.Source#CONTAINER}. The scope's {@code enderChest} flag doesn't apply.
+     * Server side only, on the server thread: pass the server's container (a chest's
+     * block entity, or the container behind its menu).
+     */
+    public static void walk(Container container, ItemScope scope, ItemVisitor visitor) {
+        walkContainer(container, container.getContainerSize(), ItemRef.Source.CONTAINER, scope, visitor);
+    }
+
+    /**
+     * Every item in {@code container} that {@code test} accepts, as {@link #walk(Container,
+     * ItemScope, ItemVisitor)} orders them, read only. Safe on either side: on the client,
+     * pass the container behind the open screen's menu, which the server keeps in step.
+     * Paths have source {@link ItemRef.Source#CONTAINER} and name the container's own slot
+     * index; the server resolves one with {@link #at(Container, ItemPath)}.
+     */
+    public static List<Found> find(Container container, ItemScope scope, Predicate<ItemStack> test) {
+        List<Found> out = new ArrayList<>();
+        walk(container, scope, ref -> {
+            if (test.test(ref.stack())) out.add(new Found(ref.path(), ref.stack().copy()));
+            return true;
+        });
+        return out;
+    }
+
+    /**
+     * The live item at a {@link ItemRef.Source#CONTAINER} path in {@code container}, or
+     * {@code null} when it isn't there (as {@link #at(ServerPlayer, ItemPath)}) or the path's
+     * source is another one. The caller supplies the container the path was found in,
+     * typically the one behind the menu the player has open, so a client can't point the
+     * server at a container of its choosing.
+     */
+    public static @Nullable ItemRef at(Container container, ItemPath path) {
+        if (path.source() != ItemRef.Source.CONTAINER) return null;
+        return resolve(container, container.getContainerSize(), path);
+    }
+
+    // Live items
+
+    /**
+     * A {@link LiveItem} bound to the item at {@code path} in the player's inventory or
+     * ender chest, for a menu that stays open on it across many writes. {@code null} when
+     * the item isn't there, as {@link #at(ServerPlayer, ItemPath)}.
+     */
+    public static @Nullable LiveItem live(ServerPlayer player, ItemPath path) {
+        if (path.source() == ItemRef.Source.CONTAINER) return null;
+        Container container = path.source() == ItemRef.Source.INVENTORY ? player.getInventory() : player.getEnderChestInventory();
+        return LiveItem.bind(container, slotsOf(container, path.source()), path);
+    }
+
+    /**
+     * A {@link LiveItem} bound to the item at a {@link ItemRef.Source#CONTAINER} path in
+     * {@code container}. {@code null} when the item isn't there, as {@link #at(Container, ItemPath)}.
+     */
+    public static @Nullable LiveItem live(Container container, ItemPath path) {
+        if (path.source() != ItemRef.Source.CONTAINER) return null;
+        return LiveItem.bind(container, container.getContainerSize(), path);
+    }
+
+    /** How many top-level slots a source has: the inventory's 36 main slots, or all of the container. */
+    private static int slotsOf(Container container, ItemRef.Source source) {
+        return source == ItemRef.Source.INVENTORY ? 36 : container.getContainerSize();
+    }
+
+    /** Follows {@code path} down from {@code container}'s first {@code slots} slots: a fresh ref, or null. */
+    static @Nullable Ref resolve(Container container, int slots, ItemPath path) {
+        if (path.depth() > ANYWHERE.maxDepth()) return null;
         if (path.slot() < 0 || path.slot() >= slots) return null;
         ItemStack top = container.getItem(path.slot());
         if (top.isEmpty()) return null;
@@ -269,7 +352,7 @@ public final class ItemSources {
     }
 
     /** An item: a top-level slot's live stack (holder null), or entry {@code index} of a holder's list. */
-    private static final class Ref implements ItemRef {
+    static final class Ref implements ItemRef {
         final Top top;
         final @Nullable Holder holder;
         final int index;
@@ -341,6 +424,17 @@ public final class ItemSources {
         public boolean commit() {
             if (!unchanged()) return false;
             write();
+            return true;
+        }
+
+        /**
+         * Puts a copy of {@code with} in this nested item's place and writes up the chain.
+         * For {@link LiveItem}, whose working stack is its own object, not the walk's.
+         */
+        boolean replace(ItemStack with) {
+            if (holder == null || !unchanged()) return false;
+            holder.items.set(index, with.copy());
+            holder.write();
             return true;
         }
     }

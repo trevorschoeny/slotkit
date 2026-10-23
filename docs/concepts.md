@@ -21,7 +21,7 @@ The API is the `api` packages: `com.trevlar.slotkit.api.*`. [Versioning](version
 | `api.menu` | Custom container menus and their screens | Client and server |
 | `api.storage` | `Storage` and storage attachments | Client and server |
 | `api.state` | Slot-state channels | Client and server |
-| `api.item` | `ItemSources`: items in the inventory, the ender chest, shulker boxes and bundles | Server; `find` on both |
+| `api.item` | `ItemSources`: items in the inventory, the ender chest, a supplied container, shulker boxes and bundles; `LiveItem` for a menu on a nested item | Server; `find` on both |
 
 ## Two tiers
 
@@ -290,6 +290,10 @@ A `Storage` is the item container behind a created slot group. `StorageAttachmen
 On the server, `walk` and `take` hand out an `ItemRef` for each item. A take, a put or a committed change writes back up through every container to the top-level slot. A ref whose slot or containers changed since it was read writes nothing.
 
 An `ItemPath` names one item by its top-level slot and its index inside each container on the way down. `find` lists matches with their paths on either side, read-only. A client sends a path in its own packet, and the server turns it back into a ref with `at`, which returns `null` when the item is no longer there. Check the item again on the server before acting on it. The [recipe](recipes.md#find-and-use-items-inside-shulker-boxes-and-bundles) shows both.
+
+The same `walk`, `find` and `at` also take a `Container` the caller supplies, such as the chest a player has open. Its paths have source `CONTAINER` and name the container's own slots. The server resolves one only against a container it supplies, usually the one behind the open menu, so a client can't point it at another.
+
+A menu that stays open on a nested item, such as a bundle inside a shulker box in a chest, binds a `LiveItem` with `ItemSources.live`. Its `stack()` is one object for as long as it's bound, so the mod's own storage over an item stack can sit on it; `live.storage(...)` writes every change back up the chain. It goes stale when the top-level stack moves or the item itself is changed by anything else, and the menu's `stillValid` returns `!isStale()` so vanilla closes it.
 
 ## Saved ids
 
