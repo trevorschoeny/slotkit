@@ -362,6 +362,26 @@ public final class OnDemandGroup {
         }
     }
 
+    /**
+     * Server: tells the client about every instance on {@code menu} again, removed ones
+     * too, in slot order, so a new client menu for it (one {@code MenuSwitch.back}
+     * reopened) builds the same slots at the same indices before its contents arrive.
+     */
+    @ApiStatus.Internal
+    public static void replay(ServerPlayer player, AbstractContainerMenu menu) {
+        List<Instance> all = listOn(menu);
+        all.sort(java.util.Comparator.comparingInt(i -> i.flatStart));
+        for (Instance i : all) {
+            String kind = i.kind.id.panelId();
+            Handshake.send(player, new GroupInstanceS2CPayload(menu.containerId, GroupInstanceS2CPayload.ADD,
+                    kind, i.number, i.flatStart, i.activeCount));
+            if (i.removed) {
+                Handshake.send(player, new GroupInstanceS2CPayload(menu.containerId, GroupInstanceS2CPayload.REMOVE,
+                        kind, i.number, i.flatStart, 0));
+            }
+        }
+    }
+
     /** The kind a created group is an instance of, or {@code null} when it's no instance. */
     @ApiStatus.Internal
     public static SlotGroupId.@Nullable Created kindOf(SlotGroupId.@Nullable Created group) {

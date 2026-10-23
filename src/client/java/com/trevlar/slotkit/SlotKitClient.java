@@ -93,6 +93,13 @@ public class SlotKitClient implements ClientModInitializer {
                 com.trevlar.slotkit.network.GroupInstanceS2CPayload.TYPE,
                 (payload, ctx) -> com.trevlar.slotkit.api.slot.OnDemandGroup.applyOnClient(payload, ctx.player()));
 
+        // Menu switching: the server opens the inventory screen, and a screen the server
+        // opens over another waits for its contents.
+        net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(
+                com.trevlar.slotkit.network.OpenInventoryS2CPayload.TYPE,
+                (payload, ctx) -> com.trevlar.slotkit.core.MenuSwitchClient.openInventory(ctx.client()));
+        ClientTickEvents.END_CLIENT_TICK.register(client -> com.trevlar.slotkit.core.MenuSwitchClient.tick());
+
         // Answer the server's hello. With no hello, turn created slots off.
         HandshakeClient.register();
 

@@ -17,6 +17,7 @@
     "SKHopperGateMixin",
     "SKInventoryInsertMixin",
     "SKInventoryMenuMixin",
+    "SKMenuSwitchMixin",
     "SKQuickMoveRouteMixin",
     "SKOperationsMixin",
     "SKPlayerActionMixin",
@@ -26,6 +27,7 @@
     "SKPlayerOpenMenuMixin",
     "SKPortableSlotStateMixin",
     "SKRetiredRegistryEntryMixin",
+    "SKSetAsideOpenerMixin",
     "SKSlotGateMixin",
     "SlotPositionAccessor"
   ],
@@ -42,6 +44,8 @@
     "SKHasClickedOutsideMixin",
     "SKLocalDropMixin",
     "SKPlayerActionSendMixin",
+    "SKScreenHoldMixin",
+    "SKSwitchPacketsMixin",
     "SlotWrapperAccessor"
   ],
   "injectors": {

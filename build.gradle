@@ -108,6 +108,19 @@ loom {
     }
 }
 
+// Self-checks: Fabric client gametests in src/gametest, run with `./gradlew :slotkit:runClientGameTest`.
+// The run opens its own window, runs every check in a throwaway world, and closes; it never
+// touches run/ or a scene client.
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = 'slotkit_checks'
+        enableGameTests = false
+        enableClientGameTests = true
+        eula = true
+    }
+}
+
 // Declared after loom {} so the client source set exists. MenuKit splits its source
 // sets too, so its client half is added here. A published jar holds both halves;
 // this is only how a project dependency sees them.

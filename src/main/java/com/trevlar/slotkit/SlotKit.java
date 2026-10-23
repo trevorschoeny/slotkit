@@ -53,6 +53,14 @@ public class SlotKit implements ModInitializer {
                 com.trevlar.slotkit.network.GroupInstanceS2CPayload.TYPE,
                 com.trevlar.slotkit.network.GroupInstanceS2CPayload.STREAM_CODEC);
 
+        // Menu switching: the inventory screen opens on the server's word, and a player
+        // leaving takes their set-aside menu with them.
+        net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.clientboundPlay().register(
+                com.trevlar.slotkit.network.OpenInventoryS2CPayload.TYPE,
+                com.trevlar.slotkit.network.OpenInventoryS2CPayload.STREAM_CODEC);
+        net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register(
+                (handler, server) -> com.trevlar.slotkit.api.menu.MenuSwitch.left(handler.getPlayer()));
+
         // The one generic open request every CustomMenu shares. The server checks it:
         // the menu must declare validWhen, and it must hold for the player.
         net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.serverboundPlay().register(
