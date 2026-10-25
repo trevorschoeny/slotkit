@@ -6,7 +6,7 @@ If you're a player and another mod asked for SlotKit, install it alongside that 
 
 SlotKit was called MenuKit: Containers. Mods built for Containers need an update, and the [upgrading guide](https://github.com/trevorschoeny/slotkit/blob/main/docs/upgrading.md) has the steps. MenuKit: Containers 6.2.0 is still in this project's version list.
 
-## Features
+### Features
 
 SlotKit has two tiers. A mod needs SlotKit on the other side only for the second.
 
@@ -21,18 +21,21 @@ SlotKit has two tiers. A mod needs SlotKit on the other side only for the second
 - Every rule about a slot (a veto, a category rule, a gate, a slot-state channel) is declared for survival, creative, or both, and holds in creative too. A panel can take a different place in each mode.
 - A player inventory slot has one address, the same on every screen and for every player, so a rule can name it at startup.
 - Each container on a menu stays its own container. A menu's shift-click never lands in another mod's slots by accident, and a mod can show any container's slots in its own panel by the group's id.
+- The server can add slot groups to the menu a player has open and remove them again, for something the player opens while a screen is up, like a shulker box opened from a chest's screen.
+- A panel can sit on every shown group of a category, so a chest and each shulker box or ender chest opened beside it get a panel of their own.
+- A player at a chest can switch to their inventory, a shulker box, or their ender chest and back, and the chest stays open in the world the whole time.
 - Slots in a MenuKit scroll area clip to it, so a long grid of slots can scroll.
 - Created slots are UI components. A pocket, an extra equipment slot, or a satchel is each a real `Slot`, synced by vanilla's protocol. A mod registers its slot groups once and places them in its own MenuKit panels, next to its buttons and labels, on every screen it chooses.
 - The server can open, close, and resize a slot group for each player, and a mod can decide where a shift-click goes.
 - A slot's contents can be shown to other players, for gear drawn on the player model.
-- A mod can find and use items anywhere a player carries them: the inventory, the ender chest, and shulker boxes and bundles nested to any depth. A change writes back through every container.
+- A mod can find and use items anywhere a player carries them: the inventory, the ender chest, and shulker boxes and bundles nested to any depth. The chest a player has open can be searched too. A change writes back through every container, and a menu can stay open on a nested item, like a bundle inside a shulker box.
 - Custom container menus are built from MenuKit panels.
 - Created slots behave like vanilla ones in creative and survival, on death, and with Curse of Binding and Mending.
 - Per-slot state can be attached to any slot, either private to each player or shared by everyone viewing it. The server checks every write a client sends. The state is stored on the slot's owner (a player, block, entity, or item), where `/data get` can read it.
 - Each side checks which mods the other has before the world loads. A server refuses only players missing a mod that builds slots, and names the mods to install, with links. Everyone else joins.
 - Worlds and player files saved with MenuKit: Containers load with no conversion, and shulker boxes keep their contents and slot state.
 
-## Example
+### Example
 
 A panel above the player inventory, registered once from the client entry point. It uses the client tier, so it works on any server.
 
@@ -74,7 +77,7 @@ Panel pockets = Panel.builder("mymod:pockets")
 new ScreenPanelAdapter(pockets).onMatching(ScreenMatcher.all());
 ```
 
-## Getting started
+### Getting started
 
 Minecraft 26.3 is unobfuscated, so SlotKit goes on the plain `implementation` configuration, beside MenuKit.
 
@@ -98,16 +101,16 @@ Declare both in `fabric.mod.json`, each against its own version, with both bound
 
 Players install SlotKit as its own mod, next to the mods that use it. List it as a required dependency on the mod's Modrinth page so it's installed with them.
 
-## Requirements
+### Requirements
 
 - [MenuKit](https://modrinth.com/mod/menukit) 7.4.0 or newer, below 8.0.0. SlotKit builds its panels and slot drawing on MenuKit.
 - [Fabric API](https://modrinth.com/mod/fabric-api)
 
-## Compatibility
+### Compatibility
 
 Minecraft 26.3 with Fabric. Install SlotKit on the client. A server needs it only when a mod that adds slots, such as Hotbar Pockets or Simple Elytra Slot, is installed there too. That mod lists SlotKit as a required dependency, so SlotKit comes along with it. That's why Modrinth lists SlotKit as client-side, even though it ends up on plenty of servers. SlotKit replaces MenuKit: Containers, so the two can't be installed together, and it can't be installed with Inventory Max either.
 
-## Used by
+### Used by
 
 - [Inventory Plus](https://modrinth.com/mod/inventory-plus-trevlar)
 - [Hotbar Pockets](https://modrinth.com/mod/hotbar-pockets)
@@ -115,15 +118,15 @@ Minecraft 26.3 with Fabric. Install SlotKit on the client. A server needs it onl
 - [Simple Elytra Slot](https://modrinth.com/mod/simple-elytra-slot)
 - [Simple Totem Slot](https://modrinth.com/mod/simple-totem-slot)
 
-## How to use
+### How to use
 
 This guide follows the order a mod usually meets SlotKit, from finding slots on the client to building slots that need both sides. Each part links to the full developer docs. [Concepts](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md) defines every term, and [Recipes](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md) has a worked example for each common task.
 
-### The public API
+#### The public API
 
 The API is every type in a package named `api`, which is `com.trevlar.slotkit.api.*`. The version contract covers those. Every other package is internal and can change in any release, a patch included. A task that seems to need an internal type is a gap in the API, so [open an issue](https://github.com/trevorschoeny/slotkit/issues) for it. [Versioning](https://github.com/trevorschoeny/slotkit/blob/main/docs/versioning.md) has what each part of a version number promises.
 
-### Declare which sides need SlotKit
+#### Declare which sides need SlotKit
 
 A mod states in its `fabric.mod.json` whether it needs SlotKit on both sides.
 
@@ -137,19 +140,19 @@ A mod states in its `fabric.mod.json` whether it needs SlotKit on both sides.
 
 Any other value throws when the mod loads. [Declaring sides](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#declaring-sides) covers the handshake and every message a refused player sees.
 
-### Choose a mode scope
+#### Choose a mode scope
 
 Every declaration about a slot names the game mode it's for: `ModeScope.SURVIVAL`, `CREATIVE`, or `BOTH`, MenuKit's `ModeScope`. SlotKit reads the acting player's mode on each check, so a lock declared for `BOTH` holds on both of creative's tabs. The forms without a scope still work, mean `BOTH`, and are deprecated. See [Mode scope](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#mode-scope).
 
-### Find slot groups
+#### Find slot groups
 
 A slot group category is a name for a group of slots, such as `PLAYER_INVENTORY`, `PLAYER_HOTBAR`, `CHEST_STORAGE`, or `FURNACE_INPUT`. `SlotGroupCategories.all()` lists every category with no menu open, `SlotGroupCategories.of(menu)` lists the categories on a menu with their slots, and `SlotGroupCategories.categoriesBySlot(menu)` gives the category of each slot. `SlotGroups` lists individual groups, which can tell one mod's pockets apart from the main inventory when both declare `PLAYER_INVENTORY`. This is client tier. [Slot group category](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#slot-group-category) has the full rules for naming and minting categories.
 
-### Place a panel on a slot or a slot group
+#### Place a panel on a slot or a slot group
 
 A slot anchor is a MenuKit anchor whose box is one slot's frame or one slot group's box on the open screen. `SlotPlacement.group(group, position)` places a panel around a slot group, as in the first example above, and `SlotPlacement.slot(address, dx, dy)` places it at an offset from one slot. The panel takes one placement per mode with `Panel.Builder.in(scope, placement)` and is registered with MenuKit's `AnchorPanelAdapter`. A panel shows only where its slot or group is on the open menu, so a placement for creative and another for survival put the same slot in two places with no mode check of the mod's own. This is client tier. See [Slot anchors](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#slot-anchors) and [Put a slot in another place in creative](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#put-a-slot-in-another-place-in-creative).
 
-### Allow, gate, and veto operations
+#### Allow, gate, and veto operations
 
 An operation is something done to a slot. Vanilla's eleven are `CLICK_TAKE`, `CLICK_PUT`, `SHIFT_CLICK_OUT`, `SHIFT_CLICK_IN`, `COLLECT`, `DRAG_FILL`, `HOTBAR_SWAP`, `OFFHAND_SWAP`, `DROP`, `DROP_STACK`, and `INVENTORY_INSERT`, and every one is on by default.
 
@@ -161,7 +164,7 @@ An operation is something done to a slot. Vanilla's eleven are `CLICK_TAKE`, `CL
 
 [Operation](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#operation) and [Gate](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#gate) cover roles, `AppliesTo`, and click tagging with `SlotOperations.as`. See also [Block operations on a locked slot](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#block-operations-on-a-locked-slot) and [Add an operation of your own](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#add-an-operation-of-your-own).
 
-### Build created slots
+#### Build created slots
 
 A created slot is a real `Slot` a mod adds to a menu. `ParityGroup.register(owner, spec)` registers a group of them once, in common code, on the player's inventory menu and every container menu, as in the second example above. SlotKit builds no panel for it. The mod shows the group in its own MenuKit panel with `SlotFlowElement`, which lays the slots out in rows, or `SlotElement`, which places one slot. The contents persist through a `StorageAttachment` on the slot's owner, built with `StorageAttachment.playerAttached(namespace, key, size)` for a player or `EphemeralStorage.of(size)` for one menu session.
 
@@ -173,38 +176,50 @@ A created slot is a real `Slot` a mod adds to a menu. `ParityGroup.register(owne
 
 This needs SlotKit on both sides. See [Parity group](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#parity-group), [Storage](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#storage), and [Put a slot above the offhand](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#put-a-slot-above-the-offhand).
 
-### Find items inside shulker boxes and bundles
+#### Find items inside shulker boxes and bundles
 
-`ItemSources` walks the items a player carries, in the inventory, the ender chest, and shulker boxes and bundles to any depth, nearest first. An `ItemScope` says which of those to search. On the server, `take` and `walk` remove or change an item and write the change back through every container. `find` lists matches on either side with an `ItemPath` for each, so a client can choose an item and the server can act on it with `at`. See [Item sources](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#item-sources) and [Find and use items inside shulker boxes and bundles](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#find-and-use-items-inside-shulker-boxes-and-bundles).
+`ItemSources` walks the items a player carries, in the inventory, the ender chest, and shulker boxes and bundles to any depth, nearest first. An `ItemScope` says which of those to search. On the server, `take` and `walk` remove or change an item and write the change back through every container. `find` lists matches on either side with an `ItemPath` for each, so a client can choose an item and the server can act on it with `at`. The same calls also take a `Container` the caller supplies, such as the chest a player has open. On the server it resolves only against the container behind the player's menu, never one the client names. To keep a menu open on a nested item, such as a bundle inside a shulker box in a chest, bind it with `ItemSources.live(container, path)`. The `LiveItem` takes any number of writes, sends each one back up the chain, and goes stale when the item moves or something else changes it, so the menu's `stillValid` returns `!live.isStale()`. See [Item sources](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#item-sources) and [Find and use items inside shulker boxes and bundles](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#find-and-use-items-inside-shulker-boxes-and-bundles).
 
-### Show a container by its group's id
+#### Show a container by its group's id
 
 `SlotGroupElement.of(id)` shows one slot group in rows, found by its `SlotGroupId` on whatever menu is open. `SlotGroupElement.of(SlotGroupId.category(SlotGroupCategory.CHEST_STORAGE))` shows a single chest, a double chest, or a barrel with no menu-type indices, and another mod's created group is named by its saved form with no compile dependency on that mod. The element shows only while the group's slots do. Showing a group in another panel moves its slots on the screen only. Each container stays its own, and a menu's own shift-click stops before every slot SlotKit added. See [Slot group element](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#slot-group-element) and [Separate containers](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#separate-containers).
 
-### Scroll slots in a scroll area
+#### Add slot groups to an open menu
+
+An `OnDemandGroup` is registered once in common code, like a `ParityGroup`, but it's on no menu until the server adds it. `BOX.add(player, storage)` puts an instance's slots on the menu the player has open, the client's included, and `instance.remove()` takes them away. Each instance is its own slot group, with an id like `mymod:box:slots#0`, and declarations on the kind reach every instance. A removed instance's slots stay on the menu, inert, until the next instance of its kind takes them, so no other slot's index moves while the menu is open. `add` returns `null` for a client without SlotKit and the kind's mod. This needs SlotKit on both sides. The class Javadoc covers gates, quick-move routes, and active counts per instance.
+
+#### Put a panel on every group of a category
+
+`SlotPlacement.group(category, position)` reaches only a category's vanilla group. `CategoryPanels.declare(category, on -> panel)` puts one panel on each group of the category shown on the open menu, created groups and on-demand instances included, so a chest and the shulker box and ender chest a mod opens beside it each get their own Sort button. `on.group()` names the group a panel sits on. Read it when acting on a click, since a tab switch can change it. Declare at init, up to `CategoryPanels.MAX_SHOWN` panels per category. `SlotGroupCategory.BUNDLE_STORAGE` is the category for an opened bundle, so other mods treat any mod's bundle the same way. This is client tier.
+
+#### Switch between menus
+
+`MenuSwitch` moves a player between menus while the one they opened in the world waits behind the others. From a tab click on the server, `MenuSwitch.open(player, provider)` opens a menu with the chest set aside (its lid stays up, with no close sound), `openInventory(player)` opens the inventory, and `back(player)` returns to the chest. Menus opened through `open` close normally when the player leaves them, so the crafting grid hands its items back. The stack on the cursor moves with every switch. The set-aside menu closes properly when its `stillValid` fails, the player dies, changes dimension, or leaves, or the menu in front closes, and `onSetAsideClosed` hears each of these. `open` and `back` send only vanilla packets. `openInventory` needs SlotKit on the client and returns `false` without it. Server thread only.
+
+#### Scroll slots in a scroll area
 
 A `SlotElement` inside a MenuKit `ScrollContainer` scrolls and clips like any other element. A slot across the edge of the scroll area draws, hovers, and takes clicks only where it shows. A mod that uses `SlotElement` needs no extra code for this.
 
-### Open a custom menu
+#### Open a custom menu
 
 `CustomMenu.define(id, ...)` builds a container menu with its own slots, laid out with MenuKit panels. The server decides which panels are shown, a player can toggle only a panel declared `toggleable()`, and a client can open the menu only while its `validWhen` holds. The same definition check as `ParityGroup` applies. See [Open a custom menu with its own slots](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#open-a-custom-menu-with-its-own-slots).
 
-### Attach state to a slot
+#### Attach state to a slot
 
 `SlotState.register(scope, id, codec, streamCodec, defaultValue, visibility, canWrite)` creates a channel that stores one typed value per slot, separate from the slot's item. `PRIVATE` stores one value per viewer, and `SHARED` stores one value for everyone. A slot is named by an `Address`, which resolves after a menu reopens and on both sides. The server checks every write a client sends, and a `SHARED` channel refuses every client unless its `canWrite` rule allows them. See [Slot state channel](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#slot-state-channel) and [Attach a flag to a slot](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#attach-a-flag-to-a-slot).
 
-### Ask what the other side runs
+#### Ask what the other side runs
 
 `Presence` reports what the other side had when the player joined. On the client, `Presence.serverHasSlotKit()`, `serverHas(modId)`, and `serverHasChannel(channelId)` answer about the server. On the server, `Presence.clientHasSlotKit(player)` and `clientHas(player, modId)` answer about a player. See [Presence](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#presence).
 
-### Know the limits
+#### Know the limits
 
 [Limits](https://github.com/trevorschoeny/slotkit/blob/main/docs/limits.md) lists what SlotKit doesn't do and the open gaps in this release, such as created slots in overlay panels.
 
-### Upgrade
+#### Upgrade
 
 [Upgrading](https://github.com/trevorschoeny/slotkit/blob/main/docs/upgrading.md) moves a mod from SlotKit 2.0 to 2.1 and from 1.x to 2.0, with a before and after for each change, and from MenuKit: Containers or MenuKit 6's slot code, with an import map and the two renames.
 
-## License
+### License
 
 MIT.
