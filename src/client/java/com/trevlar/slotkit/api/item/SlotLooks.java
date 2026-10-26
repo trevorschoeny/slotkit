@@ -24,8 +24,7 @@ import java.util.function.UnaryOperator;
  * {@link When} the mod answers on the client from what it already knows (an open session,
  * a lock). SlotKit times the animation by the item and MenuKit draws ({@code SlotItemLooks},
  * {@code SlotDecorations}), so a mod writes neither a mixin nor a lookup of which item a
- * slot shows. Client side; declare from the client
- * initializer, with ids unique per mod.
+ * slot shows. Client side; declare from the client initializer, with ids unique per mod.
  *
  * <pre>{@code
  * static final Transition OPENING = Transition.of(250, Easing.EASE_OUT);

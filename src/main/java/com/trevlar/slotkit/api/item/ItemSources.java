@@ -82,7 +82,7 @@ public final class ItemSources {
         walkPlayer(player, scope, visitor);
     }
 
-    /** The player's sources in order: inventory, carried attachments, ender chest. False when the visitor stopped. */
+    // The player's sources in order: inventory, carried attachments, ender chest. False when the visitor stopped.
     private static boolean walkPlayer(Player player, ItemScope scope, ItemVisitor visitor) {
         // The inventory's 36 main slots, hotbar (0 to 8) first: that's also slot order.
         if (!walkContainer(player.getInventory(), 36, ItemRef.Source.INVENTORY, null, scope, visitor)) return false;
@@ -307,7 +307,7 @@ public final class ItemSources {
         return true;
     }
 
-    /** The top-level slot a chain starts from, the stack it held when read, and its carried attachment's id if any. */
+    // The top-level slot a chain starts from, the stack it held when read, and its carried attachment's id if any.
     private record Top(Container container, int slot, ItemStack stack, ItemRef.Source source, @Nullable Identifier attachment) {
         boolean stillThere() { return container.getItem(slot) == stack; }
     }

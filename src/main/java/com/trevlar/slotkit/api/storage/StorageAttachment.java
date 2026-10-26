@@ -492,8 +492,8 @@ public abstract class StorageAttachment<O, C> {
     /**
      * The live list of each attachment on each owner, shared by every binding of it, so a
      * slot's stack is the same object through the menu's binding, a shift-click, and a
-     * binding a consumer keeps for the session (Open Anywhere tracks the box in front of
-     * the player by that identity). Like a vanilla container shared by two menus. Weak
+     * binding a consumer keeps for the session (a mod can track the box in front of the
+     * player by that identity). Like a vanilla container shared by two menus. Weak
      * keys compared by identity, not equals: an Entity equals any entity with its id, so
      * the client and server player of a singleplayer world would otherwise share a list.
      * A removed block entity or a respawned player frees its entries.

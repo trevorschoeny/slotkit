@@ -77,7 +77,7 @@ public final class SlotDoubleClick {
 
     private static final List<Registration> REGISTRATIONS = new ArrayList<>();
 
-    /** The window: one second, as long as the cursor stays put. */
+    // The window: one second, as long as the cursor stays put.
     private static final long WINDOW_MS = 1000;
 
     // The pending first click: who owns it (null: none), its place, when, the screen, where
@@ -192,7 +192,7 @@ public final class SlotDoubleClick {
         return false;
     }
 
-    /** A first click: pending when the cursor is empty and a registration takes the stack. */
+    // A first click: pending when the cursor is empty and a registration takes the stack.
     private static void first(AbstractContainerScreen<?> screen, MouseButtonEvent event, Slot shown, Slot real) {
         reset();
         ItemStack stack = real.getItem();
@@ -217,7 +217,7 @@ public final class SlotDoubleClick {
         return real.container instanceof Inventory ? 1000 + real.getContainerSlot() : real.index;
     }
 
-    /** The slot on {@code player.inventoryMenu} that creative shows as {@code shown}, or null. */
+    // The slot on player.inventoryMenu that creative shows as shown, or null.
     private static @Nullable Slot realSlot(Player player, Slot shown) {
         for (Slot real : player.inventoryMenu.slots) {
             if (real.container == shown.container && real.getContainerSlot() == shown.getContainerSlot()) return real;
@@ -225,7 +225,7 @@ public final class SlotDoubleClick {
         return null;
     }
 
-    /** The slot on {@code screen} that shows the player's inventory slot {@code index}, or null. */
+    // The slot on screen that shows the player's inventory slot index, or null.
     private static @Nullable Slot inventorySlot(AbstractContainerScreen<?> screen, int index) {
         for (Slot s : screen.getMenu().slots) {
             if (s.container instanceof Inventory && s.getContainerSlot() == index) return s;

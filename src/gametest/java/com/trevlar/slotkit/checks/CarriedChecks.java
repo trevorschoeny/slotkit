@@ -23,8 +23,8 @@ import java.util.List;
 
 /**
  * A carried attachment's stacks keep their identity: from tick to tick, across a new
- * container from ItemSources, and across writes through a menu slot's own binding. Open
- * Anywhere tracks the box in front of the player that way. The client's player never
+ * container from ItemSources, and across writes through a menu slot's own binding, so a
+ * mod can track the box in front of the player that way. The client's player never
  * shares the server's stacks.
  */
 public class CarriedChecks implements ModInitializer, FabricClientGameTest {
