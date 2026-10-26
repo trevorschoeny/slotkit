@@ -19,10 +19,12 @@ import java.util.Objects;
 import java.util.function.UnaryOperator;
 
 /**
- * How a slot draws an item that carries an {@link ItemState}: an animation, another model,
- * or a mark under or over it. SlotKit reads the state from the stack on screen and MenuKit
- * draws ({@code SlotItemLooks}, {@code SlotDecorations}), so a mod writes neither a
- * mixin nor a lookup of which item a slot shows. Client side; declare from the client
+ * How a slot draws an item while something holds for it: an animation, another model, or a
+ * mark under or over it. "Something" is an {@link ItemState} the item carries, or a
+ * {@link When} the mod answers on the client from what it already knows (an open session,
+ * a lock). SlotKit times the animation by the item and MenuKit draws ({@code SlotItemLooks},
+ * {@code SlotDecorations}), so a mod writes neither a mixin nor a lookup of which item a
+ * slot shows. Client side; declare from the client
  * initializer, with ids unique per mod.
  *
  * <pre>{@code
@@ -38,6 +40,17 @@ public final class SlotLooks {
 
     private SlotLooks() {}
 
+    /** Whether a look applies to {@code slot}'s {@code stack} this frame. Client side, asked per frame. */
+    @FunctionalInterface
+    public interface When {
+        boolean test(Slot slot, ItemStack stack);
+    }
+
+    private static When of(ItemState<?> state) {
+        Objects.requireNonNull(state, "state");
+        return (slot, stack) -> state.is(stack);
+    }
+
     /**
      * The item plays {@code animation} toward its end while it carries {@code state}, and
      * back when the state clears. The timing follows the item ({@link ItemSources#pathOf}
@@ -46,45 +59,65 @@ public final class SlotLooks {
      * model swap with {@link ItemAnimation#swapped}.
      */
     public static void animate(String id, ItemState<?> state, ItemAnimation animation, Transition transition) {
-        Objects.requireNonNull(state, "state");
+        animate(id, of(state), animation, transition);
+    }
+
+    /** {@link #animate(String, ItemState, ItemAnimation, Transition)}, while {@code when} holds. */
+    public static void animate(String id, When when, ItemAnimation animation, Transition transition) {
+        Objects.requireNonNull(when, "when");
         Objects.requireNonNull(animation, "animation");
         Objects.requireNonNull(transition, "transition");
         SlotItemLooks.declare(id, (screen, slot, stack) -> {
-            float t = transition.toward(keyOf(slot), state.is(stack));
+            float t = transition.toward(keyOf(slot), when.test(slot, stack));
             return t <= 0f ? null : animation.at(t);
         });
     }
 
     /** The item draws as {@code swap}'s stack while it carries {@code state} (another model); its count stays its own. */
     public static void swapWhen(String id, ItemState<?> state, UnaryOperator<ItemStack> swap) {
-        Objects.requireNonNull(state, "state");
+        swapWhen(id, of(state), swap);
+    }
+
+    /** {@link #swapWhen(String, ItemState, UnaryOperator)}, while {@code when} holds. */
+    public static void swapWhen(String id, When when, UnaryOperator<ItemStack> swap) {
+        Objects.requireNonNull(when, "when");
         ItemAnimation.Frame frame = ItemAnimation.AS_IS.swapped(swap).at(1f);
-        SlotItemLooks.declare(id, (screen, slot, stack) -> state.is(stack) ? frame : null);
+        SlotItemLooks.declare(id, (screen, slot, stack) -> when.test(slot, stack) ? frame : null);
     }
 
     /** {@code decoration} draws under the item, and answers its tooltip, while the item carries {@code state}. */
     public static void under(String id, ItemState<?> state, SlotDecorations.Decoration decoration) {
-        SlotDecorations.under(id, when(state, decoration));
+        under(id, of(state), decoration);
+    }
+
+    /** {@code decoration} draws under the item, and answers its tooltip, while {@code when} holds. */
+    public static void under(String id, When when, SlotDecorations.Decoration decoration) {
+        SlotDecorations.under(id, gated(when, decoration));
     }
 
     /** {@code decoration} draws over the item, and answers its tooltip, while the item carries {@code state}. */
     public static void over(String id, ItemState<?> state, SlotDecorations.Decoration decoration) {
-        SlotDecorations.over(id, when(state, decoration));
+        over(id, of(state), decoration);
     }
 
-    private static SlotDecorations.Decoration when(ItemState<?> state, SlotDecorations.Decoration decoration) {
-        Objects.requireNonNull(state, "state");
+    /** {@code decoration} draws over the item, and answers its tooltip, while {@code when} holds. */
+    public static void over(String id, When when, SlotDecorations.Decoration decoration) {
+        SlotDecorations.over(id, gated(when, decoration));
+    }
+
+    private static SlotDecorations.Decoration gated(When when, SlotDecorations.Decoration decoration) {
+        Objects.requireNonNull(when, "when");
         Objects.requireNonNull(decoration, "decoration");
         return new SlotDecorations.Decoration() {
             @Override
             public void draw(GuiGraphicsExtractor g, AbstractContainerScreen<?> screen, Slot slot, ItemStack stack, int x, int y) {
-                if (state.is(stack)) decoration.draw(g, screen, slot, stack, x, y);
+                if (when.test(slot, stack)) decoration.draw(g, screen, slot, stack, x, y);
             }
 
             @Override
             public @Nullable List<Component> tooltip(AbstractContainerScreen<?> screen, Slot slot, ItemStack stack,
                                                      int mouseX, int mouseY) {
-                return state.is(stack) ? decoration.tooltip(screen, slot, stack, mouseX, mouseY) : null;
+                return when.test(slot, stack) ? decoration.tooltip(screen, slot, stack, mouseX, mouseY) : null;
             }
         };
     }
