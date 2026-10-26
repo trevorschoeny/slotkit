@@ -150,9 +150,15 @@ public final class ItemSources {
      * The path of the item in a menu slot, for acting on a slot the player clicked: an
      * inventory main slot, an ender chest slot, or a slot over one of this player's carried
      * attachments. {@code null} for any other slot (armor, offhand, crafting, a chest).
-     * Since 2.2.0.
+     *
+     * <p>Either side, with the same answer for the same slot: a client drawing a slot names
+     * its item as the server will. A creative tab's slot names the slot it shows. On a
+     * client an ender chest's menu slots aren't the player's ender chest (vanilla gives
+     * the client a stand-in container), so there they are {@code null}: a mod that knows
+     * the ender chest is open names them itself. Since 2.2.0.
      */
-    public static @Nullable ItemPath pathOf(ServerPlayer player, Slot slot) {
+    public static @Nullable ItemPath pathOf(Player player, Slot shown) {
+        Slot slot = com.trevlar.slotkit.core.Slots.target(shown);
         int i = slot.getContainerSlot();
         if (slot.container == player.getInventory()) return i < 36 ? new ItemPath(ItemRef.Source.INVENTORY, i, List.of()) : null;
         if (slot.container == player.getEnderChestInventory()) return new ItemPath(ItemRef.Source.ENDER_CHEST, i, List.of());
