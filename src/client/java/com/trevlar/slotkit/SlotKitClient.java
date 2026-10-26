@@ -73,7 +73,14 @@ public class SlotKitClient implements ClientModInitializer {
                     return false; // observation only, never consume
                 });
                 ScreenEvents.remove(screen).register(scr -> WindowSignals.clearSelection());
+                // Double-clicks a mod takes: the real mouse, read before the screen sees it.
+                ScreenMouseEvents.allowMouseClick(screen).register((scr, event) ->
+                        mc.player == null || !com.trevlar.slotkit.api.slot.SlotDoubleClick.click(acs, event, mc.player));
             }
+        });
+        // Back in the world, no double-click pairs across it.
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (client.gui.screen() == null) com.trevlar.slotkit.api.slot.SlotDoubleClick.reset();
         });
 
         // Slot state: the server's snapshots and updates, and the client's own writes
