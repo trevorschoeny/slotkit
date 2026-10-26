@@ -1,9 +1,15 @@
 package com.trevlar.slotkit.api.item;
 
+import com.trevlar.slotkit.api.storage.StorageContainerAdapter;
+import com.trevlar.slotkit.core.attachment.AttachedPlayerStorage;
+import com.trevlar.slotkit.core.attachment.StorageAttachments;
+
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.ItemStackTemplate;
@@ -32,9 +38,17 @@ import java.util.function.Predicate;
  *
  * <h3>Order</h3>
  * Nearest first, level by level: the inventory's own slots (hotbar first), then every
- * item one container deep in the inventory, then two deep; then the ender chest in the
- * same order. A shallower item always comes before a deeper one, whichever container
- * it's in.
+ * item one container deep in the inventory, then two deep; then each carried attachment
+ * (in declaration order), then the ender chest, each in the same order. Within one
+ * source a shallower item always comes before a deeper one.
+ *
+ * <h3>Carried attachments</h3>
+ * A player attachment declared {@code playerAttached(...).carried()} holds things the
+ * player carries (a pocket, a carried ender chest). Under {@link ItemScope#carried} its
+ * slots are walked like the inventory's, with source {@link ItemRef.Source#CARRIED} and
+ * paths naming the attachment. A client sees an attachment's contents when they reach it:
+ * through a menu holding its slots (the player's inventory menu, for a slot added there
+ * on both sides), or always for {@code playerAttachedVisible}.
  *
  * <h3>Containers</h3>
  * A shulker box item's {@code minecraft:container} contents (written back with
@@ -65,12 +79,24 @@ public final class ItemSources {
 
     /** Visits each item in scope, nearest first, until the visitor returns false. */
     public static void walk(ServerPlayer player, ItemScope scope, ItemVisitor visitor) {
+        walkPlayer(player, scope, visitor);
+    }
+
+    /** The player's sources in order: inventory, carried attachments, ender chest. False when the visitor stopped. */
+    private static boolean walkPlayer(Player player, ItemScope scope, ItemVisitor visitor) {
         // The inventory's 36 main slots, hotbar (0 to 8) first: that's also slot order.
-        if (!walkContainer(player.getInventory(), 36, ItemRef.Source.INVENTORY, scope, visitor)) return;
+        if (!walkContainer(player.getInventory(), 36, ItemRef.Source.INVENTORY, null, scope, visitor)) return false;
+        if (scope.carried()) {
+            for (var e : StorageAttachments.carried().entrySet()) {
+                Container c = new StorageContainerAdapter(e.getValue().bind(player));
+                if (!walkContainer(c, c.getContainerSize(), ItemRef.Source.CARRIED, e.getKey(), scope, visitor)) return false;
+            }
+        }
         if (scope.enderChest()) {
             Container ender = player.getEnderChestInventory();
-            walkContainer(ender, ender.getContainerSize(), ItemRef.Source.ENDER_CHEST, scope, visitor);
+            return walkContainer(ender, ender.getContainerSize(), ItemRef.Source.ENDER_CHEST, null, scope, visitor);
         }
+        return true;
     }
 
     /**
@@ -95,8 +121,8 @@ public final class ItemSources {
      * copies, nothing written. Safe on either side. On the client it reads the contents
      * that ride on the item stacks the client has. Vanilla never sends a client its
      * ender chest's contents outside the chest's own menu, so a client finds nothing
-     * there. A client sends a chosen {@link Found#path()} to the server, which acts on it with
-     * {@link #at}.
+     * there; carried attachments are as the class notes say. A client sends a chosen
+     * {@link Found#path()} to the server, which acts on it with {@link #at}.
      */
     public static List<Found> find(Player player, ItemScope scope, Predicate<ItemStack> test) {
         List<Found> out = new ArrayList<>();
@@ -104,10 +130,7 @@ public final class ItemSources {
             if (test.test(ref.stack())) out.add(new Found(ref.path(), ref.stack().copy()));
             return true;
         };
-        if (walkContainer(player.getInventory(), 36, ItemRef.Source.INVENTORY, scope, collect) && scope.enderChest()) {
-            Container ender = player.getEnderChestInventory();
-            walkContainer(ender, ender.getContainerSize(), ItemRef.Source.ENDER_CHEST, scope, collect);
-        }
+        walkPlayer(player, scope, collect);
         return out;
     }
 
@@ -119,9 +142,38 @@ public final class ItemSources {
      * reference is as fresh as a walk's, so a take writes back up the chain.
      */
     public static @Nullable ItemRef at(ServerPlayer player, ItemPath path) {
-        if (path.source() == ItemRef.Source.CONTAINER) return null;   // the player can't name that container
-        Container container = path.source() == ItemRef.Source.INVENTORY ? player.getInventory() : player.getEnderChestInventory();
-        return resolve(container, slotsOf(container, path.source()), path);
+        Container container = containerOf(player, path);
+        return container == null ? null : resolve(container, slotsOf(container, path.source()), path);
+    }
+
+    /**
+     * The path of the item in a menu slot, for acting on a slot the player clicked: an
+     * inventory main slot, an ender chest slot, or a slot over one of this player's carried
+     * attachments. {@code null} for any other slot (armor, offhand, crafting, a chest).
+     * Since 2.2.0.
+     */
+    public static @Nullable ItemPath pathOf(ServerPlayer player, Slot slot) {
+        int i = slot.getContainerSlot();
+        if (slot.container == player.getInventory()) return i < 36 ? new ItemPath(ItemRef.Source.INVENTORY, i, List.of()) : null;
+        if (slot.container == player.getEnderChestInventory()) return new ItemPath(ItemRef.Source.ENDER_CHEST, i, List.of());
+        if (slot.container instanceof StorageContainerAdapter a && a.getStorage() instanceof AttachedPlayerStorage s
+                && s.owner() == player && StorageAttachments.carried().containsKey(s.attachment())) {
+            return new ItemPath(ItemRef.Source.CARRIED, i, List.of(), s.attachment());
+        }
+        return null;
+    }
+
+    /** The player's container a path starts in, or null (a supplied container's path, or an attachment that isn't carried). */
+    private static @Nullable Container containerOf(Player player, ItemPath path) {
+        return switch (path.source()) {
+            case INVENTORY -> player.getInventory();
+            case ENDER_CHEST -> player.getEnderChestInventory();
+            case CONTAINER -> null;   // the player can't name that container
+            case CARRIED -> {
+                var attachment = StorageAttachments.carried().get(path.attachment());
+                yield attachment == null ? null : new StorageContainerAdapter(attachment.bind(player));
+            }
+        };
     }
 
     // A supplied container (an open chest, a barrel)
@@ -135,7 +187,7 @@ public final class ItemSources {
      * block entity, or the container behind its menu).
      */
     public static void walk(Container container, ItemScope scope, ItemVisitor visitor) {
-        walkContainer(container, container.getContainerSize(), ItemRef.Source.CONTAINER, scope, visitor);
+        walkContainer(container, container.getContainerSize(), ItemRef.Source.CONTAINER, null, scope, visitor);
     }
 
     /**
@@ -169,14 +221,13 @@ public final class ItemSources {
     // Live items
 
     /**
-     * A {@link LiveItem} bound to the item at {@code path} in the player's inventory or
-     * ender chest, for a menu that stays open on it across many writes. {@code null} when
+     * A {@link LiveItem} bound to the item at {@code path} in the player's inventory, ender
+     * chest or a carried attachment, for a menu that stays open on it across many writes. {@code null} when
      * the item isn't there, as {@link #at(ServerPlayer, ItemPath)}.
      */
     public static @Nullable LiveItem live(ServerPlayer player, ItemPath path) {
-        if (path.source() == ItemRef.Source.CONTAINER) return null;
-        Container container = path.source() == ItemRef.Source.INVENTORY ? player.getInventory() : player.getEnderChestInventory();
-        return LiveItem.bind(container, slotsOf(container, path.source()), path);
+        Container container = containerOf(player, path);
+        return container == null ? null : LiveItem.bind(container, slotsOf(container, path.source()), path);
     }
 
     /**
@@ -199,7 +250,7 @@ public final class ItemSources {
         if (path.slot() < 0 || path.slot() >= slots) return null;
         ItemStack top = container.getItem(path.slot());
         if (top.isEmpty()) return null;
-        Ref ref = new Ref(new Top(container, path.slot(), top, path.source()), null, -1, top, 0);
+        Ref ref = new Ref(new Top(container, path.slot(), top, path.source(), path.attachment()), null, -1, top, 0);
         for (int index : path.inside()) {
             Holder holder = ref.child();
             if (holder == null || index < 0 || index >= holder.items.size()) return null;
@@ -217,11 +268,11 @@ public final class ItemSources {
 
     /** One top-level container, level by level. Returns false when the visitor stopped. */
     private static boolean walkContainer(Container container, int slots, ItemRef.Source source,
-                                         ItemScope scope, ItemVisitor visitor) {
+                                         @Nullable Identifier attachment, ItemScope scope, ItemVisitor visitor) {
         List<Ref> level = new ArrayList<>();
         for (int i = 0; i < slots; i++) {
             ItemStack stack = container.getItem(i);
-            if (!stack.isEmpty()) level.add(new Ref(new Top(container, i, stack, source), null, -1, stack, 0));
+            if (!stack.isEmpty()) level.add(new Ref(new Top(container, i, stack, source, attachment), null, -1, stack, 0));
         }
         while (!level.isEmpty()) {
             for (Ref ref : level) {
@@ -243,8 +294,8 @@ public final class ItemSources {
         return true;
     }
 
-    /** The top-level slot a chain starts from, and the stack it held when read. */
-    private record Top(Container container, int slot, ItemStack stack, ItemRef.Source source) {
+    /** The top-level slot a chain starts from, the stack it held when read, and its carried attachment's id if any. */
+    private record Top(Container container, int slot, ItemStack stack, ItemRef.Source source, @Nullable Identifier attachment) {
         boolean stillThere() { return container.getItem(slot) == stack; }
     }
 
@@ -383,7 +434,7 @@ public final class ItemSources {
 
         @Override
         public ItemPath path() {
-            if (holder == null) return new ItemPath(top.source(), top.slot(), List.of());
+            if (holder == null) return new ItemPath(top.source(), top.slot(), List.of(), top.attachment());
             ItemPath up = holder.owner.path();
             List<Integer> inside = new ArrayList<>(up.inside());
             // A bundle's component drops emptied stacks while this walk's list keeps them in
@@ -391,7 +442,7 @@ public final class ItemSources {
             int at = index;
             if (holder.bundle) for (int i = 0; i < index; i++) if (holder.items.get(i).isEmpty()) at--;
             inside.add(at);
-            return new ItemPath(up.source(), up.slot(), inside);
+            return new ItemPath(up.source(), up.slot(), inside, up.attachment());
         }
 
         /** Nothing on this ref's chain changed since it was read. */

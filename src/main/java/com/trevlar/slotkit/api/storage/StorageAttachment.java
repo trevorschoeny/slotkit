@@ -6,6 +6,7 @@ import com.trevlar.slotkit.api.slot.DropRule;
 import com.trevlar.slotkit.api.storage.Storage;
 
 import com.trevlar.slotkit.api.storage.CustomAttachmentSpec;
+import com.trevlar.slotkit.core.attachment.AttachedPlayerStorage;
 import com.trevlar.slotkit.core.attachment.StorageAttachments;
 
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
@@ -111,6 +112,21 @@ public abstract class StorageAttachment<O, C> {
          * {@code playerAttached(...).dropsOnDeath(KEEP)}.
          */
         public abstract PlayerStorageAttachment<C> dropsOnDeath(DropRule rule);
+
+        /**
+         * Marks this attachment's contents as items the player carries, so
+         * {@code ItemSources} walks them when a scope asks ({@code ItemScope.carried(true)}),
+         * after the inventory and before the ender chest. Their paths have source
+         * {@code ItemRef.Source.CARRIED} and name this attachment's id. Opt in for storage
+         * that holds the player's own things (a pocket, a carried ender chest), not for
+         * worn gear whose use is its slot. Call at init, where it's declared. Chains:
+         * {@code playerAttached(...).carried()}. Since 2.2.0.
+         *
+         * @throws UnsupportedOperationException for a {@link #customPlayerAttached} attachment
+         */
+        public PlayerStorageAttachment<C> carried() {
+            throw new UnsupportedOperationException("carried() is for playerAttached and playerAttachedVisible attachments");
+        }
     }
 
     // Factories
@@ -149,7 +165,7 @@ public abstract class StorageAttachment<O, C> {
         Identifier id = Identifier.fromNamespaceAndPath(namespace, path);
         AttachmentType<ItemContainerContents> type =
                 StorageAttachments.registerPlayerContentAttachment(id, slotCount);
-        return new PlayerAttachment(slotCount, type);
+        return new PlayerAttachment(slotCount, type, id);
     }
 
     /**
@@ -172,7 +188,7 @@ public abstract class StorageAttachment<O, C> {
         Identifier id = Identifier.fromNamespaceAndPath(namespace, path);
         AttachmentType<ItemContainerContents> type =
                 StorageAttachments.registerPlayerContentAttachment(id, slotCount, true);
-        return new PlayerAttachment(slotCount, type);
+        return new PlayerAttachment(slotCount, type, id);
     }
 
     /**
@@ -292,15 +308,17 @@ public abstract class StorageAttachment<O, C> {
             extends PlayerStorageAttachment<NonNullList<ItemStack>> {
         private final int slotCount;
         private final AttachmentType<ItemContainerContents> type;
-        PlayerAttachment(int slotCount, AttachmentType<ItemContainerContents> type) {
+        private final Identifier id;
+        PlayerAttachment(int slotCount, AttachmentType<ItemContainerContents> type, Identifier id) {
             this.slotCount = slotCount;
             this.type = type;
+            this.id = id;
         }
         @Override public int slotCount() { return slotCount; }
         @Override public Storage bind(Player player) {
             // A PlayerStorage, so shift-click routing in CustomContainerMenu treats
             // this as the player side.
-            return new PlayerFabricStorage(slotCount,
+            return new PlayerFabricStorage(slotCount, player, id,
                     () -> player.getAttached(type),
                     contents -> player.setAttached(type, contents),
                     () -> { /* Fabric saves player attachments; no setChanged */ });
@@ -311,17 +329,30 @@ public abstract class StorageAttachment<O, C> {
             StorageAttachments.setDeathDropRule(type, rule);
             return this;
         }
+
+        @Override
+        public PlayerStorageAttachment<NonNullList<ItemStack>> carried() {
+            StorageAttachments.markCarried(id, this);
+            return this;
+        }
     }
 
-    // FabricAttachmentStorage with the PlayerStorage marker, for shift-click routing.
-    private static final class PlayerFabricStorage implements PlayerStorage {
+    // FabricAttachmentStorage with the PlayerStorage marker, for shift-click routing,
+    // and its owner and attachment id, so ItemSources.pathOf can name a slot over it.
+    private static final class PlayerFabricStorage implements AttachedPlayerStorage {
         private final FabricAttachmentStorage delegate;
-        PlayerFabricStorage(int slotCount,
+        private final Player owner;
+        private final Identifier attachment;
+        PlayerFabricStorage(int slotCount, Player owner, Identifier attachment,
                              Supplier<@Nullable ItemContainerContents> reader,
                              java.util.function.Consumer<ItemContainerContents> writer,
                              Runnable dirtyMarker) {
             this.delegate = new FabricAttachmentStorage(slotCount, reader, writer, dirtyMarker);
+            this.owner = owner;
+            this.attachment = attachment;
         }
+        @Override public Player owner() { return owner; }
+        @Override public Identifier attachment() { return attachment; }
         @Override public ItemStack getStack(int i) { return delegate.getStack(i); }
         @Override public void setStack(int i, ItemStack s) { delegate.setStack(i, s); }
         @Override public int size() { return delegate.size(); }

@@ -224,6 +224,23 @@ public final class StorageAttachments {
         return null;
     }
 
+    // Player attachments ItemSources walks when a scope asks for carried items, in
+    // declaration order. Filled by StorageAttachment.PlayerStorageAttachment.carried().
+    private static final java.util.Map<Identifier, com.trevlar.slotkit.api.storage.StorageAttachment<net.minecraft.world.entity.player.Player, ?>>
+            CARRIED = java.util.Collections.synchronizedMap(new java.util.LinkedHashMap<>());
+
+    /** Enrolls a player attachment as carried: ItemSources walks it under {@code ItemScope.carried(true)}. */
+    public static void markCarried(Identifier id,
+            com.trevlar.slotkit.api.storage.StorageAttachment<net.minecraft.world.entity.player.Player, ?> attachment) {
+        com.trevlar.menukit.api.Declarations.requireOpen("a carried storage attachment");
+        CARRIED.putIfAbsent(id, attachment);
+    }
+
+    /** The carried attachments, in declaration order. */
+    public static java.util.Map<Identifier, com.trevlar.slotkit.api.storage.StorageAttachment<net.minecraft.world.entity.player.Player, ?>> carried() {
+        synchronized (CARRIED) { return new java.util.LinkedHashMap<>(CARRIED); }
+    }
+
     /** The content attachment registered under {@code id}, or null. Used when restoring a grave capture. */
     public static @Nullable AttachmentType<ItemContainerContents> typeById(Identifier id) {
         return CACHE.get(id);
