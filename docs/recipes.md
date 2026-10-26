@@ -267,6 +267,47 @@ Since 2.1.0, the chest a player has open is a source too. Pass its container to 
 
 To keep a menu open on a nested item, bind it with `ItemSources.live(container, path)` (or `live(player, path)`), build the mod's storage over `live.stack()`, and wrap it with `live.storage(...)` so each write goes up the chain. Have the menu's `stillValid` return `!live.isStale()`: when the item moves or anything else changes it, vanilla refuses further clicks and closes the menu, and nothing is lost because every change was already written.
 
+## Show an item as open
+
+Since 2.2.0. Give an item a state on the server and let the slot draw it. Here a box shows its lid open and a grey wash while the mod's `OPEN` state is on it.
+
+```java
+// Common init (the mod declares bothSides: required):
+static final ItemState<Boolean> OPEN = ItemState.flag("mymod:open", ItemState.Saved.NO);
+
+// Server, when the box opens and when it closes:
+OPEN.set(ref, true);
+OPEN.clear(ref);
+
+// Client init:
+SlotLooks.animate("mymod:open_lid", OPEN, ItemAnimation.OPEN_LID, Transition.of(250, Easing.EASE_OUT));
+SlotLooks.over("mymod:open_wash", OPEN, (g, screen, slot, stack, x, y) -> g.fill(x, y, x + 16, y + 16, 0x80606060));
+```
+
+Result: the lid opens over 250 ms when the state is set and closes when it clears, in every slot showing the item, inside a shulker box's screen too. When "open" belongs to the player's session rather than the item, pass a `SlotLooks.When` instead of the state, answered on the client: `(slot, stack) -> MyClient.isOpen(slot)`. A copy of the item then never shows as open.
+
+## Open an item on a double-click
+
+Since 2.2.0. Take a plain left double-click on a slot and send your own packet.
+
+```java
+// Client init:
+SlotDoubleClick.register("mymod:open",
+        (slot, stack) -> ClientPlayNetworking.canSend(OpenC2S.TYPE) && MyMod.opens(stack),
+        pair -> ClientPlayNetworking.send(new OpenC2S(pair.menuIndex(), pair.kind())));
+
+// Server, on receiving it: the first click lifted the stack, so put it back, then act.
+AbstractContainerMenu menu = player.containerMenu;
+Slot slot = menu.getSlot(payload.menuIndex());
+if (payload.kind() == SlotDoubleClick.Kind.PUT_BACK && !slot.hasItem() && MyMod.opens(menu.getCarried())) {
+    slot.set(menu.getCarried());
+    menu.setCarried(ItemStack.EMPTY);
+}
+if (MyMod.opens(slot.getItem())) MyMod.open(player, slot);
+```
+
+Result: the item stays in its slot, and the mod opens it. The check in `Starts` runs once, at the first click, so put a settings toggle and the server-has-the-mod check there. A stack the mod doesn't take keeps vanilla's "gather all". Validate on the server, which receives only a menu index from the client.
+
 ## Show a vanilla slot in your own panel
 
 Since 2.0.0. A `SlotElement` can present a slot the menu built itself. Here a furnace's fuel slot moves into a labeled panel beside the furnace:

@@ -17,11 +17,11 @@ The API is the `api` packages: `com.trevlar.slotkit.api.*`. [Versioning](version
 | `api` | `Presence`, what the other side runs | Both |
 | `api.group` | Slot groups, categories, sets, resolvers, `SlotGroupPanelAdapter` | Client |
 | `api.window` | Addresses, the window, behavior keys, slot operations, gates and vetoes | Client |
-| `api.slot` | Created slots, `ParityGroup`, `SlotSpec`, shift-click routes, and the client-only `SlotElement`, `SlotFlowElement`, `SlotGroupElement`, `SlotPlacement` and `ClientSlots` | Client and server |
+| `api.slot` | Created slots, `ParityGroup`, `SlotSpec`, shift-click routes, and the client-only `SlotElement`, `SlotFlowElement`, `SlotGroupElement`, `SlotPlacement`, `ClientSlots` and `SlotDoubleClick` | Client and server |
 | `api.menu` | Custom container menus and their screens | Client and server |
 | `api.storage` | `Storage` and storage attachments | Client and server |
 | `api.state` | Slot-state channels | Client and server |
-| `api.item` | `ItemSources`: items in the inventory, the ender chest, a supplied container, shulker boxes and bundles; `LiveItem` for a menu on a nested item | Server; `find` on both |
+| `api.item` | `ItemSources`: items in the inventory, the ender chest, a supplied container, shulker boxes and bundles; `LiveItem` for a menu on a nested item; `ItemState` on both sides and the client-only `SlotLooks` | Server; `find`, `pathOf` and `ItemState` on both |
 
 ## Two tiers
 
@@ -294,6 +294,35 @@ An `ItemPath` names one item by its top-level slot and its index inside each con
 The same `walk`, `find` and `at` also take a `Container` the caller supplies, such as the chest a player has open. Its paths have source `CONTAINER` and name the container's own slots. The server resolves one only against a container it supplies, usually the one behind the open menu, so a client can't point it at another.
 
 A menu that stays open on a nested item, such as a bundle inside a shulker box in a chest, binds a `LiveItem` with `ItemSources.live`. Its `stack()` is one object for as long as it's bound, so the mod's own storage over an item stack can sit on it; `live.storage(...)` writes every change back up the chain. It goes stale when the top-level stack moves or the item itself is changed by anything else, and the menu's `stillValid` returns `!isStale()` so vanilla closes it.
+
+A player attachment declared `playerAttached(...).carried()` holds the player's own things, such as a pocket or a carried ender chest. A scope with `carried(true)` walks it after the inventory and before the ender chest. Its paths have source `CARRIED` and name the attachment by its id, and `containerOf(player, path)` returns its contents. Every binding of the attachment (the menu's slots, a shift-click, `ItemSources`) shares one list of stacks, so a stack is the same object wherever it's read until something replaces it.
+
+`pathOf(player, slot)` names the item in a menu slot: an inventory main slot, an ender chest slot or a carried attachment's slot. The client and the server give the same answer for the same slot, so a client drawing a slot can name its item as the server will. Creative's tabs name the slot they show. On the client an ender chest's own menu shows a stand-in container, so its slots there are `null`.
+
+## Item state and slot looks
+
+An `ItemState` is a value that rides on an item. It is a data component SlotKit registers for the mod, so it follows the item into a shulker box and back and vanilla syncs it to every client with the stack. `ItemState.Saved.YES` saves it with the item; `Saved.NO` drops it at a relog or a restart. The server sets it with `set` and `clear`, on a stack or through an `ItemRef` so the change writes back up the chain. Only a mod that declares `bothSides: required` declares a state, because a client without the mod can't read the stack.
+
+`SlotLooks` changes how a slot draws an item while a condition holds. The condition is an `ItemState` the item carries, or a `SlotLooks.When` the mod answers on the client from what it already knows. Use `When` when the state belongs to the session rather than the item, such as which box a player has open, so copies of the item never carry it. A look is one of:
+
+- `animate`: an `ItemAnimation` plays toward its end while the condition holds and back when it clears. The timing follows the item, so a screen opened in place of another picks up a running animation where it stood.
+- `swapWhen`: the item draws as another stack, keeping its own count.
+- `under` and `over`: a MenuKit slot decoration drawn under or over the item.
+
+SlotLooks declares the look and MenuKit draws it, through `SlotItemLooks` and `SlotDecorations`. Declare looks from the client initializer, with ids unique per mod.
+
+## Double-click
+
+`SlotDoubleClick` takes a plain left double-click on a slot for a mod's action. The gesture is a left click with no shift, then a second within one second with the cursor on the same pixel. A third click starts over, and moving the cursor ends the window. Only the real mouse counts, so a sort mod's simulated clicks never pair.
+
+The first click stays vanilla's and lifts the stack onto the cursor. It starts a pair when the cursor was empty and a registration's `Starts` accepts the slot and stack; the first registration that accepts owns the pair. While the pair is pending, the lifted stack is drawn back in its slot. The second click, which vanilla would take as "gather all", goes to the owner instead:
+
+- `Kind.PUT_BACK`: the same stack is on the cursor and its slot is empty. SlotKit puts it back on the client first, so it never seems to move.
+- `Kind.IN_PLACE`: the stack never left its slot, because the slot is locked, and the cursor is empty.
+
+Anything else stays vanilla's. On creative's inventory tab, `Starts` and `Pair.slot` see the real slot on `player.inventoryMenu`, and `Pair.menuIndex` is its index there, which is the menu the server has open. Creative's item tabs never pair. A player inventory slot still pairs when a screen opens in place of the first one between the clicks; any other slot pairs only on the same screen.
+
+The server side is the mod's. Its handler sends its own packet, and its server puts the stack back too, since the server saw the first click lift it. If the server refuses, its sync corrects the client.
 
 ## Saved ids
 

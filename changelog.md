@@ -1,3 +1,19 @@
+## 2.2.0
+
+A mod can name the item in any slot, give an item a state, and change how a slot draws an item while a state or a check holds. A mod can also take a double-click on a slot for its own action. Requires MenuKit 7.5.0 or newer.
+
+#### Added
+
+- `ItemSources.pathOf(player, slot)` names the item in an inventory slot, an ender chest slot or a carried attachment's slot, with the same answer on the client and the server. Creative's tabs name the slot they show.
+- A player attachment can be declared `carried()`: it holds the player's own things, such as a pocket. `ItemScope.carried(true)` walks it, its paths have source `CARRIED`, and `ItemSources.containerOf(player, path)` returns its contents. Its stacks keep their identity across every binding, so a mod can track one from tick to tick.
+- `ItemState` is a value that rides on an item, such as "open" or "favorite", saved with the item or not as the mod chooses. Vanilla syncs it with the stack, so every client drawing the item reads it.
+- `SlotLooks` changes how a slot draws an item while an `ItemState` or a client-side check holds: an animation that plays forward and back, another model, or a mark under or over the item. MenuKit does the drawing, so the mod writes no mixin.
+- `SlotDoubleClick` takes a plain left double-click on a slot for a mod's action, in place of vanilla's "gather all". The item never seems to move, and it works on creative's inventory tab.
+
+#### Changed
+
+- A player attachment's stacks are shared by every binding of it (the menu's slots, a shift-click, `ItemSources`), so a stack is the same object wherever it's read.
+
 ## 2.1.0
 
 Rules about slots now hold in creative, and a mod says which game mode each one is for. Panels can sit on a single slot, and each container on a menu stays its own. Calls replaced in this release are deprecated, and the [upgrading guide](https://github.com/trevorschoeny/slotkit/blob/main/docs/upgrading.md#from-slotkit-20-to-21) shows the new form of each deprecated call. Requires MenuKit 7.4.0 or newer.
