@@ -318,7 +318,7 @@ public abstract class StorageAttachment<O, C> {
         @Override public Storage bind(Player player) {
             // A PlayerStorage, so shift-click routing in CustomContainerMenu treats
             // this as the player side.
-            return new PlayerFabricStorage(slotCount, player, id,
+            return new PlayerFabricStorage(slotCount, player, id, type,
                     () -> player.getAttached(type),
                     contents -> player.setAttached(type, contents),
                     () -> { /* Fabric saves player attachments; no setChanged */ });
@@ -344,10 +344,11 @@ public abstract class StorageAttachment<O, C> {
         private final Player owner;
         private final Identifier attachment;
         PlayerFabricStorage(int slotCount, Player owner, Identifier attachment,
+                             AttachmentType<ItemContainerContents> type,
                              Supplier<@Nullable ItemContainerContents> reader,
                              java.util.function.Consumer<ItemContainerContents> writer,
                              Runnable dirtyMarker) {
-            this.delegate = new FabricAttachmentStorage(slotCount, reader, writer, dirtyMarker);
+            this.delegate = new FabricAttachmentStorage(slotCount, owner, type, reader, writer, dirtyMarker);
             this.owner = owner;
             this.attachment = attachment;
         }
@@ -369,7 +370,7 @@ public abstract class StorageAttachment<O, C> {
         }
         @Override public int slotCount() { return slotCount; }
         @Override public Storage bind(BlockEntity be) {
-            return new FabricAttachmentStorage(slotCount,
+            return new FabricAttachmentStorage(slotCount, be, type,
                     () -> be.getAttached(type),
                     contents -> be.setAttached(type, contents),
                     be::setChanged);
@@ -386,7 +387,7 @@ public abstract class StorageAttachment<O, C> {
         }
         @Override public int slotCount() { return slotCount; }
         @Override public Storage bind(Entity entity) {
-            return new FabricAttachmentStorage(slotCount,
+            return new FabricAttachmentStorage(slotCount, entity, type,
                     () -> entity.getAttached(type),
                     contents -> entity.setAttached(type, contents),
                     () -> { /* Fabric saves entity attachments; no setChanged */ });
@@ -481,20 +482,37 @@ public abstract class StorageAttachment<O, C> {
 
     // Shared by both custom-spec wrappers.
     private static <O, C> Storage bindCustomSpec(CustomAttachmentSpec<O, C> spec, O owner) {
-        return new LiveListStorage<>(spec.slotCount(),
+        return new LiveListStorage<>(spec.slotCount(), new Live<>(),
                 () -> spec.read(owner),
                 spec::toItemList,
                 list -> spec.write(owner, spec.fromItemList(list)),
                 () -> spec.markDirty(owner));
     }
 
+    /**
+     * The live list of each attachment on each owner, shared by every binding of it, so a
+     * slot's stack is the same object through the menu's binding, a shift-click, and a
+     * binding a consumer keeps for the session (Open Anywhere tracks the box in front of
+     * the player by that identity). Like a vanilla container shared by two menus. Weak
+     * keys compared by identity, not equals: an Entity equals any entity with its id, so
+     * the client and server player of a singleplayer world would otherwise share a list.
+     * A removed block entity or a respawned player frees its entries.
+     */
+    private static final Map<Object, Map<AttachmentType<?>, Live<ItemContainerContents>>> SHARED =
+            new com.google.common.collect.MapMaker().weakKeys().makeMap();
+
+    private static Live<ItemContainerContents> sharedLive(Object owner, AttachmentType<?> type) {
+        return SHARED.computeIfAbsent(owner, o -> new java.util.concurrent.ConcurrentHashMap<>())
+                .computeIfAbsent(type, t -> new Live<>());
+    }
+
     // Storage backed by a Fabric attachment. The reader returns null while nothing is attached.
     private static final class FabricAttachmentStorage extends LiveListStorage<ItemContainerContents> {
-        FabricAttachmentStorage(int slotCount,
+        FabricAttachmentStorage(int slotCount, Object owner, AttachmentType<?> type,
                                  Supplier<@Nullable ItemContainerContents> reader,
                                  java.util.function.Consumer<ItemContainerContents> writer,
                                  Runnable dirtyMarker) {
-            super(slotCount, reader,
+            super(slotCount, sharedLive(owner, type), reader,
                     c -> StorageAttachments.contentsToList(c, slotCount),
                     list -> writer.accept(StorageAttachments.listToContents(list)),
                     dirtyMarker);
@@ -512,18 +530,18 @@ public abstract class StorageAttachment<O, C> {
      */
     private static class LiveListStorage<C> implements Storage {
         private final int slotCount;
+        private final Live<C> state;           // the list and what it was read from, maybe shared
         private final Supplier<@Nullable C> reader;
         private final java.util.function.Function<@Nullable C, NonNullList<ItemStack>> toList;
         private final java.util.function.Consumer<NonNullList<ItemStack>> writer;
         private final Runnable dirtyMarker;
-        private @Nullable NonNullList<ItemStack> list;
-        private @Nullable C readFrom;          // the saved content the list was read from
 
-        LiveListStorage(int slotCount, Supplier<@Nullable C> reader,
+        LiveListStorage(int slotCount, Live<C> state, Supplier<@Nullable C> reader,
                         java.util.function.Function<@Nullable C, NonNullList<ItemStack>> toList,
                         java.util.function.Consumer<NonNullList<ItemStack>> writer,
                         Runnable dirtyMarker) {
             this.slotCount = slotCount;
+            this.state = state;
             this.reader = reader;
             this.toList = toList;
             this.writer = writer;
@@ -533,17 +551,17 @@ public abstract class StorageAttachment<O, C> {
         /** The live list, read again if the saved content changed since. */
         private NonNullList<ItemStack> live() {
             C now = reader.get();
-            if (list == null || (now != readFrom && !java.util.Objects.equals(now, readFrom))) {
-                list = toList.apply(now);
-                readFrom = now;
+            if (state.list == null || (now != state.readFrom && !java.util.Objects.equals(now, state.readFrom))) {
+                state.list = toList.apply(now);
+                state.readFrom = now;
             }
-            return list;
+            return state.list;
         }
 
         // Writes the list and records what was saved, so the next read keeps this list.
         private void writeBack(NonNullList<ItemStack> l) {
             writer.accept(l);
-            readFrom = reader.get();
+            state.readFrom = reader.get();
             dirtyMarker.run();
         }
 
@@ -562,5 +580,11 @@ public abstract class StorageAttachment<O, C> {
             // the saved content changed meanwhile, that list is gone and so is the change.
             writeBack(live());
         }
+    }
+
+    // A live list and the saved content it was read from.
+    private static final class Live<C> {
+        @Nullable NonNullList<ItemStack> list;
+        @Nullable C readFrom;
     }
 }

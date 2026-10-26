@@ -163,8 +163,15 @@ public final class ItemSources {
         return null;
     }
 
-    /** The player's container a path starts in, or null (a supplied container's path, or an attachment that isn't carried). */
-    private static @Nullable Container containerOf(Player player, ItemPath path) {
+    /**
+     * The player's container a path starts in: the inventory, the ender chest, or a
+     * carried attachment's contents. {@code null} for a supplied container's path, or an
+     * attachment that isn't carried. A carried attachment's container may be a new object
+     * on each call, but its stacks are the same objects as every other binding's (the
+     * menu's slots, a shift-click), until something changes them, so a stack can be
+     * tracked by identity from tick to tick. Since 2.2.0.
+     */
+    public static @Nullable Container containerOf(Player player, ItemPath path) {
         return switch (path.source()) {
             case INVENTORY -> player.getInventory();
             case ENDER_CHEST -> player.getEnderChestInventory();

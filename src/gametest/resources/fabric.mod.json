@@ -5,7 +5,11 @@
   "environment": "client",
   "entrypoints": {
     "fabric-client-gametest": [
-      "com.trevlar.slotkit.checks.MenuSwitchChecks"
+      "com.trevlar.slotkit.checks.MenuSwitchChecks",
+      "com.trevlar.slotkit.checks.CarriedChecks"
+    ],
+    "main": [
+      "com.trevlar.slotkit.checks.CarriedChecks"
     ]
   }
 }
