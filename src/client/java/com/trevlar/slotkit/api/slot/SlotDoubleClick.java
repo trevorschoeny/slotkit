@@ -48,8 +48,8 @@ import java.util.function.Consumer;
  * <p>On creative's inventory tab, {@link Starts} and {@link Pair#slot} see the real slot on
  * {@code player.inventoryMenu}, and {@link Pair#menuIndex} is its index there, the menu the
  * server has open. Creative's item tabs never pair. A player inventory slot pairs across a
- * screen opened in place of the first one between the clicks; any other slot pairs only on
- * the same screen.
+ * screen opened in place of the first one between the clicks, even when the cursor now lands
+ * on another slot or on none; any other slot pairs only on the same screen.
  *
  * Since 2.2.0.
  */
@@ -133,34 +133,35 @@ public final class SlotDoubleClick {
         if (REGISTRATIONS.isEmpty()) return false;
         Slot shown = ((AbstractContainerScreenAccessor) screen).sk$getHoveredSlot();
         boolean creative = screen instanceof CreativeModeInventoryScreen;
-        if (shown == null || creative && !((CreativeModeInventoryScreen) screen).isInventoryOpen()
+        if (creative && !((CreativeModeInventoryScreen) screen).isInventoryOpen()
                 || event.button() != InputConstants.MOUSE_BUTTON_LEFT || event.hasShiftDown()) {
             reset();
             return false;
         }
-        Slot real = creative ? realSlot(player, shown) : shown;
-        if (real == null) {
-            reset();
-            return false;
-        }
-        int at = placeOf(real);
         long now = Util.getMillis();
         // The same pixel, not the same fraction of one: a screen opened in place of another
         // puts the cursor back where it was, to the pixel.
         boolean still = owner != null && now - firstAt < WINDOW_MS
                 && Math.floor(event.x()) == Math.floor(firstX) && Math.floor(event.y()) == Math.floor(firstY);
-        boolean remapped = false;
-        if (still && screen != firstScreen && place >= 1000 && !creative) {
-            // A screen opened in place of the first one may sit higher or lower: the second
-            // click goes to the first one's inventory slot, wherever it now sits.
-            Slot first = inventorySlot(screen, place - 1000);
-            if (first != null) {
-                shown = real = first;
-                at = place;
-                remapped = true;
+        // A screen opened in place of the first one may sit higher or lower, so the pixel may
+        // now be on another slot or on none: the second click goes to the first one's
+        // inventory slot, wherever it now sits.
+        Slot remap = still && screen != firstScreen && place >= 1000 && !creative
+                ? inventorySlot(screen, place - 1000) : null;
+        Slot real;
+        int at;
+        if (remap != null) {
+            shown = real = remap;
+            at = place;
+        } else {
+            real = shown == null ? null : creative ? realSlot(player, shown) : shown;
+            if (real == null) {
+                reset();
+                return false;
             }
+            at = placeOf(real);
         }
-        boolean second = still && at == place && (screen == firstScreen || remapped);
+        boolean second = still && at == place && (screen == firstScreen || remap != null);
         if (!second) {
             first(screen, event, shown, real);
             return false;
