@@ -55,10 +55,11 @@ import java.util.function.Consumer;
  * the first click, inside SlotKit's read of the click before the screen sees it, so
  * {@link Pending#started} runs before vanilla's click lifts the stack and before that click
  * goes to the server: a packet sent from it arrives ahead of the pickup. A pending pair that
- * ends without a second click lapses, once: the window runs out (checked each client tick, so with no further input), the cursor
- * moves, a click that can't be the second (on another slot, with shift, another button, or
- * off every slot), a second click whose stack is neither back on the cursor nor still in its
- * slot, or the screens closing to the world. A click that ends it lapses before that click
+ * ends without a second click lapses, once: the window runs out (checked each client tick,
+ * so with no further input), the cursor moves, a click that can't be the second (on
+ * another slot, with shift, another button, or off every slot), a second click whose
+ * stack is neither back on the cursor nor still in its slot, or the screens closing to
+ * the world. A click that ends it lapses before that click
  * goes through, so a stack put down elsewhere is still on the cursor when the lapse is heard.
  * A pair that pairs never lapses. Every pair that starts either pairs or lapses.
  *
