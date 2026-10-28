@@ -141,7 +141,7 @@ public final class CreatedSlots {
     /**
      * Off-screen position for a registered slot's vanilla {@code Slot.x/y}. A new slot
      * starts here and returns here at the end of any frame in which no panel showed it
-     * ({@link SlotElementRegistry#parkUnpresented}); the panel that shows it writes its
+     * ({@code SlotElementRegistry.parkUnpresented}); the panel that shows it writes its
      * real {@code x/y} each frame. Parked here, vanilla's slot pass and hover checks
      * do nothing with it. The creative wrapper is parked at the same coordinate
      * ({@code SKCreativeSlotParkMixin}).
