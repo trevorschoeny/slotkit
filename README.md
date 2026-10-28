@@ -28,7 +28,9 @@ SlotKit has two tiers. A mod needs SlotKit on the other side only for the second
 - Created slots are UI components. A pocket, an extra equipment slot, or a satchel is each a real `Slot`, synced by vanilla's protocol. A mod registers its slot groups once and places them in its own MenuKit panels, next to its buttons and labels, on every screen it chooses.
 - The server can open, close, and resize a slot group for each player, and a mod can decide where a shift-click goes.
 - A slot's contents can be shown to other players, for gear drawn on the player model.
-- A mod can find and use items anywhere a player carries them: the inventory, the ender chest, and shulker boxes and bundles nested to any depth. The chest a player has open can be searched too. A change writes back through every container, and a menu can stay open on a nested item, like a bundle inside a shulker box.
+- A mod can find and use items anywhere a player carries them: the inventory, the ender chest, and shulker boxes and bundles nested to any depth. The chest a player has open can be searched too. A change writes back through every container, and a menu can stay open on a nested item, like a bundle inside a shulker box. A mod's own carried slots, such as a pocket or a carried ender chest, can be searched as well.
+- An item can carry a state of the mod's own, saved with it or not, and a slot can draw the item differently while that state or a client-side check holds: an animation, another stack in its place, or a mark under or over it.
+- A mod can take a plain double-click on a slot for its own action, the same gesture in every mod that uses it.
 - Custom container menus are built from MenuKit panels.
 - Created slots behave like vanilla ones in creative and survival, on death, and with Curse of Binding and Mending.
 - Per-slot state can be attached to any slot, either private to each player or shared by everyone viewing it. The server checks every write a client sends. The state is stored on the slot's owner (a player, block, entity, or item), where `/data get` can read it.
@@ -86,8 +88,8 @@ repositories {
     maven { url 'https://api.modrinth.com/maven' }
 }
 dependencies {
-    implementation 'maven.modrinth:menukit:7.4.0+26.3'
-    implementation 'maven.modrinth:xQUBXV8I:2.1.0+26.3'   // SlotKit
+    implementation 'maven.modrinth:menukit:7.5.0+26.3'
+    implementation 'maven.modrinth:xQUBXV8I:2.2.0+26.3'   // SlotKit
 }
 ```
 
@@ -96,14 +98,14 @@ dependencies {
 Declare both in `fabric.mod.json`, each against its own version, with both bounds ([why](https://github.com/trevorschoeny/slotkit/blob/main/docs/versioning.md)). Separate the bounds with a space, since Fabric doesn't read a comma there.
 
 ```json
-"depends": { "menukit": ">=7.4.0 <8.0.0", "slotkit": ">=2.1.0 <3.0.0" }
+"depends": { "menukit": ">=7.5.0 <8.0.0", "slotkit": ">=2.2.0 <3.0.0" }
 ```
 
 Players install SlotKit as its own mod, next to the mods that use it. List it as a required dependency on the mod's Modrinth page so it's installed with them.
 
 ### Requirements
 
-- [MenuKit](https://modrinth.com/mod/menukit) 7.4.0 or newer, below 8.0.0. SlotKit builds its panels and slot drawing on MenuKit.
+- [MenuKit](https://modrinth.com/mod/menukit) 7.5.0 or newer, below 8.0.0. SlotKit builds its panels and slot drawing on MenuKit.
 - [Fabric API](https://modrinth.com/mod/fabric-api)
 
 ### Compatibility
@@ -178,15 +180,17 @@ This needs SlotKit on both sides. See [Parity group](https://github.com/trevorsc
 
 #### Find items inside shulker boxes and bundles
 
-`ItemSources` walks the items a player carries, in the inventory, the ender chest, and shulker boxes and bundles to any depth, nearest first. An `ItemScope` says which of those to search. On the server, `take` and `walk` remove or change an item and write the change back through every container. `find` lists matches on either side with an `ItemPath` for each, so a client can choose an item and the server can act on it with `at`. The same calls also take a `Container` the caller supplies, such as the chest a player has open. On the server it resolves only against the container behind the player's menu, never one the client names. To keep a menu open on a nested item, such as a bundle inside a shulker box in a chest, bind it with `ItemSources.live(container, path)`. The `LiveItem` takes any number of writes, sends each one back up the chain, and goes stale when the item moves or something else changes it, so the menu's `stillValid` returns `!live.isStale()`. A player attachment declared `carried()` is searched too when the scope asks (`ItemScope.carried(true)`), and `ItemSources.pathOf(player, slot)` names the item in a slot the player clicked, with the same answer on both sides. See [Item sources](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#item-sources) and [Find and use items inside shulker boxes and bundles](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#find-and-use-items-inside-shulker-boxes-and-bundles).
+`ItemSources` walks the items a player carries, in the inventory, the ender chest, and shulker boxes and bundles to any depth, nearest first. An `ItemScope` says which of those to search. On the server, `take` and `walk` remove or change an item and write the change back through every container. `find` lists matches on either side with an `ItemPath` for each, so a client can choose an item and the server can act on it with `at`. The same calls also take a `Container` the caller supplies, such as the chest a player has open. It resolves only against the container the mod passes in, so on the server pass the one behind the player's menu, never one the client names. To keep a menu open on a nested item, such as a bundle inside a shulker box in a chest, bind it with `ItemSources.live(container, path)`. The `LiveItem` takes any number of writes, sends each one back up the chain, and goes stale when the item moves or something else changes it, so the menu's `stillValid` returns `!live.isStale()`. See [Item sources](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#item-sources) and [Find and use items inside shulker boxes and bundles](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#find-and-use-items-inside-shulker-boxes-and-bundles).
 
-#### Give an item a state and show it
+Since 2.2.0, `ItemSources.pathOf(player, slot)` names the item in a main inventory slot, an ender chest slot, or a carried attachment's slot, with the same answer on the client and the server. On the client an ender chest's own menu shows a stand-in container, so its slots name nothing there. A player attachment declared `playerAttached(...).carried()` holds the player's own things, a scope with `carried(true)` walks it, and `containerOf(player, path)` returns its contents. Every binding of a player, block, or entity attachment shares one list of stacks, so a stack is the same object wherever it's read. See [Item sources](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#item-sources).
 
-`ItemState` is a value that rides on an item, such as "open" or "favorite". The server sets it, vanilla syncs it with the stack, and it is saved with the item or not as the mod declares. `SlotLooks` changes how a slot draws an item while a state holds, or while a check the mod answers on the client holds: an animation that plays forward and back, another model, or a mark under or over the item. A mod writes no mixin and no lookup of which item a slot shows. See [Item state and slot looks](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#item-state-and-slot-looks) and [Show an item as open](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#show-an-item-as-open).
+#### Give an item a state, and change how it draws
+
+An `ItemState` is a value that rides on an item, through shulker boxes and back, synced to every client with the stack. `ItemState.Saved.YES` saves it with the item, and `Saved.NO` drops it at a relog or restart. The server sets it with `set` and `clear`. Only a mod that declares `bothSides: required` can declare a state. `SlotLooks` changes how a slot draws an item while an `ItemState` holds or a `SlotLooks.When` check answers yes on the client: `animate` plays an animation, `swapWhen` draws another stack in its place, and `under` and `over` draw a mark through MenuKit's slot decorations. Declare looks from the client initializer. See [Item state and slot looks](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#item-state-and-slot-looks) and [Show an item as open](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#show-an-item-as-open).
 
 #### Take a double-click on a slot
 
-`SlotDoubleClick.register(id, starts, onPair)` takes a plain left double-click on a slot for the mod's own action, such as opening the item, in place of vanilla's "gather all". SlotKit handles the timing, puts the lifted item back at once and draws it in its slot meanwhile, so the item never seems to move. On creative's inventory tab it names the real slot. The mod sends its own packet. See [Double-click](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#double-click) and [Open an item on a double-click](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#open-an-item-on-a-double-click).
+`SlotDoubleClick` gives a plain left double-click on a slot to a mod's action. Both clicks land within one second with the cursor on the same pixel, and only the real mouse counts, so a sort mod's simulated clicks never pair. The first click stays vanilla's and lifts the stack, which is drawn back in its slot while the pair is pending. The second, which vanilla would take as gather all, goes to the first registration that accepted the slot. See [Double-click](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#double-click) and [Open an item on a double-click](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#open-an-item-on-a-double-click).
 
 #### Show a container by its group's id
 
@@ -226,7 +230,7 @@ A `SlotElement` inside a MenuKit `ScrollContainer` scrolls and clips like any ot
 
 #### Upgrade
 
-[Upgrading](https://github.com/trevorschoeny/slotkit/blob/main/docs/upgrading.md) moves a mod from SlotKit 2.0 to 2.1 and from 1.x to 2.0, with a before and after for each change, and from MenuKit: Containers or MenuKit 6's slot code, with an import map and the two renames.
+[Upgrading](https://github.com/trevorschoeny/slotkit/blob/main/docs/upgrading.md) moves a mod from SlotKit 2.1 to 2.2, from 2.0 to 2.1, and from 1.x to 2.0, with a before and after for each change, and from MenuKit: Containers or MenuKit 6's slot code, with an import map and the two renames.
 
 ### License
 
