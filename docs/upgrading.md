@@ -1,5 +1,11 @@
 # Upgrading
 
+## From SlotKit 2.1 to 2.2
+
+2.2 needs MenuKit 7.5.0. Change the dependencies to `menukit` `>=7.5.0 <8.0.0` and `slotkit` `>=2.2.0 <3.0.0` ([versioning](versioning.md#what-to-declare)).
+
+A Fabric-backed `StorageAttachment` (`playerAttached`, `playerAttachedVisible`, `blockScoped`, `entityAttached`, `itemContainer`) now shares one live list per owner and attachment, the same list for every `bind` call on that owner, instead of handing each call its own copy. A player attachment bound twice in the same tick, from two menus or two mods, now sees one list and one set of edits; previously each bind read its own copy, so a stack tracked by identity across binds looked like it moved every tick even when nothing changed. A mod that only reads and writes through `bind(...)` sees no difference. A mod that kept its own separate list instead of calling `bind` again, or that relied on two binds being independent copies (editing one without the other seeing it), now sees both binds reflect the same edits. Nothing else changes; no saved data needs migration.
+
 ## From SlotKit 2.0 to 2.1
 
 SlotKit 2.1 adds a mode scope to every declaration about a slot: `SURVIVAL`, `CREATIVE` or `BOTH`, MenuKit's `ModeScope`, read from the acting player on each check ([mode scope](concepts.md#mode-scope)). It also adds slot anchors, per-mode placements, `Address.playerInventory(n)` and `SlotGroupElement`. 2.1 needs MenuKit 7.4.0. Change the dependencies to `menukit` `>=7.4.0 <8.0.0` and `slotkit` `>=2.1.0 <3.0.0` ([versioning](versioning.md#what-to-declare)).

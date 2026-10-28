@@ -26,14 +26,14 @@ Pin each Kit against its own version, to the major.minor the mod was built again
 
 ```json
 "depends": {
-  "menukit": ">=7.4.0 <8.0.0",
-  "slotkit": ">=2.1.0 <3.0.0"
+  "menukit": ">=7.5.0 <8.0.0",
+  "slotkit": ">=2.2.0 <3.0.0"
 }
 ```
 
 A minor release can add API. A mod can call something a later minor added while declaring only the major's first release as its floor. That mod loads on the older SlotKit and crashes with `NoSuchMethodError` the first time it calls the new method. Set the lower bound to the version the mod was built and tested against, not the oldest one believed to still work.
 
-SlotKit 2.1.0 needs MenuKit `>=7.4.0 <8.0.0`. Your mod's `menukit` range sits inside that.
+SlotKit 2.2.0 needs MenuKit `>=7.5.0 <8.0.0`. Your mod's `menukit` range sits inside that.
 
 ## Two mistakes
 
