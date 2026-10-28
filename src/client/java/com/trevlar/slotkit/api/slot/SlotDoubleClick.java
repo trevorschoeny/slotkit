@@ -51,6 +51,14 @@ import java.util.function.Consumer;
  * screen opened in place of the first one between the clicks, even when the cursor now lands
  * on another slot or on none; any other slot pairs only on the same screen.
  *
+ * <p>A pending pair that ends without a second click tells its owner through {@link Lapse},
+ * once: the window runs out (checked each client tick, so with no further input), the cursor
+ * moves, a click that can't be the second (on another slot, with shift, another button, or
+ * off every slot), a second click whose stack is neither back on the cursor nor still in its
+ * slot, or the screens closing to the world. A click that ends it lapses before that click
+ * goes through, so a stack put down elsewhere is still on the cursor when the lapse is heard.
+ * A pair that pairs never lapses.
+ *
  * Since 2.2.0.
  */
 public final class SlotDoubleClick {
@@ -73,7 +81,16 @@ public final class SlotDoubleClick {
     /** A double-click taken: the slot (the real one), its index on the menu the server has open, and the stack. */
     public record Pair(AbstractContainerScreen<?> screen, Slot slot, int menuIndex, ItemStack stack, Kind kind) {}
 
-    private record Registration(String id, Starts starts, Consumer<Pair> onPair) {}
+    /**
+     * A pending pair ended with no second click: the first click's slot (the real one) and a
+     * copy of the stack it lifted. On the client thread, at a tick, a frame or a click.
+     */
+    @FunctionalInterface
+    public interface Lapse {
+        void lapsed(Slot slot, ItemStack stack);
+    }
+
+    private record Registration(String id, Starts starts, Consumer<Pair> onPair, Lapse onLapse) {}
 
     private static final List<Registration> REGISTRATIONS = new ArrayList<>();
 
@@ -86,6 +103,7 @@ public final class SlotDoubleClick {
     // still finds it on a screen opened in place of the first; else the real menu index.
     private static @Nullable Registration owner;
     private static int place;
+    private static @Nullable Slot firstSlot;
     private static long firstAt;
     private static @Nullable Screen firstScreen;
     private static double firstX, firstY;
@@ -94,21 +112,44 @@ public final class SlotDoubleClick {
 
     /** Registers a double-click action. {@code id} is unique per mod, as {@code "mymod:open"}. */
     public static void register(String id, Starts starts, Consumer<Pair> onPair) {
+        register(id, starts, onPair, (slot, stack) -> {});
+    }
+
+    /** Registers a double-click action that also hears its pending pairs that end unpaired. */
+    public static void register(String id, Starts starts, Consumer<Pair> onPair, Lapse onLapse) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(starts, "starts");
         Objects.requireNonNull(onPair, "onPair");
+        Objects.requireNonNull(onLapse, "onLapse");
         for (Registration r : REGISTRATIONS) {
             if (r.id.equals(id)) throw new IllegalArgumentException("double-click " + id + " is already registered");
         }
-        REGISTRATIONS.add(new Registration(id, starts, onPair));
+        REGISTRATIONS.add(new Registration(id, starts, onPair, onLapse));
     }
 
-    /** Ends any pending pair (back in the world). */
+    /** Ends any pending pair unpaired, telling its owner (back in the world, say). */
     @ApiStatus.Internal
     public static void reset() {
+        Registration by = owner;
+        Slot slot = firstSlot;
+        ItemStack stack = lifted;
+        clear();
+        // Cleared first, so the owner's callback sees no pair pending.
+        if (by != null && slot != null) by.onLapse.lapsed(slot, stack);
+    }
+
+    // Ends any pending pair without a word: it paired.
+    private static void clear() {
         owner = null;
+        firstSlot = null;
         firstScreen = null;
         lifted = ItemStack.EMPTY;
+    }
+
+    /** Each client tick on a container screen: a window that ran out, or a moved cursor, lapses with no further input. */
+    @ApiStatus.Internal
+    public static void tick(int mouseX, int mouseY) {
+        if (owner != null && over(mouseX, mouseY)) reset();
     }
 
     /**
@@ -118,13 +159,18 @@ public final class SlotDoubleClick {
     @ApiStatus.Internal
     public static int @Nullable [] heldAt(int mouseX, int mouseY) {
         if (owner == null) return null;
-        // The screen draws at whole pixels; the click came in at fractions of one.
-        if (Util.getMillis() - firstAt >= WINDOW_MS
-                || mouseX != (int) Math.floor(firstX) || mouseY != (int) Math.floor(firstY)) {
+        if (over(mouseX, mouseY)) {
             reset();
             return null;
         }
         return new int[] {heldX, heldY};
+    }
+
+    // The pending pair's window has run out or the cursor has left its pixel.
+    private static boolean over(int mouseX, int mouseY) {
+        // The screen draws at whole pixels; the click came in at fractions of one.
+        return Util.getMillis() - firstAt >= WINDOW_MS
+                || mouseX != (int) Math.floor(firstX) || mouseY != (int) Math.floor(firstY);
     }
 
     /** A real click on a container screen, before the screen sees it. True when it was taken. */
@@ -170,10 +216,10 @@ public final class SlotDoubleClick {
         // The second click: a third starts over.
         Registration by = Objects.requireNonNull(owner);
         ItemStack want = lifted;
-        reset();
         ItemStack carried = screen.getMenu().getCarried();
         int menuIndex = real.index;
         if (!real.hasItem() && !carried.isEmpty() && ItemStack.matches(carried, want)) {
+            clear();
             // Back in its slot now, on this side, rather than once the server says so: the
             // lift lasts only as long as the player's own double-click.
             real.set(carried);
@@ -187,9 +233,12 @@ public final class SlotDoubleClick {
             return true;
         }
         if (real.hasItem() && carried.isEmpty()) {
+            clear();
             by.onPair.accept(new Pair(screen, real, menuIndex, real.getItem(), Kind.IN_PLACE));
             return true;
         }
+        // Neither back on the cursor nor still in its slot: no pair, and vanilla's click.
+        reset();
         return false;
     }
 
@@ -201,6 +250,7 @@ public final class SlotDoubleClick {
         for (Registration r : REGISTRATIONS) {
             if (!r.starts.test(real, stack)) continue;
             owner = r;
+            firstSlot = real;
             place = placeOf(real);
             firstAt = Util.getMillis();
             firstScreen = screen;

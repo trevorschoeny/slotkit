@@ -324,6 +324,8 @@ Anything else stays vanilla's. On creative's inventory tab, `Starts` and `Pair.s
 
 The server side is the mod's. Its handler sends its own packet, and its server puts the stack back too, since the server saw the first click lift it. If the server refuses, its sync corrects the client.
 
+A mod that holds something back while a pair is pending, such as a screen it would otherwise close when the stack is lifted, registers with a fourth argument, a `Lapse`. SlotKit calls it once, with the first click's slot and a copy of the stack it lifted, when the pending pair ends without a second click: the window runs out (checked every client tick, so it fires with no further input), the cursor moves, a click lands that can't be the second one (on another slot, off every slot, with shift or another button), or the screens close to the world. A click that ends the pair lapses before that click goes through, so a stack being put down elsewhere is still on the cursor when the mod hears it. A pair that pairs never lapses.
+
 ## Saved ids
 
 SlotKit reads and writes the ids MenuKit and Containers 6.x saved. They keep the `menukit:` namespace: slot group categories (`menukit:player_inventory`), behavior keys and reaction causes (`menukit:mending`), the slot-state attachments (`menukit:slot_state_player_inventory` and its siblings), the keyed storage NBT keys (`menukit:scope`, `menukit:owner`), and a shulker box's carried state (`menukit:portable_slot_state`). Do not rename any of them to `slotkit:`. A renamed id reads as a new, empty one, and what players saved under the old id is lost.

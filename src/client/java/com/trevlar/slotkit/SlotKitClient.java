@@ -78,9 +78,18 @@ public class SlotKitClient implements ClientModInitializer {
                         mc.player == null || !com.trevlar.slotkit.api.slot.SlotDoubleClick.click(acs, event, mc.player));
             }
         });
-        // Back in the world, no double-click pairs across it.
+        // Back in the world, no double-click pairs across it; on a container screen, a window
+        // that ran out or a moved cursor ends the pair even with no frame drawing the stack.
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (client.gui.screen() == null) com.trevlar.slotkit.api.slot.SlotDoubleClick.reset();
+            if (client.gui.screen() == null) {
+                com.trevlar.slotkit.api.slot.SlotDoubleClick.reset();
+            } else if (client.gui.screen() instanceof AbstractContainerScreen<?>) {
+                var window = client.getWindow();
+                // Scaled as the screen's own mouse position is.
+                com.trevlar.slotkit.api.slot.SlotDoubleClick.tick(
+                        (int) (client.mouseHandler.xpos() * window.getGuiScaledWidth() / window.getScreenWidth()),
+                        (int) (client.mouseHandler.ypos() * window.getGuiScaledHeight() / window.getScreenHeight()));
+            }
         });
 
         // Slot state: the server's snapshots and updates, and the client's own writes

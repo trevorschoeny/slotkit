@@ -8,7 +8,7 @@ A mod can name the item in any slot, give an item a state, and change how a slot
 - A player attachment can be declared `carried()`: it holds the player's own things, such as a pocket. `ItemScope.carried(true)` walks it, its paths have source `CARRIED`, and `ItemSources.containerOf(player, path)` returns its contents. Its stacks keep their identity across every binding, so a mod can track one from tick to tick.
 - `ItemState` is a value that rides on an item, such as "open" or "favorite", saved with the item or not as the mod chooses. Vanilla syncs it with the stack, so every client drawing the item reads it.
 - `SlotLooks` changes how a slot draws an item while an `ItemState` or a client-side check holds: an animation that plays forward and back, another model, or a mark under or over the item. MenuKit does the drawing, so the mod writes no mixin.
-- `SlotDoubleClick` takes a plain left double-click on a slot for a mod's action, in place of vanilla's "gather all". The item never seems to move, and it works on creative's inventory tab.
+- `SlotDoubleClick` takes a plain left double-click on a slot for a mod's action, in place of vanilla's "gather all". The item never seems to move, and it works on creative's inventory tab. A registration can also hear when a first click ends without a second.
 
 #### Changed
 
