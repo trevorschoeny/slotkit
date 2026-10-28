@@ -2,7 +2,7 @@
 
 This page adds SlotKit to a Fabric mod that already uses MenuKit. It does two things: a panel beside the player inventory, which needs SlotKit on the client only, and nine real slots, which need SlotKit on both sides. Stop after step 2 if your mod builds no slots.
 
-Prerequisites: a Fabric mod on Minecraft 26.3 with MenuKit 7.4 set up ([MenuKit's getting started](https://github.com/trevorschoeny/menukit/blob/main/docs/getting-started.md)), and a client entry point.
+Prerequisites: a Fabric mod on Minecraft 26.3 with MenuKit 7.5 set up ([MenuKit's getting started](https://github.com/trevorschoeny/menukit/blob/main/docs/getting-started.md)), and a client entry point.
 
 ## 1. Add the dependency
 
@@ -127,4 +127,4 @@ Start the client with the mod's `runClient` task and open the inventory to see t
 - [concepts.md](concepts.md) defines slot groups, operations, created slots, addresses, slot state, and declaring sides.
 - [recipes.md](recipes.md) covers the common tasks.
 - [limits.md](limits.md) lists what SlotKit does not do.
-- [upgrading.md](upgrading.md) moves a mod from SlotKit 2.0 to 2.1, from 1.x to 2.0, or from MenuKit: Containers or MenuKit 6's slot code.
+- [upgrading.md](upgrading.md) moves a mod from SlotKit 2.1 to 2.2, 2.0 to 2.1, from 1.x to 2.0, or from MenuKit: Containers or MenuKit 6's slot code.

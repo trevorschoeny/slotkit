@@ -4,7 +4,7 @@
 
 2.2 needs MenuKit 7.5.0. Change the dependencies to `menukit` `>=7.5.0 <8.0.0` and `slotkit` `>=2.2.0 <3.0.0` ([versioning](versioning.md#what-to-declare)).
 
-A Fabric-backed `StorageAttachment` (`playerAttached`, `playerAttachedVisible`, `blockScoped`, `entityAttached`, `itemContainer`) now shares one live list per owner and attachment, the same list for every `bind` call on that owner, instead of handing each call its own copy. A player attachment bound twice in the same tick, from two menus or two mods, now sees one list and one set of edits; previously each bind read its own copy, so a stack tracked by identity across binds looked like it moved every tick even when nothing changed. A mod that only reads and writes through `bind(...)` sees no difference. A mod that kept its own separate list instead of calling `bind` again, or that relied on two binds being independent copies (editing one without the other seeing it), now sees both binds reflect the same edits. Nothing else changes; no saved data needs migration.
+A Fabric-backed `StorageAttachment` (`playerAttached`, `playerAttachedVisible`, `blockScoped`, `entityAttached`) now shares one live list per owner and attachment, the same list for every `bind` call on that owner, instead of handing each call its own copy. `itemContainer` is data-component backed, not Fabric-backed, and already shared one list per stack in 2.1.0; it changes nothing here. A player attachment bound twice in the same tick, from two menus or two mods, now sees one list and one set of edits; previously each bind read its own copy, so a stack tracked by identity across binds looked like it moved every tick even when nothing changed. A mod that only reads and writes through `bind(...)` sees no difference. A mod that kept its own separate list instead of calling `bind` again, or that relied on two binds being independent copies (editing one without the other seeing it), now sees both binds reflect the same edits. `custom(...)`, `customPlayerAttached(...)` and `ephemeral(...)` are unaffected: each `bind` on them still gets its own list. Nothing else changes; no saved data needs migration.
 
 ## From SlotKit 2.0 to 2.1
 
@@ -62,7 +62,7 @@ Pass the 1.x panel id as the group's owner id, unchanged, so its id stays the sa
 
 ## From MenuKit: Containers or MenuKit 6
 
-This section moves a mod to SlotKit 1.0.0 from MenuKit: Containers 6.x, or from the slot code MenuKit 6 carried (`api.slot`, `api.window`, `SlotGroupPanelAdapter`). SlotKit is Containers renamed, plus that slot code. Then follow [1.x to 2.0](#from-slotkit-1x-to-20) and [2.0 to 2.1](#from-slotkit-20-to-21).
+This section moves a mod to SlotKit 1.0.0 from MenuKit: Containers 6.x, or from the slot code MenuKit 6 carried (`api.slot`, `api.window`, `SlotGroupPanelAdapter`). SlotKit is Containers renamed, plus that slot code. Then follow [1.x to 2.0](#from-slotkit-1x-to-20), [2.0 to 2.1](#from-slotkit-20-to-21) and [2.1 to 2.2](#from-slotkit-21-to-22).
 
 Do MenuKit's 7.0.0 upgrade first: [MenuKit's upgrading page](https://github.com/trevorschoeny/menukit/blob/main/docs/upgrading-7.md). It also tells you whether your mod needs SlotKit at all.
 

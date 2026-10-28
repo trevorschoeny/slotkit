@@ -4,7 +4,7 @@ Definitions of the terms SlotKit coins and the rules that bind consumer code. Ev
 
 ## SlotKit and MenuKit
 
-SlotKit is one mod, `slotkit`, built on MenuKit. It holds everything about slots: slot groups and categories, slot operations and vetoes, addresses and the window, created slots, custom menus, storage, and per-slot state. SlotKit 2.1 depends on MenuKit 7.4 and uses only MenuKit's public API. MenuKit does not depend on SlotKit.
+SlotKit is one mod, `slotkit`, built on MenuKit. It holds everything about slots: slot groups and categories, slot operations and vetoes, addresses and the window, created slots, custom menus, storage, and per-slot state. SlotKit 2.2 depends on MenuKit 7.5 and uses only MenuKit's public API. MenuKit does not depend on SlotKit.
 
 SlotKit was MenuKit: Containers, plus the slot code MenuKit carried before 7.0.0. [upgrading.md](upgrading.md) moves a mod from Containers or from MenuKit 6's slot code.
 
