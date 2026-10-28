@@ -51,13 +51,16 @@ import java.util.function.Consumer;
  * screen opened in place of the first one between the clicks, even when the cursor now lands
  * on another slot or on none; any other slot pairs only on the same screen.
  *
- * <p>A pending pair that ends without a second click tells its owner through {@link Lapse},
- * once: the window runs out (checked each client tick, so with no further input), the cursor
+ * <p>A registration with a {@link Pending} hears its pairs start and lapse. A pair starts at
+ * the first click, inside SlotKit's read of the click before the screen sees it, so
+ * {@link Pending#started} runs before vanilla's click lifts the stack and before that click
+ * goes to the server: a packet sent from it arrives ahead of the pickup. A pending pair that
+ * ends without a second click lapses, once: the window runs out (checked each client tick, so with no further input), the cursor
  * moves, a click that can't be the second (on another slot, with shift, another button, or
  * off every slot), a second click whose stack is neither back on the cursor nor still in its
  * slot, or the screens closing to the world. A click that ends it lapses before that click
  * goes through, so a stack put down elsewhere is still on the cursor when the lapse is heard.
- * A pair that pairs never lapses.
+ * A pair that pairs never lapses. Every pair that starts either pairs or lapses.
  *
  * Since 2.2.0.
  */
@@ -82,15 +85,20 @@ public final class SlotDoubleClick {
     public record Pair(AbstractContainerScreen<?> screen, Slot slot, int menuIndex, ItemStack stack, Kind kind) {}
 
     /**
-     * A pending pair ended with no second click: the first click's slot (the real one) and a
-     * copy of the stack it lifted. On the client thread, at a tick, a frame or a click.
+     * A registration's pending pairs, on the client thread. Both get the first click's slot
+     * (the real one) and its stack.
      */
-    @FunctionalInterface
-    public interface Lapse {
-        void lapsed(Slot slot, ItemStack stack);
+    public interface Pending {
+        /** A first click started a pair: before vanilla lifts the stack or tells the server. */
+        default void started(Slot slot, ItemStack stack) {}
+
+        /** A pending pair ended with no second click (a copy of the lifted stack), at a tick, a frame or a click. */
+        default void lapsed(Slot slot, ItemStack stack) {}
     }
 
-    private record Registration(String id, Starts starts, Consumer<Pair> onPair, Lapse onLapse) {}
+    private static final Pending NONE = new Pending() {};
+
+    private record Registration(String id, Starts starts, Consumer<Pair> onPair, Pending pending) {}
 
     private static final List<Registration> REGISTRATIONS = new ArrayList<>();
 
@@ -112,19 +120,19 @@ public final class SlotDoubleClick {
 
     /** Registers a double-click action. {@code id} is unique per mod, as {@code "mymod:open"}. */
     public static void register(String id, Starts starts, Consumer<Pair> onPair) {
-        register(id, starts, onPair, (slot, stack) -> {});
+        register(id, starts, onPair, NONE);
     }
 
-    /** Registers a double-click action that also hears its pending pairs that end unpaired. */
-    public static void register(String id, Starts starts, Consumer<Pair> onPair, Lapse onLapse) {
+    /** Registers a double-click action that also hears its pairs start and lapse. */
+    public static void register(String id, Starts starts, Consumer<Pair> onPair, Pending pending) {
         Objects.requireNonNull(id, "id");
         Objects.requireNonNull(starts, "starts");
         Objects.requireNonNull(onPair, "onPair");
-        Objects.requireNonNull(onLapse, "onLapse");
+        Objects.requireNonNull(pending, "pending");
         for (Registration r : REGISTRATIONS) {
             if (r.id.equals(id)) throw new IllegalArgumentException("double-click " + id + " is already registered");
         }
-        REGISTRATIONS.add(new Registration(id, starts, onPair, onLapse));
+        REGISTRATIONS.add(new Registration(id, starts, onPair, pending));
     }
 
     /** Ends any pending pair unpaired, telling its owner (back in the world, say). */
@@ -135,7 +143,7 @@ public final class SlotDoubleClick {
         ItemStack stack = lifted;
         clear();
         // Cleared first, so the owner's callback sees no pair pending.
-        if (by != null && slot != null) by.onLapse.lapsed(slot, stack);
+        if (by != null && slot != null) by.pending.lapsed(slot, stack);
     }
 
     // Ends any pending pair without a word: it paired.
@@ -260,6 +268,7 @@ public final class SlotDoubleClick {
             AbstractContainerScreenAccessor edge = (AbstractContainerScreenAccessor) screen;
             heldX = edge.sk$getLeftPos() + shown.x;
             heldY = edge.sk$getTopPos() + shown.y;
+            r.pending.started(real, stack);
             return;
         }
     }
