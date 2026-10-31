@@ -1,17 +1,24 @@
 package com.trevlar.slotkit.api.menu;
 
 import com.trevlar.slotkit.api.slot.OnDemandGroup;
+import com.trevlar.slotkit.mixin.MerchantMenuAccessor;
 import com.trevlar.slotkit.network.Handshake;
 import com.trevlar.slotkit.network.OpenInventoryS2CPayload;
 import com.trevlar.slotkit.state.SlotStateHooks;
 
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundContainerClosePacket;
+import net.minecraft.network.protocol.game.ClientboundMerchantOffersPacket;
+import net.minecraft.network.protocol.game.ClientboundMountScreenOpenPacket;
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.world.level.Level;
 
 import org.jetbrains.annotations.ApiStatus;
@@ -52,8 +59,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * holds. Menus opened through {@link #open} are the tabs: switching away from one
  * closes it normally. The inventory is never set aside, so a switch that starts at
  * the inventory screen sets nothing aside, and {@link #back} has nothing to return to.
- * Only a menu opened through {@code openMenu} can be set aside (its title is what
- * {@code back} shows again); any other closes normally.
+ * Only a menu opened through {@code openMenu}, or a mount's inventory (a horse's, a
+ * llama's, a nautilus's), can be set aside: {@code back} sends the packet that opened it
+ * again. Any other closes normally. A trading screen comes back with its trades (the
+ * selected one may reset); its trader stays locked to the player while it waits.
  *
  * <p>While it waits, the set-aside menu's {@code stillValid} is checked every tick,
  * and it closes properly ({@code removed()}, so the lid shuts) when that fails, the
@@ -95,12 +104,16 @@ public final class MenuSwitch {
         void closed(ServerPlayer player, AbstractContainerMenu menu, Reason why);
     }
 
-    // The menu each player has set aside, with what back() needs to show it again.
-    private record Aside(AbstractContainerMenu menu, Component title, Level level) {}
+    // The menu each player has set aside, with the packet that opened it, which back() sends again.
+    private record Aside(AbstractContainerMenu menu, Packet<? super ClientGamePacketListener> opener, Level level) {}
 
     private static final Map<ServerPlayer, Aside> ASIDE = new WeakHashMap<>();
-    // The title every openMenu showed, by menu: what back() reopens a menu under.
-    private static final Map<AbstractContainerMenu, Component> TITLES = new WeakHashMap<>();
+    // The packet that opened each menu that can be set aside: openMenu's open-screen, or a mount screen's.
+    // The menu keeps its container id while it waits, so the same packet opens it again.
+    private static final Map<AbstractContainerMenu, Packet<? super ClientGamePacketListener>> OPENERS = new WeakHashMap<>();
+    // The trader level last sent with each trading menu's offers. The trader doesn't know
+    // its own level as a Merchant (a villager's comes from its data, a wandering trader's is 1).
+    private static final Map<AbstractContainerMenu, Integer> TRADER_LEVELS = new WeakHashMap<>();
     // The menus open() opened: the tabs, which close when left.
     private static final Set<AbstractContainerMenu> TABS = Collections.newSetFromMap(new WeakHashMap<>());
     private static final List<SetAsideClosed> LISTENERS = new CopyOnWriteArrayList<>();
@@ -190,11 +203,11 @@ public final class MenuSwitch {
     private static ItemStack leaveFront(ServerPlayer player) {
         AbstractContainerMenu front = player.containerMenu;
         ItemStack carried = takeCarried(front);
-        Component title = TITLES.get(front);
+        Packet<? super ClientGamePacketListener> opener = OPENERS.get(front);
         boolean keep = front != player.inventoryMenu && !TABS.contains(front)
-                && title != null && !ASIDE.containsKey(player);
+                && opener != null && !ASIDE.containsKey(player);
         if (keep) {
-            ASIDE.put(player, new Aside(front, title, player.level()));
+            ASIDE.put(player, new Aside(front, opener, player.level()));
             player.containerMenu = player.inventoryMenu;
         } else {
             switching = true;
@@ -213,7 +226,14 @@ public final class MenuSwitch {
         AbstractContainerMenu menu = a.menu;
         player.containerMenu = menu;
         menu.setCarried(carried);
-        player.connection.send(new ClientboundOpenScreenPacket(menu.containerId, menu.getType(), a.title));
+        player.connection.send(a.opener);
+        // A trading menu's trades come separately, as vanilla sends them, before the contents.
+        Integer traderLevel = TRADER_LEVELS.get(menu);
+        if (menu instanceof MerchantMenu && traderLevel != null) {
+            Merchant trader = ((MerchantMenuAccessor) menu).sk$getTrader();
+            player.connection.send(new ClientboundMerchantOffersPacket(menu.containerId, trader.getOffers(),
+                    traderLevel, trader.getVillagerXp(), trader.showProgressBar(), trader.canRestock()));
+        }
         // The client's menu is new: it hears about the on-demand groups before the contents.
         OnDemandGroup.replay(player, menu);
         menu.sendAllDataToRemote();
@@ -256,7 +276,21 @@ public final class MenuSwitch {
     /** {@code openMenu} opened the player's new menu under {@code title}. */
     @ApiStatus.Internal
     public static void menuOpened(ServerPlayer player, Component title) {
-        TITLES.put(player.containerMenu, title);
+        AbstractContainerMenu menu = player.containerMenu;
+        OPENERS.put(menu, new ClientboundOpenScreenPacket(menu.containerId, menu.getType(), title));
+    }
+
+    /** A mount's inventory opened for the player ({@code openHorseInventory}, {@code openNautilusInventory}), which skips {@code openMenu}. */
+    @ApiStatus.Internal
+    public static void mountOpened(ServerPlayer player, int inventoryColumns, int mountId) {
+        AbstractContainerMenu menu = player.containerMenu;
+        OPENERS.put(menu, new ClientboundMountScreenOpenPacket(menu.containerId, inventoryColumns, mountId));
+    }
+
+    /** The player's trading menu {@code containerId} was sent its offers at {@code traderLevel}. */
+    @ApiStatus.Internal
+    public static void offersSent(ServerPlayer player, int containerId, int traderLevel) {
+        if (player.containerMenu.containerId == containerId) TRADER_LEVELS.put(player.containerMenu, traderLevel);
     }
 
     /** The menu in front closed: unless that was a switch, the set-aside one closes too. */

@@ -1,6 +1,7 @@
 package com.trevlar.slotkit.checks;
 
 import com.trevlar.slotkit.api.menu.MenuSwitch;
+import com.trevlar.slotkit.mixin.MerchantMenuAccessor;
 
 import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
 import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
@@ -8,13 +9,22 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
+import net.minecraft.client.gui.screens.inventory.HorseInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
+import net.minecraft.client.gui.screens.inventory.MerchantScreen;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
+import net.minecraft.world.entity.EntitySpawnReason;
+import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.animal.equine.Donkey;
+import net.minecraft.world.entity.npc.villager.Villager;
+import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -27,7 +37,8 @@ import java.util.List;
  * MenuSwitch, end to end on a real client and server: a chest set aside while the
  * player tabs to their inventory and ender chest and back, the cursor stack riding
  * along, the crafting grid handing back, and the chest closing on Escape and when
- * the player walks away.
+ * the player walks away. A villager's trading screen and a donkey's inventory come
+ * back whole: the trades, the trader's xp and level, the mount's saddle and chest.
  */
 public class MenuSwitchChecks implements FabricClientGameTest {
 
@@ -51,6 +62,8 @@ public class MenuSwitchChecks implements FabricClientGameTest {
             switchesKeepTheChestOpen(ctx, server, chest);
             escapeClosesBoth(ctx, server, chest);
             walkingAwayClosesTheChest(ctx, server, chest);
+            tradingComesBackWithItsTrades(ctx, server);
+            mountComesBackWhole(ctx, server);
         }
     }
 
@@ -127,6 +140,82 @@ public class MenuSwitchChecks implements FabricClientGameTest {
         server.runOnServer(s -> checkOpeners(s, chest, 0, "after walking away"));
         check(HEARD.equals(List.of(MenuSwitch.Reason.INVALID)), "walking away: listener heard " + HEARD);
         check(ctx.computeOnClient(mc -> mc.gui.screen() instanceof InventoryScreen), "walking away closed the inventory too");
+        ctx.runOnClient(mc -> mc.gui.screen().onClose());
+        ctx.waitTicks(2);
+    }
+
+    /** A villager's trading screen, set aside and back: the same trades, xp and level, the trader still locked. */
+    private static void tradingComesBackWithItsTrades(ClientGameTestContext ctx, TestServerContext server) {
+        int id = server.computeOnServer(s -> {
+            ServerPlayer p = player(s);
+            Villager v = EntityTypes.VILLAGER.create(p.level(), EntitySpawnReason.COMMAND);
+            v.setNoAi(true);
+            v.setPos(p.getX() - 2, p.getY(), p.getZ());
+            v.setVillagerData(v.getVillagerData().withProfession(s.registryAccess(), VillagerProfession.LIBRARIAN).withLevel(3));
+            v.setVillagerXp(77);
+            p.level().addFreshEntity(v);
+            v.setTradingPlayer(p);
+            v.openTradingScreen(p, v.getDisplayName(), v.getVillagerData().level());
+            return p.containerMenu.containerId;
+        });
+        ctx.waitFor(mc -> mc.player.containerMenu instanceof MerchantMenu m && m.containerId == id && !m.getOffers().isEmpty());
+        int offers = ctx.computeOnClient(mc -> ((MerchantMenu) mc.player.containerMenu).getOffers().size());
+
+        server.runOnServer(s -> check(MenuSwitch.openInventory(player(s)), "openInventory refused a SlotKit client"));
+        ctx.waitFor(mc -> mc.gui.screen() instanceof InventoryScreen);
+        server.runOnServer(s -> {
+            ServerPlayer p = player(s);
+            check(MenuSwitch.setAside(p).map(m -> m.containerId == id).orElse(false), "the trading menu isn't set aside");
+            MerchantMenu aside = (MerchantMenu) MenuSwitch.setAside(p).orElseThrow();
+            check(((MerchantMenuAccessor) aside).sk$getTrader().getTradingPlayer() == p, "the trader let go of the player while set aside");
+        });
+
+        server.runOnServer(s -> check(MenuSwitch.back(player(s)), "back found no trading menu set aside"));
+        ctx.waitFor(mc -> mc.gui.screen() instanceof MerchantScreen sc && sc.getMenu().containerId == id);
+        ctx.runOnClient(mc -> {
+            MerchantMenu m = (MerchantMenu) mc.player.containerMenu;
+            check(m.containerId == id, "the client's menu after back is " + m.containerId + ", expected " + id);
+            check(m.getOffers().size() == offers, "trades after back: " + m.getOffers().size() + ", expected " + offers);
+            check(m.getTraderXp() == 77, "trader xp after back: " + m.getTraderXp());
+            check(m.getTraderLevel() == 3, "trader level after back: " + m.getTraderLevel());
+        });
+        ctx.runOnClient(mc -> mc.gui.screen().onClose());
+        server.waitFor(s -> player(s).containerMenu == player(s).inventoryMenu);
+    }
+
+    /** A donkey's inventory, set aside and back: the same container id and screen, its saddle and chest intact. */
+    private static void mountComesBackWhole(ClientGameTestContext ctx, TestServerContext server) {
+        int id = server.computeOnServer(s -> {
+            ServerPlayer p = player(s);
+            Donkey d = EntityTypes.DONKEY.create(p.level(), EntitySpawnReason.COMMAND);
+            d.setNoAi(true);
+            d.setPos(p.getX(), p.getY(), p.getZ() + 2);
+            d.setTamed(true);
+            d.getSlot(499).set(new ItemStack(Items.CHEST));   // as /item replace does: the chest and its inventory
+            d.setItemSlot(EquipmentSlot.SADDLE, new ItemStack(Items.SADDLE));
+            p.level().addFreshEntity(d);
+            d.openCustomInventoryScreen(p);
+            p.containerMenu.getSlot(2).set(new ItemStack(Items.WHEAT, 9));
+            return p.containerMenu.containerId;
+        });
+        ctx.waitFor(mc -> mc.gui.screen() instanceof HorseInventoryScreen sc && sc.getMenu().containerId == id
+                && sc.getMenu().getSlot(2).getItem().is(Items.WHEAT));
+
+        server.runOnServer(s -> check(MenuSwitch.openInventory(player(s)), "openInventory refused a SlotKit client"));
+        ctx.waitFor(mc -> mc.gui.screen() instanceof InventoryScreen);
+        server.runOnServer(s -> check(MenuSwitch.setAside(player(s)).map(m -> m.containerId == id).orElse(false),
+                "the donkey's inventory isn't set aside"));
+
+        server.runOnServer(s -> check(MenuSwitch.back(player(s)), "back found no mount inventory set aside"));
+        ctx.waitFor(mc -> mc.gui.screen() instanceof HorseInventoryScreen sc && sc.getMenu().containerId == id);
+        ctx.runOnClient(mc -> {
+            var menu = ((HorseInventoryScreen) mc.gui.screen()).getMenu();
+            check(mc.player.containerMenu == menu, "the client's menu isn't the mount screen's");
+            check(menu.getSlot(0).getItem().is(Items.SADDLE), "the saddle after back: " + menu.getSlot(0).getItem());
+            ItemStack wheat = menu.getSlot(2).getItem();
+            check(wheat.is(Items.WHEAT) && wheat.getCount() == 9, "the chest's wheat after back: " + wheat);
+        });
+        server.runOnServer(s -> check(player(s).containerMenu.containerId == id, "back didn't reopen the donkey's inventory"));
         ctx.runOnClient(mc -> mc.gui.screen().onClose());
         ctx.waitTicks(2);
     }

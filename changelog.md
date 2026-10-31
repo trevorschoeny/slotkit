@@ -1,3 +1,10 @@
+## 2.2.2
+
+#### Fixed
+
+- `MenuSwitch.back` brings a trading screen back with its trades, the trader's xp and level, instead of an empty trade list.
+- A mount's inventory (a horse, donkey, mule, llama, camel or nautilus) can be set aside and brought back by `MenuSwitch`, instead of closing on the first switch.
+
 ## 2.2.1
 
 #### Fixed
