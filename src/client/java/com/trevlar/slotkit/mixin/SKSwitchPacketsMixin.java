@@ -15,8 +15,9 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 /**
  * The packets {@link MenuSwitchClient} waits between: a server-opened screen (a mount's
- * included) is built with capture on, and a menu's first contents show its held screen just before they apply.
- * Each inject sits after the thread check, which reschedules a packet read off the game thread.
+ * included) is built with capture on, and a menu's first contents show its held screen
+ * just before they apply. Each inject sits after the thread check, which reschedules a
+ * packet read off the game thread.
  */
 @ApiStatus.Internal
 @Mixin(ClientPacketListener.class)

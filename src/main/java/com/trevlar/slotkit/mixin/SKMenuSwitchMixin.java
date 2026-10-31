@@ -22,7 +22,8 @@ import java.util.OptionalInt;
 
 /**
  * {@link MenuSwitch}'s seams on the player: where a menu opens (its cursor stack, the
- * packet that opened it, a mount's screen included, and a trading menu's trader level), where the menu in front closes (Escape included, through
+ * packet that opened it, a mount's screen included, and a trading menu's trader level),
+ * where the menu in front closes (Escape included, through
  * {@code handleContainerClose}), the tick that checks the set-aside menu, and the
  * container counter, which skips the set-aside menu's id so the client never mistakes
  * one menu for the other.
