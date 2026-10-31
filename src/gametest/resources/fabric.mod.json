@@ -6,10 +6,13 @@
   "entrypoints": {
     "fabric-client-gametest": [
       "com.trevlar.slotkit.checks.MenuSwitchChecks",
-      "com.trevlar.slotkit.checks.CarriedChecks"
+      "com.trevlar.slotkit.checks.CarriedChecks",
+      "com.trevlar.slotkit.checks.RevealChecks"
     ],
     "main": [
-      "com.trevlar.slotkit.checks.CarriedChecks"
+      "com.trevlar.slotkit.checks.CarriedChecks",
+      "com.trevlar.slotkit.checks.RevealChecks"
     ]
-  }
+  },
+  "custom": { "slotkit": { "bothSides": "required" } }
 }

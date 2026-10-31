@@ -140,13 +140,14 @@ public class CreatedSlot extends Slot {
     /**
      * True when this slot's panel is hidden, or the slot is past its group's active
      * count. To the outside world an inert slot looks like no slot at all: getItem
-     * returns EMPTY, set does nothing, mayPlace returns false, and shift-click skips it.
+     * returns EMPTY, mayPlace returns false, and shift-click skips it. set does nothing,
+     * unless only this client's reveal hides the slot (see {@link #set}).
      *
      * <p>Public for third parties that want to check directly rather than rely on
      * those methods.
      */
     public boolean isInert() {
-        return !panel.isShown() || (activeCount != null && localIndex >= activeCount.getAsInt());
+        return !panel.isShown() || pastActiveCount();
     }
 
     // The group's active count for this menu's player (SlotSpec.activeCount), or null
@@ -157,6 +158,22 @@ public class CreatedSlot extends Slot {
     @org.jetbrains.annotations.ApiStatus.Internal
     public void activeCount(java.util.function.IntSupplier count) {
         this.activeCount = count;
+    }
+
+    // True when the panel is hidden only on the client (CreatedSlots.onto: the server
+    // always shows it, the client follows revealWhen). The server then syncs real
+    // contents into a slot the client hides, and the slot has to keep them.
+    private boolean hiddenOnlyOnClient;
+
+    /** Library use: the panel is always shown on the server, and hidden only by the client's reveal. */
+    @org.jetbrains.annotations.ApiStatus.Internal
+    public void hiddenOnlyOnClient() {
+        this.hiddenOnlyOnClient = true;
+    }
+
+    // Past the active count: inert on both sides, whatever the panel says.
+    private boolean pastActiveCount() {
+        return activeCount != null && localIndex >= activeCount.getAsInt();
     }
 
     // Each override calls super so other mods' mixins into Slot still run. SlotKit
@@ -214,14 +231,23 @@ public class CreatedSlot extends Slot {
     }
 
     /**
-     * Writes the stack, unless the slot is inert. An inert slot reads as EMPTY, so a
-     * write to it is the world catching up with that EMPTY (the server syncing it to
-     * the client, a creative client sending it back), not a real change. Taking it
-     * would wipe the items the slot's storage still holds.
+     * Writes the stack, unless the slot is inert on both sides. A slot inert on both
+     * sides reads as EMPTY there, so a write to it is the world catching up with that
+     * EMPTY (the server syncing it to the client, a creative client sending it back),
+     * not a real change. Taking it would wipe the items the slot's storage still holds.
+     *
+     * <p>A slot hidden only by this client's reveal is different: the server shows it
+     * and syncs its real contents, so the client keeps them, and they're there the
+     * moment the slot is revealed (and for anything reading the storage meanwhile, a
+     * HUD). It still reads as EMPTY while hidden. The server never resends what it
+     * already sent, so dropping the write would leave the client empty for good.
+     * Creative's echo of that EMPTY back to the server is stopped on the client
+     * ({@code SKCreativeHiddenSlotMixin}).
      */
     @Override
     public void set(ItemStack stack) {
-        if (isInert()) return;
+        if (pastActiveCount()) return;
+        if (!panel.isShown() && !hiddenOnlyOnClient) return;
         super.set(stack);
     }
 

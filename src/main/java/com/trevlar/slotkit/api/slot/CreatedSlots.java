@@ -336,6 +336,7 @@ public final class CreatedSlots {
                 CreatedSlot slot = new CreatedSlot(
                         adapter, local, OFFSCREEN, OFFSCREEN, group, panel, groupId, local);
                 if (activeCount != null) slot.activeCount(activeCount);
+                slot.hiddenOnlyOnClient(); // the panel above: shown on the server, revealWhen on the client
                 if (replacing < 0) {
                     inv.sk$addSlot(slot);
                 } else {
