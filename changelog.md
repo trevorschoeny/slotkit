@@ -1,3 +1,9 @@
+## 2.2.1
+
+#### Fixed
+
+- A slot hidden only on the client (not the server) now keeps a server write instead of dropping it, fixing pocket items that showed as present and clickable but invisible in the inventory and HUD.
+
 ## 2.2.0
 
 #### Added
