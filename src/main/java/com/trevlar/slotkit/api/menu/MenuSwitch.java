@@ -13,10 +13,13 @@ import net.minecraft.network.protocol.game.ClientboundContainerClosePacket;
 import net.minecraft.network.protocol.game.ClientboundMerchantOffersPacket;
 import net.minecraft.network.protocol.game.ClientboundMountScreenOpenPacket;
 import net.minecraft.network.protocol.game.ClientboundOpenScreenPacket;
+import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.MerchantMenu;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.Merchant;
 import net.minecraft.world.level.Level;
@@ -24,7 +27,10 @@ import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
 
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
+
 import java.util.Collections;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -74,6 +80,15 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * The stack on the cursor moves across every switch, to the next menu, instead of
  * going back to the inventory.
  *
+ * <h3>Clicks in flight</h3>
+ * A click the client sent before it heard of a switch is addressed to the menu it
+ * left, and vanilla drops it. Until the client's first click on the new menu, such a
+ * click on one of the player's inventory slots (any slot whose container the new menu
+ * also shows) lands on that same slot in the new menu: a pickup, a put-down, a number
+ * key, a middle click or a drop key, or a click outside the screen. A click on the old
+ * menu's own slots, a shift-click, a double-click collect and a drag are still dropped,
+ * since what they would do depends on the menu they were aimed at.
+ *
  * <h3>The client</h3>
  * {@code open} and {@code back} send only vanilla packets, so they work for a player
  * without SlotKit. {@link #openInventory} needs SlotKit on the client (vanilla has no
@@ -117,6 +132,13 @@ public final class MenuSwitch {
     // The menus open() opened: the tabs, which close when left.
     private static final Set<AbstractContainerMenu> TABS = Collections.newSetFromMap(new WeakHashMap<>());
     private static final List<SetAsideClosed> LISTENERS = new CopyOnWriteArrayList<>();
+    // The menu each player was last switched away from, and the one they were switched to,
+    // until the client's first click that isn't addressed to the old one.
+    private record Left(AbstractContainerMenu from, AbstractContainerMenu to) {}
+    private static final Map<ServerPlayer, Left> LEFT = new WeakHashMap<>();
+    // The clicks whose effect is the slot's alone, whatever menu shows it.
+    private static final Set<ContainerInput> SLOT_ONLY =
+            EnumSet.of(ContainerInput.PICKUP, ContainerInput.SWAP, ContainerInput.CLONE, ContainerInput.THROW);
 
     // Set while this class closes a menu itself, so the close hook knows it's a switch.
     private static boolean switching;
@@ -136,7 +158,8 @@ public final class MenuSwitch {
         Objects.requireNonNull(player, "player");
         Objects.requireNonNull(next, "next");
         checkFront(player);
-        int leftId = player.containerMenu.containerId;
+        AbstractContainerMenu from = player.containerMenu;
+        int leftId = from.containerId;
         ItemStack carried = leaveFront(player);
         pendingCarried = carried;
         OptionalInt id;
@@ -145,9 +168,14 @@ public final class MenuSwitch {
         } finally {
             pendingCarried = null;
         }
-        if (id.isPresent()) return id;
+        if (id.isPresent()) {
+            switchedFrom(player, from);
+            return id;
+        }
         // Refused: never leave the player on a screen whose menu is gone.
-        if (!back(player, carried)) {
+        if (back(player, carried)) {
+            switchedFrom(player, from);
+        } else {
             player.connection.send(new ClientboundContainerClosePacket(leftId));
             if (!carried.isEmpty()) player.getInventory().placeItemBackInInventory(carried, net.minecraft.util.Prediction.SERVER_ONLY);
         }
@@ -164,12 +192,14 @@ public final class MenuSwitch {
         Objects.requireNonNull(player, "player");
         if (!Handshake.hears(player)) return false;
         checkFront(player);
-        ItemStack carried = player.containerMenu == player.inventoryMenu
+        AbstractContainerMenu from = player.containerMenu;
+        ItemStack carried = from == player.inventoryMenu
                 ? takeCarried(player.inventoryMenu)   // already the inventory: nothing closes
                 : leaveFront(player);
         Handshake.send(player, OpenInventoryS2CPayload.INSTANCE);
         player.inventoryMenu.setCarried(carried);
         player.inventoryMenu.sendAllDataToRemote();
+        switchedFrom(player, from);
         return true;
     }
 
@@ -183,7 +213,10 @@ public final class MenuSwitch {
         Objects.requireNonNull(player, "player");
         checkFront(player);
         if (!ASIDE.containsKey(player)) return false;
-        return back(player, leaveFront(player));
+        AbstractContainerMenu from = player.containerMenu;
+        back(player, leaveFront(player));
+        switchedFrom(player, from);
+        return true;
     }
 
     /** The menu {@code player} has set aside, if any. */
@@ -239,6 +272,26 @@ public final class MenuSwitch {
         menu.sendAllDataToRemote();
         SlotStateHooks.sendSnapshotForOpenedMenu(player);
         return true;
+    }
+
+    /** The client's clicks on {@code from} still in flight now belong to the menu in front. */
+    private static void switchedFrom(ServerPlayer player, AbstractContainerMenu from) {
+        if (from != player.containerMenu) LEFT.put(player, new Left(from, player.containerMenu));
+    }
+
+    /**
+     * The slot in {@code to} showing what {@code from}'s slot {@code slotNum} shows, for a
+     * click whose effect is that slot's alone, or empty when the click means nothing in {@code to}.
+     */
+    private static OptionalInt sameSlot(AbstractContainerMenu from, AbstractContainerMenu to, int slotNum, ContainerInput input) {
+        if (!SLOT_ONLY.contains(input)) return OptionalInt.empty();
+        if (slotNum == AbstractContainerMenu.SLOT_CLICKED_OUTSIDE) return OptionalInt.of(slotNum);
+        if (slotNum < 0 || !from.isValidSlotIndex(slotNum)) return OptionalInt.empty();
+        Slot was = from.getSlot(slotNum);
+        for (Slot s : to.slots) {
+            if (s.container == was.container && s.getContainerSlot() == was.getContainerSlot()) return OptionalInt.of(s.index);
+        }
+        return OptionalInt.empty();
     }
 
     private static ItemStack takeCarried(AbstractContainerMenu menu) {
@@ -315,6 +368,30 @@ public final class MenuSwitch {
     @ApiStatus.Internal
     public static void left(ServerPlayer player) {
         closeAside(player, Reason.LEFT);
+    }
+
+    /**
+     * A click from the player's client, on the server thread before vanilla handles it:
+     * the same click on the menu in front when it was aimed at the menu just switched
+     * away from (see "Clicks in flight" in the class doc), otherwise {@code click} itself.
+     */
+    @ApiStatus.Internal
+    public static ServerboundContainerClickPacket clickArrived(ServerPlayer player, ServerboundContainerClickPacket click) {
+        Left left = LEFT.get(player);
+        if (left == null) return click;
+        AbstractContainerMenu front = player.containerMenu;
+        if (left.to != front || click.containerId() != left.from.containerId) {
+            // The client has caught up with the switch, or the menu has moved on since.
+            LEFT.remove(player);
+            return click;
+        }
+        OptionalInt slot = sameSlot(left.from, front, click.slotNum(), click.containerInput());
+        if (slot.isEmpty()) return click;   // vanilla drops it: its container id is stale
+        // The client predicted this click on the old menu: a state id that never matches
+        // makes vanilla send the new menu whole afterwards, and the old menu's slot
+        // predictions mean nothing here.
+        return new ServerboundContainerClickPacket(front.containerId, -1, (short) slot.getAsInt(),
+                click.buttonNum(), click.containerInput(), Int2ObjectMaps.emptyMap(), click.carriedItem());
     }
 
     /** The container id the player's next menu must not take while one is set aside, or -1. */

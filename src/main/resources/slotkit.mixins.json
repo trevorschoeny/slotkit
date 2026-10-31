@@ -30,6 +30,7 @@
     "SKRetiredRegistryEntryMixin",
     "SKSetAsideOpenerMixin",
     "SKSlotGateMixin",
+    "SKStaleClickMixin",
     "SlotPositionAccessor"
   ],
   "client": [

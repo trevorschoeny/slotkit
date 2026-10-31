@@ -13,7 +13,9 @@ import net.minecraft.client.gui.screens.inventory.HorseInventoryScreen;
 import net.minecraft.client.gui.screens.inventory.InventoryScreen;
 import net.minecraft.client.gui.screens.inventory.MerchantScreen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.HashedStack;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.SimpleMenuProvider;
@@ -24,11 +26,14 @@ import net.minecraft.world.entity.animal.equine.Donkey;
 import net.minecraft.world.entity.npc.villager.Villager;
 import net.minecraft.world.entity.npc.villager.VillagerProfession;
 import net.minecraft.world.inventory.ChestMenu;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.inventory.MerchantMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.ChestBlockEntity;
+
+import it.unimi.dsi.fastutil.ints.Int2ObjectMaps;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -39,6 +44,7 @@ import java.util.List;
  * along, the crafting grid handing back, and the chest closing on Escape and when
  * the player walks away. A villager's trading screen and a donkey's inventory come
  * back whole: the trades, the trader's xp and level, the mount's saddle and chest.
+ * A click the client sent to the chest just before a switch lands on the inventory.
  */
 public class MenuSwitchChecks implements FabricClientGameTest {
 
@@ -61,6 +67,7 @@ public class MenuSwitchChecks implements FabricClientGameTest {
 
             switchesKeepTheChestOpen(ctx, server, chest);
             escapeClosesBoth(ctx, server, chest);
+            clickInFlightLandsOnTheNewMenu(ctx, server, chest);
             walkingAwayClosesTheChest(ctx, server, chest);
             tradingComesBackWithItsTrades(ctx, server);
             mountComesBackWhole(ctx, server);
@@ -124,6 +131,47 @@ public class MenuSwitchChecks implements FabricClientGameTest {
             check(player(s).containerMenu == player(s).inventoryMenu, "a menu is still open after Escape");
         });
         check(HEARD.equals(List.of(MenuSwitch.Reason.CLOSED)), "Escape: listener heard " + HEARD);
+    }
+
+    /**
+     * The server switches the player to their inventory while a put-down click, sent from
+     * the chest screen, is still on its way: it lands on the same inventory slot. A stale
+     * click on the chest's own slots, or one after the client has clicked the new menu,
+     * is dropped as vanilla drops it.
+     */
+    private static void clickInFlightLandsOnTheNewMenu(ClientGameTestContext ctx, TestServerContext server, BlockPos chest) {
+        int chestId = openChest(ctx, server, chest);
+        server.runOnServer(s -> {
+            ServerPlayer p = player(s);
+            p.getInventory().setItem(9, ItemStack.EMPTY);
+            p.containerMenu.setCarried(new ItemStack(Items.DIAMOND, 5));
+            check(MenuSwitch.openInventory(p), "openInventory refused a SlotKit client");
+            // The chest menu's slot 27 is the inventory's slot 9, the first above the hotbar.
+            p.connection.handleContainerClick(click(chestId, 27));
+            check(p.inventoryMenu.getCarried().isEmpty(), "the put-down in flight was lost: still carrying " + p.inventoryMenu.getCarried());
+            check(p.getInventory().getItem(9).is(Items.DIAMOND), "the put-down in flight left slot 9 with " + p.getInventory().getItem(9));
+
+            p.inventoryMenu.setCarried(new ItemStack(Items.DIAMOND, 5));
+            p.connection.handleContainerClick(click(chestId, 0));   // the chest's own first slot
+            checkCarried(p.inventoryMenu.getCarried(), "the inventory, after a stale click on the chest's slot");
+            check(MenuSwitch.setAside(p).orElseThrow().getSlot(0).getItem().is(Items.COBBLESTONE), "a stale click reached the chest's slot");
+
+            p.inventoryMenu.setCarried(ItemStack.EMPTY);
+            p.connection.handleContainerClick(click(0, 20));   // the client clicks the inventory: an empty slot, empty cursor
+            p.inventoryMenu.setCarried(new ItemStack(Items.DIAMOND, 5));
+            p.connection.handleContainerClick(click(chestId, 28));
+            checkCarried(p.inventoryMenu.getCarried(), "the inventory, after a chest click that came once the client caught up");
+            p.inventoryMenu.setCarried(ItemStack.EMPTY);
+            p.getInventory().setItem(9, ItemStack.EMPTY);
+        });
+        ctx.waitFor(mc -> mc.gui.screen() instanceof InventoryScreen && mc.player.inventoryMenu.getCarried().isEmpty());
+        ctx.runOnClient(mc -> mc.gui.screen().onClose());
+        server.waitFor(s -> MenuSwitch.setAside(player(s)).isEmpty());
+    }
+
+    private static ServerboundContainerClickPacket click(int containerId, int slot) {
+        return new ServerboundContainerClickPacket(containerId, 0, (short) slot, (byte) 0, ContainerInput.PICKUP,
+                Int2ObjectMaps.emptyMap(), HashedStack.EMPTY);
     }
 
     /** Walking away from the chest while on another tab closes it. */
