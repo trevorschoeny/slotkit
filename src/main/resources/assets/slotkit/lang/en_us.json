@@ -19,7 +19,7 @@
   "slot_operation.menukit.drop.description": "The drop key throws one item out of this slot.",
   "slot_operation.menukit.drop_stack": "Drop stack",
   "slot_operation.menukit.drop_stack.description": "Control plus the drop key throws the whole stack out of this slot.",
-  "slot_operation.menukit.world_pickup": "Inventory insert",
+  "slot_operation.menukit.world_pickup": "Item pickup",
   "slot_operation.menukit.world_pickup.description": "Items given to the inventory can land in this slot: picked up from the ground, from /give or pick block, or returned by a crafting grid. Includes topping up a stack.",
   "slot_group.menukit.player_inventory": "Inventory",
   "slot_group.menukit.player_hotbar": "Hotbar",
