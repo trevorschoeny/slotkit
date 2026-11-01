@@ -6,6 +6,16 @@
 - A mount's inventory (a horse, donkey, mule, llama, camel or nautilus) can be set aside and brought back by `MenuSwitch`, instead of closing on the first switch.
 - A click sent just before the server switched menus with `MenuSwitch` landed nowhere; on one of the player's inventory slots it now lands on the same slot in the new menu.
 - The world pickup slot operation's name read "Inventory insert"; it's "Item pickup" now.
+- A menu set aside by `MenuSwitch` now closes when the player dies, respawns, leaves the End or disconnects, so a crafting grid behind it hands its items back.
+- Breaking a block emptied its `blockScoped` storage only onto the ground; a menu still open on it could hand every item out a second time.
+- Restoring from a grave overwrote whatever the player had put in the slot since; the grave's stack now goes elsewhere and the slot's item stays.
+- A grave took every stack from a player attachment; it now leaves `KEEP` stacks with the player and destroys `DESTROY` ones, as a death without a grave does.
+- An `EphemeralStorage` group in a custom menu lost its items when the menu closed; they go back to the player, as a crafting grid's do.
+- A panel the server shows arrived with empty slots until something changed them.
+- A death kept a player's active slot counts instead of starting them over, and leaving the End could lose them.
+- A slot state value set by server code with `set(player, key, index, value)`, or on a placed container with no player, never reached the clients viewing it; the second wasn't stored either.
+- A player's slot state values went missing on the client after a dimension change.
+- A dispenser or dropper whose random pick landed on a gated slot fired nothing, even with other slots ready.
 
 ## 2.2.1
 
