@@ -92,10 +92,10 @@ public final class PlayerSlotCapture {
 
     /**
      * Writes a captured stack back to its slot on grave collect. Does nothing and
-     * returns false if the attachment id is unknown or the index is out of range,
-     * meaning the slot layout changed since capture (the consumer reconfigured or
-     * removed the attachment). The caller handles that overflow, for example by
-     * dropping it.
+     * returns false if the slot holds something new since death, or if the attachment
+     * id is unknown or the index is out of range, meaning the slot layout changed since
+     * capture (the consumer reconfigured or removed the attachment). The caller
+     * handles that overflow, for example by dropping it.
      *
      * @return true if restored to the slot; false if it couldn't be placed
      */
@@ -118,8 +118,9 @@ public final class PlayerSlotCapture {
     }
 
     /**
-     * Restores a whole capture. Returns the stacks that could not be placed (unknown
-     * attachment or out-of-range index) so the caller can drop them.
+     * Restores a whole capture. Returns the stacks that could not be placed (an
+     * occupied slot, an unknown attachment or an out-of-range index) so the caller can
+     * drop them.
      */
     public static List<ItemStack> restoreAll(ServerPlayer player, List<CapturedSlot> slots) {
         List<ItemStack> overflow = new ArrayList<>();

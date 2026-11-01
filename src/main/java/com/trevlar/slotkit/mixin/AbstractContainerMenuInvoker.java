@@ -38,6 +38,10 @@ public interface AbstractContainerMenuInvoker {
     @Invoker("addSlot")
     Slot sk$addSlot(Slot slot);
 
+    /** Calls vanilla's {@code resetQuickCraft}, ending a drag in progress. */
+    @Invoker("resetQuickCraft")
+    void sk$resetQuickCraft();
+
     /**
      * Calls vanilla's {@code moveItemStackTo}, the fill-partial-stacks-then-empty-slots
      * routine vanilla's own {@code quickMoveStack} uses. Exposed so a menu's own
@@ -46,10 +50,6 @@ public interface AbstractContainerMenuInvoker {
      * reimplementing the merge. Taken over from inventory-max's hand-built version so
      * consumers don't each declare it.
      */
-    /** Calls vanilla's {@code resetQuickCraft}, ending a drag in progress. */
-    @Invoker("resetQuickCraft")
-    void sk$resetQuickCraft();
-
     @Invoker("moveItemStackTo")
     boolean sk$moveItemStackTo(ItemStack stack, int startIndex, int endIndex,
                                     boolean reverseDirection);
