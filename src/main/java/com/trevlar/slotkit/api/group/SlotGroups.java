@@ -17,6 +17,7 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 import com.trevlar.slotkit.api.window.SlotRef;
 
@@ -183,6 +184,40 @@ public final class SlotGroups {
         }
         if (ref.container() instanceof Inventory) return playerInventoryGroup(ref.containerSlot());
         return null;
+    }
+
+    /**
+     * Whether any slot in {@code ref}'s group already holds the same item as
+     * {@code incoming} ({@link ItemStack#isSameItem}; components may differ), the
+     * slot itself included. On a menu that is the group's slots on the menu; with no
+     * menu, the group's slots in the player's inventory. A slot in no known group
+     * counts its own container as the group. {@code false} for an empty
+     * {@code incoming}. For a put veto such as "only where this item already is".
+     * Since 2.3.0.
+     */
+    public static boolean holds(SlotRef ref, ItemStack incoming) {
+        Objects.requireNonNull(ref, "ref");
+        Objects.requireNonNull(incoming, "incoming");
+        if (incoming.isEmpty()) return false;
+        SlotGroupId group = of(ref);
+        // ponytail: a scan of one menu's slots per question; index by group if a hot path ever shows it
+        if (group != null && ref.menu() != null) {
+            for (Slot s : ref.menu().slots) {
+                if (s.hasItem() && ItemStack.isSameItem(s.getItem(), incoming)
+                        && group.equals(of(SlotRef.of(ref.menu(), s, ref.player())))) return true;
+            }
+            return false;
+        }
+        if (group != null && ref.container() instanceof Inventory inv) {
+            for (int i = 0; i < inv.getContainerSize(); i++) {
+                if (ItemStack.isSameItem(inv.getItem(i), incoming) && group.equals(playerInventoryGroup(i))) return true;
+            }
+            return false;
+        }
+        for (int i = 0; i < ref.container().getContainerSize(); i++) {
+            if (ItemStack.isSameItem(ref.container().getItem(i), incoming)) return true;
+        }
+        return false;
     }
 
     /** Vanilla's layout of the player's own inventory: hotbar, main grid, armor, offhand. */

@@ -6,6 +6,7 @@ import com.trevlar.slotkit.api.storage.PlayerStorage;
 import com.trevlar.slotkit.api.slot.CreatedSlotGroup;
 import com.trevlar.slotkit.api.window.BehaviorKeys;
 import com.trevlar.slotkit.api.window.SlotOperations;
+import com.trevlar.slotkit.api.window.SlotRef;
 
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
@@ -64,7 +65,8 @@ final class QuickMoveRouter {
                 if (group == sourceGroup) continue;
                 CreatedSlot rep = reps.get(group);
                 if (rep == null) continue;
-                if (!SlotOperations.allowsGesture(menu, rep, player, BehaviorKeys.SHIFT_CLICK_IN)) continue;
+                if (!SlotOperations.allowsPutGesture(SlotRef.of(menu, rep, player), BehaviorKeys.SHIFT_CLICK_IN,
+                        workingStack)) continue;
                 if (!rep.mayPlace(workingStack)) continue;
                 candidates.add(group);
             }

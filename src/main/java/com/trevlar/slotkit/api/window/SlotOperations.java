@@ -14,6 +14,7 @@ import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 import org.jetbrains.annotations.ApiStatus;
 import org.jspecify.annotations.Nullable;
@@ -138,6 +139,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * A veto that decides by slot group registers as a {@link GroupVeto}: it is handed
  * the slot's group, resolved once per question ({@link SlotGroups#of}), rather than
  * working it out again on every slot of every click.
+ *
+ * <p>A veto that needs to see the item coming in registers as a {@link PutVeto}.
+ * It is asked only by {@link #allowsPut}, which every put seam uses with the
+ * stack it is about to place: "only into a container that already holds this
+ * item" is a put veto.
  *
  * <h2>Simulated clicks</h2>
  *
@@ -512,14 +518,28 @@ public final class SlotOperations {
         boolean denies(SlotRef slot, @Nullable SlotGroupId group, BehaviorKey<?> operation);
     }
 
+    /**
+     * A veto on putting a particular item into a slot, handed the stack about to
+     * land ({@code incoming}, never empty; read it, don't change it) along with the
+     * slot's group as a {@link GroupVeto} gets it. Asked only by
+     * {@link #allowsPut}, which vanilla's put seams use: a click place, shift-click
+     * in, drag-fill, a world pickup, and a click a mod sends under {@link #as}.
+     * Swaps ask it on both slots. Since 2.3.0.
+     */
+    @FunctionalInterface
+    public interface PutVeto {
+        boolean denies(SlotRef slot, @Nullable SlotGroupId group, BehaviorKey<?> operation, ItemStack incoming);
+    }
+
     private static final List<GroupVeto> VETOES = new CopyOnWriteArrayList<>();
+    private static final List<PutVeto> PUT_VETOES = new CopyOnWriteArrayList<>();
     /** Whether any veto asked for the group, so a question with none never resolves it. */
     private static volatile boolean anyGroupVeto = false;
 
     // A veto that throws is a consumer's bug, and a click must not crash on it: it
     // is logged once and skipped from then on, so the log says which one and the
     // game keeps working with that veto silent.
-    private static final Set<GroupVeto> BROKEN = Collections.synchronizedSet(
+    private static final Set<Object> BROKEN = Collections.synchronizedSet(
             Collections.newSetFromMap(new IdentityHashMap<>()));
 
     /**
@@ -557,6 +577,35 @@ public final class SlotOperations {
     @Deprecated(since = "2.1.0", forRemoval = true)
     public static void veto(GroupVeto veto) {
         veto(ModeScope.BOTH, veto);
+    }
+
+    /**
+     * Registers a {@link PutVeto} that applies while the acting player's mode is in
+     * {@code scope}, read per question as {@link #veto(ModeScope, Veto)} is. Since 2.3.0.
+     */
+    public static void vetoPut(ModeScope scope, PutVeto veto) {
+        com.trevlar.menukit.api.Declarations.requireOpen("SlotOperations.vetoPut");
+        Objects.requireNonNull(scope, "scope");
+        Objects.requireNonNull(veto, "veto");
+        PUT_VETOES.add(scope == ModeScope.BOTH ? veto : new ScopedPutVeto(scope, veto));
+    }
+
+    /** {@link #vetoPut(ModeScope, PutVeto)} in both modes. Since 2.3.0. */
+    public static void vetoPut(PutVeto veto) {
+        vetoPut(ModeScope.BOTH, veto);
+    }
+
+    /** A put veto that only speaks while the acting player's mode is in its scope. */
+    private record ScopedPutVeto(ModeScope scope, PutVeto veto) implements PutVeto {
+        @Override
+        public boolean denies(SlotRef slot, @Nullable SlotGroupId group, BehaviorKey<?> operation, ItemStack incoming) {
+            return scope.includes(slot.player()) && veto.denies(slot, group, operation, incoming);
+        }
+
+        @Override
+        public String toString() {
+            return veto + " (" + scope + ")";
+        }
     }
 
     private static void register(ModeScope scope, GroupVeto veto) {
@@ -615,20 +664,47 @@ public final class SlotOperations {
      * vanilla's and a mod's own, asks this before touching a slot.
      */
     public static boolean allows(SlotRef ref, BehaviorKey<TriBool> operation) {
+        return allows(ref, operation, ItemStack.EMPTY);
+    }
+
+    /**
+     * {@link #allows}, then every {@link PutVeto} with the stack about to land.
+     * What a put asks when it knows the item; an empty {@code incoming} puts nothing,
+     * so no put veto is asked. Since 2.3.0.
+     */
+    public static boolean allowsPut(SlotRef ref, BehaviorKey<TriBool> operation, ItemStack incoming) {
+        return allows(ref, operation, Objects.requireNonNull(incoming, "incoming"));
+    }
+
+    private static boolean allows(SlotRef ref, BehaviorKey<TriBool> operation, ItemStack incoming) {
         Objects.requireNonNull(ref, "ref");
         Objects.requireNonNull(operation, "operation");
         if (!cascade(ref, operation)) return false;
-        SlotGroupId group = anyGroupVeto ? SlotGroups.of(ref) : null;   // once per question
+        boolean askPut = !incoming.isEmpty() && !PUT_VETOES.isEmpty();
+        SlotGroupId group = anyGroupVeto || askPut ? SlotGroups.of(ref) : null;   // once per question
         for (GroupVeto veto : VETOES) {
             if (BROKEN.contains(veto)) continue;
             try {
                 if (veto.denies(ref, group, operation)) return false;
             } catch (RuntimeException e) {
-                BROKEN.add(veto);
-                LOGGER.error("[SlotKit] a slot operation veto threw and is disabled from here on: {}", veto, e);
+                disable(veto, e);
+            }
+        }
+        if (!askPut) return true;
+        for (PutVeto veto : PUT_VETOES) {
+            if (BROKEN.contains(veto)) continue;
+            try {
+                if (veto.denies(ref, group, operation, incoming)) return false;
+            } catch (RuntimeException e) {
+                disable(veto, e);
             }
         }
         return true;
+    }
+
+    private static void disable(Object veto, RuntimeException e) {
+        BROKEN.add(veto);
+        LOGGER.error("[SlotKit] a slot operation veto threw and is disabled from here on: {}", veto, e);
     }
 
     /** {@link #allows(SlotRef, BehaviorKey)} for a slot on an open menu. */
@@ -652,12 +728,23 @@ public final class SlotOperations {
      */
     @ApiStatus.Internal
     public static boolean allowsGesture(SlotRef ref, BehaviorKey<TriBool> gesture) {
+        return allowsPutGesture(ref, gesture, ItemStack.EMPTY);
+    }
+
+    /**
+     * {@link #allowsGesture} for a put seam that knows the stack about to land:
+     * the put vetoes judge it along with the operation the gesture serves. Library
+     * seams only; a mod asks {@link #allowsPut}. Since 2.3.0.
+     */
+    @ApiStatus.Internal
+    public static boolean allowsPutGesture(SlotRef ref, BehaviorKey<TriBool> gesture, ItemStack incoming) {
+        Objects.requireNonNull(incoming, "incoming");
         ClickTags.Tag tag = ClickTags.current();
         List<BehaviorKey<TriBool>> carried = tag == null ? null : ClickTags.carriedFor(tag, gesture);
-        if (carried == null) return allows(ref, gesture);
+        if (carried == null) return allows(ref, gesture, incoming);
         if (!cascade(ref, gesture)) return false; // the slot's author judges the gesture
         for (BehaviorKey<TriBool> op : carried) {
-            if (!allows(ref, op)) return false;   // everyone else judges the operation it serves
+            if (!allows(ref, op, incoming)) return false;   // everyone else judges the operation it serves
         }
         return true;
     }

@@ -1,3 +1,11 @@
+## 2.3.0
+
+#### Added
+
+- `SlotOperations.PutVeto`, registered with `vetoPut`: a veto handed the stack about to land, so a rule can refuse a put by item ("only into a container that already holds it"). Every put seam asks it: click place, shift-click in, drag-fill, number-key and offhand swaps (both slots), world pickup, and clicks a mod sends under `as(...)`.
+- `SlotOperations.allowsPut(ref, operation, incoming)`: `allows`, then every put veto with the incoming stack.
+- `SlotGroups.holds(ref, incoming)`: whether any slot in that slot's group already holds the same item, on the open menu or, with none, in the player's inventory.
+
 ## 2.2.2
 
 #### Fixed

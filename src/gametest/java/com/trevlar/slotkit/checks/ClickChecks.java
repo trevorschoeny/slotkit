@@ -2,6 +2,9 @@ package com.trevlar.slotkit.checks;
 
 import com.trevlar.menukit.api.panel.ModeScope;
 import com.trevlar.slotkit.api.group.SlotGroupCategory;
+import com.trevlar.slotkit.api.group.SlotGroups;
+import com.trevlar.slotkit.api.window.BehaviorKey;
+import com.trevlar.slotkit.api.window.SlotRef;
 import com.trevlar.slotkit.api.menu.MenuSwitch;
 import com.trevlar.slotkit.api.slot.CreatedSlot;
 import com.trevlar.slotkit.api.slot.ParityGroup;
@@ -47,6 +50,8 @@ import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
@@ -54,7 +59,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * keeps the cursor stack, a switch from inside a click doesn't mute the set-aside menu,
  * a take veto holds on an output slot, and inventory gates hold on a number-key swap, a
  * drop key and an item pickup, and a created shulker-storage group refuses a shulker box
- * by click, number key, shift-click and drag, as vanilla's shulker box slots do.
+ * by click, number key, shift-click and drag, as vanilla's shulker box slots do. A put
+ * veto sees the incoming stack at every put seam, and "only where this item already is"
+ * (SlotGroups.holds) holds by click, number key and drag; holds answers for a menu group
+ * and for the player's inventory with no menu.
  */
 public class ClickChecks implements ModInitializer, FabricClientGameTest {
 
@@ -63,6 +71,9 @@ public class ClickChecks implements ModInitializer, FabricClientGameTest {
     static volatile boolean on;
     static final int NO_PICKUP = 7;   // hotbar slot nothing leaves
     static final int STICKS_ONLY = 8; // hotbar slot only sticks enter
+    // The put veto below speaks only while this is set; it records what each put operation was handed.
+    static volatile boolean matching;
+    static final Map<BehaviorKey<?>, ItemStack> SEEN = new ConcurrentHashMap<>();
     static StorageAttachment.PlayerStorageAttachment<net.minecraft.core.NonNullList<ItemStack>> BOX;
 
     @Override
@@ -77,6 +88,12 @@ public class ClickChecks implements ModInitializer, FabricClientGameTest {
                 .count(3).storage(p -> BOX.bind(p)).shiftClickIn(true));
         SlotOperations.veto(ModeScope.BOTH, (ref, op) -> on && op == BehaviorKeys.CLICK_TAKE
                 && ref.slot() instanceof net.minecraft.world.inventory.ResultSlot);
+        // Matching, as Inventory Plus's Reach checklists use it: the box takes only an item it already holds.
+        SlotOperations.vetoPut(ModeScope.BOTH, (ref, group, op, incoming) -> {
+            if (!matching) return false;
+            if (group != null) SEEN.put(op, incoming.copy());
+            return isBox(ref.slot()) && !SlotGroups.holds(ref, incoming);
+        });
     }
 
     private static SlotGate gate(boolean keepsItem, boolean sticksOnly) {
@@ -105,6 +122,13 @@ public class ClickChecks implements ModInitializer, FabricClientGameTest {
                 shulkerStorageRefusesShulkers(server);
             } finally {
                 on = false;
+            }
+            matching = true;
+            try {
+                putVetoSeesTheIncomingStack(server);
+                holdsAnswersForMenuAndInventory(server);
+            } finally {
+                matching = false;
             }
         }
         if (!FAILURES.isEmpty()) throw new AssertionError(String.join("; ", FAILURES));
@@ -255,6 +279,99 @@ public class ClickChecks implements ModInitializer, FabricClientGameTest {
             check(box.getItem().is(Items.DIRT), "a click didn't put dirt in a shulker-storage slot: " + box.getItem());
             box.set(ItemStack.EMPTY);
             menu.setCarried(ItemStack.EMPTY);
+            inv.clearContent();
+        });
+    }
+
+    private static boolean isBox(Slot slot) {
+        return slot instanceof CreatedSlot c && c.panelId().equals("slotkit_checks:box:box");
+    }
+
+    private static void seen(BehaviorKey<?> op, net.minecraft.world.item.Item item, String seam) {
+        ItemStack got = SEEN.remove(op);
+        check(got != null && got.is(item), "a put veto at the " + seam + " seam was handed " + got + ", not " + item);
+    }
+
+    // Every put seam hands the put veto the stack about to land; Matching refuses dirt and lets cobblestone in.
+    private static void putVetoSeesTheIncomingStack(TestServerContext server) {
+        server.runOnServer(s -> {
+            ServerPlayer p = player(s);
+            Inventory inv = p.getInventory();
+            inv.clearContent();
+            AbstractContainerMenu menu = p.inventoryMenu;
+            List<Slot> box = menu.slots.stream().filter(ClickChecks::isBox).toList();
+            if (box.size() < 3) { check(false, "the box group isn't on the inventory menu"); return; }
+            SEEN.clear();
+
+            // click
+            menu.setCarried(new ItemStack(Items.DIRT));
+            menu.clicked(box.get(0).index, 0, ContainerInput.PICKUP, p);
+            seen(BehaviorKeys.CLICK_PUT, Items.DIRT, "click");
+            check(!box.get(0).hasItem(), "Matching let a click put dirt in an empty box");
+            box.get(0).set(new ItemStack(Items.COBBLESTONE));
+            menu.setCarried(new ItemStack(Items.COBBLESTONE, 5));
+            menu.clicked(box.get(1).index, 0, ContainerInput.PICKUP, p);
+            check(box.get(1).getItem().is(Items.COBBLESTONE), "Matching refused cobblestone in a box that holds cobblestone");
+            menu.setCarried(ItemStack.EMPTY);
+
+            // number key
+            inv.setItem(0, new ItemStack(Items.DIRT));
+            menu.clicked(box.get(2).index, 0, ContainerInput.SWAP, p);
+            seen(BehaviorKeys.HOTBAR_SWAP, Items.DIRT, "number-key");
+            check(!box.get(2).hasItem(), "Matching let a number-key swap put dirt in the box");
+            inv.setItem(0, ItemStack.EMPTY);
+
+            // drag
+            menu.setCarried(new ItemStack(Items.DIRT));
+            menu.clicked(-999, AbstractContainerMenu.getQuickcraftMask(0, 0), ContainerInput.QUICK_CRAFT, p);
+            menu.clicked(box.get(2).index, AbstractContainerMenu.getQuickcraftMask(1, 0), ContainerInput.QUICK_CRAFT, p);
+            menu.clicked(-999, AbstractContainerMenu.getQuickcraftMask(2, 0), ContainerInput.QUICK_CRAFT, p);
+            seen(BehaviorKeys.DRAG_FILL, Items.DIRT, "drag");
+            check(!box.get(2).hasItem(), "Matching let a drag put dirt in the box");
+            menu.setCarried(ItemStack.EMPTY);
+
+            // shift-click
+            inv.setItem(0, new ItemStack(Items.DIRT));
+            menu.clicked(36, 0, ContainerInput.QUICK_MOVE, p);
+            seen(BehaviorKeys.SHIFT_CLICK_IN, Items.DIRT, "shift-click");
+            check(box.stream().noneMatch(b -> b.getItem().is(Items.DIRT)), "Matching let a shift-click put dirt in the box");
+            inv.clearContent();
+
+            // a mod's own click, sent as an operation: the carried put operation is judged with the stack
+            menu.setCarried(new ItemStack(Items.DIRT));
+            SlotOperations.as(BehaviorKeys.COLLECT, BehaviorKeys.DRAG_FILL,
+                    () -> menu.clicked(box.get(2).index, 0, ContainerInput.PICKUP, p));
+            seen(BehaviorKeys.DRAG_FILL, Items.DIRT, "as(...) click");
+            check(!box.get(2).hasItem(), "Matching let a mod's own click put dirt in the box");
+            menu.setCarried(ItemStack.EMPTY);
+
+            // world pickup
+            inv.add(new ItemStack(Items.APPLE));
+            seen(BehaviorKeys.INVENTORY_INSERT, Items.APPLE, "world pickup");
+
+            for (Slot b : box) b.set(ItemStack.EMPTY);
+            inv.clearContent();
+        });
+    }
+
+    private static void holdsAnswersForMenuAndInventory(TestServerContext server) {
+        server.runOnServer(s -> {
+            ServerPlayer p = player(s);
+            Inventory inv = p.getInventory();
+            inv.clearContent();
+            AbstractContainerMenu menu = p.inventoryMenu;
+            List<Slot> box = menu.slots.stream().filter(ClickChecks::isBox).toList();
+            if (box.size() < 3) return;
+            box.get(0).set(new ItemStack(Items.COBBLESTONE));
+            SlotRef emptyBoxSlot = SlotRef.of(menu, box.get(2), p);
+            check(SlotGroups.holds(emptyBoxSlot, new ItemStack(Items.COBBLESTONE)), "holds missed cobblestone elsewhere in the box");
+            check(!SlotGroups.holds(emptyBoxSlot, new ItemStack(Items.DIRT)), "holds found dirt in a box with none");
+            box.get(0).set(ItemStack.EMPTY);
+
+            // no menu: the hotbar holds stone, the main inventory doesn't
+            inv.setItem(3, new ItemStack(Items.STONE));
+            check(SlotGroups.holds(SlotRef.of(inv, 5, p), new ItemStack(Items.STONE)), "holds missed stone in the hotbar with no menu");
+            check(!SlotGroups.holds(SlotRef.of(inv, 20, p), new ItemStack(Items.STONE)), "holds counted the hotbar's stone as the main inventory's");
             inv.clearContent();
         });
     }

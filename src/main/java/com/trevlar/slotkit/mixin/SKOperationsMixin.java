@@ -63,9 +63,10 @@ public abstract class SKOperationsMixin {
         if (ClickOperations.refuses(self, slotId, button, input, player)) ci.cancel();
     }
 
-    private boolean sk$allowsShiftClickIn(Slot slot) {
+    private boolean sk$allowsShiftClickIn(Slot slot, ItemStack incoming) {
         AbstractContainerMenu self = (AbstractContainerMenu) (Object) this;
-        return SlotOperations.allowsGesture(SlotRef.of(self, slot, ActingPlayer.current()), BehaviorKeys.SHIFT_CLICK_IN);
+        return SlotOperations.allowsPutGesture(SlotRef.of(self, slot, ActingPlayer.current()),
+                BehaviorKeys.SHIFT_CLICK_IN, incoming);
     }
 
     /** Empty pass: a refused destination is unplaceable. The gate answers inside {@code mayPlace} itself. */
@@ -74,7 +75,7 @@ public abstract class SKOperationsMixin {
             at = @At(value = "INVOKE",
                     target = "Lnet/minecraft/world/inventory/Slot;mayPlace(Lnet/minecraft/world/item/ItemStack;)Z"))
     private boolean sk$shiftClickInPlace(Slot slot, ItemStack stack, Operation<Boolean> original) {
-        if (!sk$allowsShiftClickIn(slot)) return false;
+        if (!sk$allowsShiftClickIn(slot, stack)) return false;
         return original.call(slot, stack);
     }
 
@@ -92,7 +93,7 @@ public abstract class SKOperationsMixin {
     private ItemStack sk$shiftClickInMerge(Slot slot, Operation<ItemStack> original,
                                            @Local(argsOnly = true) ItemStack movingStack) {
         AbstractContainerMenu self = (AbstractContainerMenu) (Object) this;
-        if (!sk$allowsShiftClickIn(slot)) return ItemStack.EMPTY;
+        if (!sk$allowsShiftClickIn(slot, movingStack)) return ItemStack.EMPTY;
         if (!SlotGating.mayPlaceOnMove(self, slot, movingStack)) return ItemStack.EMPTY;
         return original.call(slot);
     }
@@ -108,7 +109,8 @@ public abstract class SKOperationsMixin {
     @Inject(method = "canDragTo", at = @At("HEAD"), cancellable = true)
     private void sk$dragFill(Slot slot, CallbackInfoReturnable<Boolean> cir) {
         AbstractContainerMenu self = (AbstractContainerMenu) (Object) this;
-        if (!SlotOperations.allowsGesture(SlotRef.of(self, slot, ActingPlayer.current()), BehaviorKeys.DRAG_FILL)) {
+        if (!SlotOperations.allowsPutGesture(SlotRef.of(self, slot, ActingPlayer.current()), BehaviorKeys.DRAG_FILL,
+                self.getCarried())) {
             cir.setReturnValue(false);
         }
     }

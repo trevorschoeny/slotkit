@@ -64,8 +64,11 @@ public abstract class SKInventoryInsertMixin {
     // The insert operation, then the slot's own gate, which vanilla's add never asks.
     private boolean sk$allows(int index, @Nullable ItemStack stack) {
         Inventory self = (Inventory) (Object) this;
-        if (!SlotOperations.allows(SlotRef.of(self, index, player), BehaviorKeys.INVENTORY_INSERT)) return false;
-        if (stack == null || stack.isEmpty()) return true;
+        ItemStack incoming = stack == null ? ItemStack.EMPTY : stack;
+        if (!SlotOperations.allowsPut(SlotRef.of(self, index, player), BehaviorKeys.INVENTORY_INSERT, incoming)) {
+            return false;
+        }
+        if (incoming.isEmpty()) return true;
         Slot slot = SlotGating.inventorySlot(player, index);
         return slot == null || SlotGating.mayPlaceAt(slot, stack);
     }

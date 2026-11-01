@@ -69,7 +69,8 @@ public final class ClickOperations {
                             || !slot.mayPlace(carried));
                 boolean puts = !carried.isEmpty();
                 yield (takes && !allows(menu, slot, player, BehaviorKeys.CLICK_TAKE))
-                        || (puts && !allows(menu, slot, player, BehaviorKeys.CLICK_PUT));
+                        || (puts && !SlotOperations.allowsPutGesture(SlotRef.of(menu, slot, player),
+                                BehaviorKeys.CLICK_PUT, carried));
             }
             case QUICK_MOVE -> !allows(menu, slot, player, BehaviorKeys.SHIFT_CLICK_OUT);
             case THROW -> !allows(menu, slot, player, button == 0 ? BehaviorKeys.DROP : BehaviorKeys.DROP_STACK);
@@ -78,12 +79,15 @@ public final class ClickOperations {
                         : Inventory.isHotbarSlot(button) ? BehaviorKeys.HOTBAR_SWAP
                         : null; // vanilla ignores any other button, and so does this
                 // Vanilla asks only the clicked slot; the inventory slot's gate is asked here.
-                yield op != null && (!allows(menu, slot, player, op)
-                        || !SlotOperations.allowsGesture(SlotRef.inventory(menu, player, button), op)
+                // Each side receives the other's stack.
+                yield op != null && (!SlotOperations.allowsPutGesture(SlotRef.of(menu, slot, player), op,
+                                player.getInventory().getItem(button))
+                        || !SlotOperations.allowsPutGesture(SlotRef.inventory(menu, player, button), op, slot.getItem())
                         || !SlotGating.mayExchangeInInventory(player, button, slot.getItem()));
             }
             case QUICK_CRAFT -> AbstractContainerMenu.getQuickcraftHeader(button) == 1
-                    && !allows(menu, slot, player, BehaviorKeys.DRAG_FILL);
+                    && !SlotOperations.allowsPutGesture(SlotRef.of(menu, slot, player), BehaviorKeys.DRAG_FILL,
+                            menu.getCarried());
             default -> false;
         };
     }

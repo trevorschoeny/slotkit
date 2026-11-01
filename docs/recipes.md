@@ -437,6 +437,19 @@ Result: every operation in the game, vanilla's and any other mod's, calls `SlotO
 
 On a vanilla server the veto still holds for the client's own clicks: the client does not send a click the veto refuses.
 
+## Refuse a put by the item coming in
+
+Needs: SlotKit 2.3.0. Call at common init.
+
+```java
+SlotOperations.vetoPut(ModeScope.BOTH, (ref, group, op, incoming) ->
+        op == BehaviorKeys.INVENTORY_INSERT
+                && MySettings.matchingOnly(group)
+                && !SlotGroups.holds(ref, incoming));
+```
+
+Result: a world pickup lands only in a group that already holds that item, and then fills any empty slot in it, so one cobblestone in a box lets pickups fill the box. A `PutVeto` is a veto that is also handed the stack about to land. Every put SlotKit runs asks it through `SlotOperations.allowsPut`: a click place, shift-click in, drag-fill, a number-key or offhand swap (on both slots), a world pickup, and a click a mod sends under `SlotOperations.as`. `SlotGroups.holds` looks at the group's slots on the open menu, or in the player's inventory when no menu is open. A mod that puts items itself asks `allowsPut` with the stack before it acts.
+
 ## Add an operation of your own
 
 Needs: SlotKit, client tier. Define at common init, and check before acting.
