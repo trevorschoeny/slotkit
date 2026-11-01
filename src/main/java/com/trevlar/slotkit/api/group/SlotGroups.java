@@ -200,7 +200,7 @@ public final class SlotGroups {
         Objects.requireNonNull(incoming, "incoming");
         if (incoming.isEmpty()) return false;
         SlotGroupId group = of(ref);
-        // ponytail: a scan of one menu's slots per question; index by group if a hot path ever shows it
+        // Scans the menu's slots on every call. Index slots by group if a hot path ever needs it.
         if (group != null && ref.menu() != null) {
             for (Slot s : ref.menu().slots) {
                 if (s.hasItem() && ItemStack.isSameItem(s.getItem(), incoming)

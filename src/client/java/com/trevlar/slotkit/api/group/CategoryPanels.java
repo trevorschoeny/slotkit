@@ -50,9 +50,9 @@ public final class CategoryPanels {
     /**
      * How many groups of one category get a panel at once on one screen.
      */
-    // ponytail: a fixed pool, since MenuKit builds a screen's anchor hosts when it opens and
-    // groups come later; a fifth shown group of one category goes without. Upgrade path: an
-    // anchor with any number of boxes in MenuKit.
+    // A fixed pool, since MenuKit builds a screen's anchor hosts when it opens and
+    // groups come later; a fifth shown group of one category goes without. To lift it, MenuKit needs an
+    // anchor with any number of boxes.
     public static final int MAX_SHOWN = 4;
 
     /** Where one of a category's panels goes, and which group it is on. */
