@@ -368,6 +368,20 @@ public final class MenuSwitch {
     @ApiStatus.Internal
     public static void left(ServerPlayer player) {
         closeAside(player, Reason.LEFT);
+        LEFT.remove(player);
+    }
+
+    /**
+     * The player's entity is leaving its level: a dimension change, a respawn (which
+     * replaces the entity), the End's exit, or leaving the server. A respawned or
+     * departed entity never ticks again, so its set-aside menu closes now or never
+     * (a crafting grid's items would be lost), and this class lets go of it. Each map
+     * entry's menu holds its player, so a weak key alone never frees it.
+     */
+    @ApiStatus.Internal
+    public static void removed(ServerPlayer player) {
+        closeAside(player, Reason.INVALID);
+        LEFT.remove(player);
     }
 
     /**
