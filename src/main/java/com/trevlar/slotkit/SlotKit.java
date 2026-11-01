@@ -70,9 +70,9 @@ public class SlotKit implements ModInitializer {
                 com.trevlar.slotkit.network.OpenMenuC2SPayload.TYPE,
                 (payload, context) -> {
                     if (!com.trevlar.slotkit.network.Handshake.hears(context.player())) return;
-                    context.server().execute(() ->
-                            com.trevlar.slotkit.api.menu.CustomMenu.handleOpenRequest(
-                                    context.player(), payload.menuId()));
+                    // Fabric runs this on the server thread already; deferring it again
+                    // could open the menu on a player a respawn just replaced.
+                    com.trevlar.slotkit.api.menu.CustomMenu.handleOpenRequest(context.player(), payload.menuId());
                 });
 
         // The negotiation, in the configuration phase: refuse a client only for a mod
