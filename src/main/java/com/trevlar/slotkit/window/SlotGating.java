@@ -87,6 +87,27 @@ public final class SlotGating {
         return gate == SlotGate.OPEN || GatingContext.judging(slot, () -> gate.mayPlace(stack, GatingContext.current()));
     }
 
+    /**
+     * Whether the gate on {@code player}'s inventory slot {@code index} lets its stack
+     * leave (when it has one) and {@code incoming} arrive (when not empty), for moves that
+     * write the inventory without asking its Slot: a number-key or offhand swap, a drop key.
+     */
+    public static boolean mayExchangeInInventory(Player player, int index, ItemStack incoming) {
+        if (!WindowEngine.hasServerDeclarations()) return true;
+        Slot slot = inventorySlot(player, index);
+        if (slot == null) return true;
+        if (slot.hasItem() && !mayPickupAt(slot, player)) return false;
+        return incoming.isEmpty() || mayPlaceAt(slot, incoming);
+    }
+
+    /** {@code player}'s inventory menu slot showing inventory index {@code index}, or null. */
+    public static @Nullable Slot inventorySlot(Player player, int index) {
+        for (Slot s : player.inventoryMenu.slots) {
+            if (s.container == player.getInventory() && s.getContainerSlot() == index) return s;
+        }
+        return null;
+    }
+
     // Automation: container and index, no menu, no player.
 
     /** Whether automation may insert {@code stack} into a placed container's slot. */

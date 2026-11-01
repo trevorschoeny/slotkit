@@ -5,15 +5,19 @@ import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.trevlar.slotkit.api.window.BehaviorKeys;
 import com.trevlar.slotkit.api.window.SlotOperations;
 import com.trevlar.slotkit.api.window.SlotRef;
+import com.trevlar.slotkit.window.SlotGating;
 
 import net.minecraft.core.NonNullList;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import org.jspecify.annotations.Nullable;
 
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
+import org.spongepowered.asm.mixin.Unique;
 
 /**
  * Enforces {@link BehaviorKeys#INVENTORY_INSERT}: whether an item given to the
@@ -50,22 +54,44 @@ public abstract class SKInventoryInsertMixin {
         throw new AssertionError("shadow");
     }
 
+    // The stack being added, for the slot gates: getFreeSlot doesn't take it. Server thread.
+    @Unique private @Nullable ItemStack sk$incoming;
+
     private boolean sk$allows(int index) {
+        return sk$allows(index, sk$incoming);
+    }
+
+    // The insert operation, then the slot's own gate, which vanilla's add never asks.
+    private boolean sk$allows(int index, @Nullable ItemStack stack) {
         Inventory self = (Inventory) (Object) this;
-        return SlotOperations.allows(SlotRef.of(self, index, player), BehaviorKeys.INVENTORY_INSERT);
+        if (!SlotOperations.allows(SlotRef.of(self, index, player), BehaviorKeys.INVENTORY_INSERT)) return false;
+        if (stack == null || stack.isEmpty()) return true;
+        Slot slot = SlotGating.inventorySlot(player, index);
+        return slot == null || SlotGating.mayPlaceAt(slot, stack);
+    }
+
+    @WrapMethod(method = "add(ILnet/minecraft/world/item/ItemStack;)Z")
+    private boolean sk$noteAdded(int slot, ItemStack stack, Operation<Boolean> original) {
+        ItemStack outer = sk$incoming;
+        sk$incoming = stack;
+        try {
+            return original.call(slot, stack);
+        } finally {
+            sk$incoming = outer;
+        }
     }
 
     @WrapMethod(method = "getSlotWithRemainingSpace")
     private int sk$pickupIntoPartial(ItemStack stack, Operation<Integer> original) {
         int chosen = original.call(stack);
-        if (chosen < 0 || sk$allows(chosen)) return chosen;   // no answer, or an allowed one: stands
+        if (chosen < 0 || sk$allows(chosen, stack)) return chosen;   // no answer, or an allowed one: stands
         int selected = getSelectedSlot();
-        if (hasRemainingSpaceForItem(getItem(selected), stack) && sk$allows(selected)) return selected;
-        if (hasRemainingSpaceForItem(getItem(Inventory.SLOT_OFFHAND), stack) && sk$allows(Inventory.SLOT_OFFHAND)) {
+        if (hasRemainingSpaceForItem(getItem(selected), stack) && sk$allows(selected, stack)) return selected;
+        if (hasRemainingSpaceForItem(getItem(Inventory.SLOT_OFFHAND), stack) && sk$allows(Inventory.SLOT_OFFHAND, stack)) {
             return Inventory.SLOT_OFFHAND;
         }
         for (int i = 0; i < items.size(); i++) {
-            if (hasRemainingSpaceForItem(items.get(i), stack) && sk$allows(i)) return i;
+            if (hasRemainingSpaceForItem(items.get(i), stack) && sk$allows(i, stack)) return i;
         }
         return -1;
     }

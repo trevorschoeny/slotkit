@@ -6,6 +6,7 @@ import com.trevlar.slotkit.api.window.SlotRef;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 import org.jetbrains.annotations.ApiStatus;
 
@@ -42,14 +43,25 @@ public final class PlayerActions {
     /** Whether {@code player} doing {@code action} is refused. False for actions that are not operations. */
     public static boolean refuses(Player player, ServerboundPlayerActionPacket.Action action) {
         return switch (action) {
-            case DROP_ITEM -> !SlotOperations.allowsGesture(selected(player), BehaviorKeys.DROP);
-            case DROP_ALL_ITEMS -> !SlotOperations.allowsGesture(selected(player), BehaviorKeys.DROP_STACK);
+            // These never touch a Slot, so the slots' gates are asked here too.
+            case DROP_ITEM -> !SlotOperations.allowsGesture(selected(player), BehaviorKeys.DROP)
+                    || !SlotGating.mayExchangeInInventory(player, selectedIndex(player), ItemStack.EMPTY);
+            case DROP_ALL_ITEMS -> !SlotOperations.allowsGesture(selected(player), BehaviorKeys.DROP_STACK)
+                    || !SlotGating.mayExchangeInInventory(player, selectedIndex(player), ItemStack.EMPTY);
             case SWAP_ITEM_WITH_OFFHAND -> !SlotOperations.allowsGesture(selected(player), BehaviorKeys.OFFHAND_SWAP)
                     || !SlotOperations.allowsGesture(
                             SlotRef.inventory(player.inventoryMenu, player, Inventory.SLOT_OFFHAND),
-                            BehaviorKeys.OFFHAND_SWAP);
+                            BehaviorKeys.OFFHAND_SWAP)
+                    || !SlotGating.mayExchangeInInventory(player, selectedIndex(player),
+                            player.getInventory().getItem(Inventory.SLOT_OFFHAND))
+                    || !SlotGating.mayExchangeInInventory(player, Inventory.SLOT_OFFHAND,
+                            player.getInventory().getItem(selectedIndex(player)));
             default -> false;
         };
+    }
+
+    private static int selectedIndex(Player player) {
+        return player.getInventory().getSelectedSlot();
     }
 
     private static SlotRef selected(Player player) {

@@ -62,8 +62,11 @@ public final class ClickOperations {
             case PICKUP -> {
                 ItemStack inSlot = slot.getItem();
                 ItemStack carried = menu.getCarried();
+                // Same item on the cursor still takes when the slot refuses it (an output
+                // slot): vanilla then lifts the slot's stack onto the cursor.
                 boolean takes = !inSlot.isEmpty()
-                        && (carried.isEmpty() || !ItemStack.isSameItemSameComponents(inSlot, carried));
+                        && (carried.isEmpty() || !ItemStack.isSameItemSameComponents(inSlot, carried)
+                            || !slot.mayPlace(carried));
                 boolean puts = !carried.isEmpty();
                 yield (takes && !allows(menu, slot, player, BehaviorKeys.CLICK_TAKE))
                         || (puts && !allows(menu, slot, player, BehaviorKeys.CLICK_PUT));
@@ -74,8 +77,10 @@ public final class ClickOperations {
                 BehaviorKey<TriBool> op = button == Inventory.SLOT_OFFHAND ? BehaviorKeys.OFFHAND_SWAP
                         : Inventory.isHotbarSlot(button) ? BehaviorKeys.HOTBAR_SWAP
                         : null; // vanilla ignores any other button, and so does this
+                // Vanilla asks only the clicked slot; the inventory slot's gate is asked here.
                 yield op != null && (!allows(menu, slot, player, op)
-                        || !SlotOperations.allowsGesture(SlotRef.inventory(menu, player, button), op));
+                        || !SlotOperations.allowsGesture(SlotRef.inventory(menu, player, button), op)
+                        || !SlotGating.mayExchangeInInventory(player, button, slot.getItem()));
             }
             case QUICK_CRAFT -> AbstractContainerMenu.getQuickcraftHeader(button) == 1
                     && !allows(menu, slot, player, BehaviorKeys.DRAG_FILL);
