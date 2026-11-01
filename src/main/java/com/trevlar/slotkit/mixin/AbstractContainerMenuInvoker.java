@@ -46,6 +46,10 @@ public interface AbstractContainerMenuInvoker {
      * reimplementing the merge. Taken over from inventory-max's hand-built version so
      * consumers don't each declare it.
      */
+    /** Calls vanilla's {@code resetQuickCraft}, ending a drag in progress. */
+    @Invoker("resetQuickCraft")
+    void sk$resetQuickCraft();
+
     @Invoker("moveItemStackTo")
     boolean sk$moveItemStackTo(ItemStack stack, int startIndex, int endIndex,
                                     boolean reverseDirection);

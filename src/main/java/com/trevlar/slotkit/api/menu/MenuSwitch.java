@@ -165,6 +165,12 @@ public final class MenuSwitch {
         OptionalInt id;
         try {
             id = player.openMenu(next);
+        } catch (RuntimeException e) {
+            // The front is already gone and the cursor stack is only held here: take the
+            // refusal path below, so the player keeps the stack, then let the error through.
+            pendingCarried = null;
+            refused(player, from, leftId, carried);
+            throw e;
         } finally {
             pendingCarried = null;
         }
@@ -172,14 +178,18 @@ public final class MenuSwitch {
             switchedFrom(player, from);
             return id;
         }
-        // Refused: never leave the player on a screen whose menu is gone.
+        refused(player, from, leftId, carried);
+        return id;
+    }
+
+    // Refused: never leave the player on a screen whose menu is gone.
+    private static void refused(ServerPlayer player, AbstractContainerMenu from, int leftId, ItemStack carried) {
         if (back(player, carried)) {
             switchedFrom(player, from);
         } else {
             player.connection.send(new ClientboundContainerClosePacket(leftId));
             if (!carried.isEmpty()) player.getInventory().placeItemBackInInventory(carried, net.minecraft.util.Prediction.SERVER_ONLY);
         }
-        return id;
     }
 
     /**
@@ -240,6 +250,11 @@ public final class MenuSwitch {
         boolean keep = front != player.inventoryMenu && !TABS.contains(front)
                 && opener != null && !ASIDE.containsKey(player);
         if (keep) {
+            // A switch from inside a click (a right-click handler) finds the menu muted
+            // and mid-drag; vanilla unmutes only the menu in front after the click, so
+            // the set-aside one would send nothing after back() until its next click.
+            front.resumeRemoteUpdates();
+            ((com.trevlar.slotkit.mixin.AbstractContainerMenuInvoker) front).sk$resetQuickCraft();
             ASIDE.put(player, new Aside(front, opener, player.level()));
             player.containerMenu = player.inventoryMenu;
         } else {
@@ -330,6 +345,10 @@ public final class MenuSwitch {
     @ApiStatus.Internal
     public static void menuOpened(ServerPlayer player, Component title) {
         AbstractContainerMenu menu = player.containerMenu;
+        // Fabric opens an extended menu with its own payload, carrying data the vanilla
+        // packet can't, and its client side can't be built from the vanilla packet at all.
+        // With no opener recorded it closes normally instead of being set aside.
+        if (menu.getType() instanceof net.fabricmc.fabric.api.menu.v1.ExtendedMenuType) return;
         OPENERS.put(menu, new ClientboundOpenScreenPacket(menu.containerId, menu.getType(), title));
     }
 
