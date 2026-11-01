@@ -9,12 +9,14 @@
       "com.trevlar.slotkit.checks.DedicatedServerChecks",
       "com.trevlar.slotkit.checks.CarriedChecks",
       "com.trevlar.slotkit.checks.RevealChecks",
-      "com.trevlar.slotkit.checks.StorageChecks"
+      "com.trevlar.slotkit.checks.StorageChecks",
+      "com.trevlar.slotkit.checks.ClickChecks"
     ],
     "main": [
       "com.trevlar.slotkit.checks.CarriedChecks",
       "com.trevlar.slotkit.checks.RevealChecks",
-      "com.trevlar.slotkit.checks.StorageChecks"
+      "com.trevlar.slotkit.checks.StorageChecks",
+      "com.trevlar.slotkit.checks.ClickChecks"
     ]
   },
   "custom": {

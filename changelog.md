@@ -16,6 +16,12 @@
 - A slot state value set by server code with `set(player, key, index, value)`, or on a placed container with no player, never reached the clients viewing it; the second wasn't stored either.
 - A player's slot state values went missing on the client after a dimension change.
 - A dispenser or dropper whose random pick landed on a gated slot fired nothing, even with other slots ready.
+- `MenuSwitch` set aside a menu opened through Fabric's `ExtendedMenuProvider`, and `back` then sent an open packet its client can't build it from; such a menu now closes normally on a switch.
+- A `MenuSwitch.open` whose provider threw lost the player's cursor stack.
+- A menu set aside by a switch made from inside a click (a right-click handler) sent no updates after `back` until its next click.
+- A `CLICK_TAKE` veto didn't hold on an output slot (crafting, furnace) when the cursor held the same item.
+- A gate on a player inventory slot didn't hold against a number-key or offhand swap, the drop key, or an item picked up into the inventory.
+- An open request for an unknown custom menu logged a warning on every packet; it's a debug line now.
 
 ## 2.2.1
 
