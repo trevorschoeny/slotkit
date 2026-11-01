@@ -48,10 +48,11 @@ public final class PlayerActions {
                     || !SlotGating.mayExchangeInInventory(player, selectedIndex(player), ItemStack.EMPTY);
             case DROP_ALL_ITEMS -> !SlotOperations.allowsGesture(selected(player), BehaviorKeys.DROP_STACK)
                     || !SlotGating.mayExchangeInInventory(player, selectedIndex(player), ItemStack.EMPTY);
-            case SWAP_ITEM_WITH_OFFHAND -> !SlotOperations.allowsGesture(selected(player), BehaviorKeys.OFFHAND_SWAP)
-                    || !SlotOperations.allowsGesture(
+            case SWAP_ITEM_WITH_OFFHAND -> !SlotOperations.allowsPutGesture(selected(player), BehaviorKeys.OFFHAND_SWAP,
+                            player.getInventory().getItem(Inventory.SLOT_OFFHAND))
+                    || !SlotOperations.allowsPutGesture(
                             SlotRef.inventory(player.inventoryMenu, player, Inventory.SLOT_OFFHAND),
-                            BehaviorKeys.OFFHAND_SWAP)
+                            BehaviorKeys.OFFHAND_SWAP, player.getInventory().getItem(selectedIndex(player)))
                     || !SlotGating.mayExchangeInInventory(player, selectedIndex(player),
                             player.getInventory().getItem(Inventory.SLOT_OFFHAND))
                     || !SlotGating.mayExchangeInInventory(player, Inventory.SLOT_OFFHAND,

@@ -73,6 +73,8 @@ public class ClickChecks implements ModInitializer, FabricClientGameTest {
     static final int STICKS_ONLY = 8; // hotbar slot only sticks enter
     // The put veto below speaks only while this is set; it records what each put operation was handed.
     static volatile boolean matching;
+    // Refuses dirt landing anywhere, with no box involved, while set; used for the no-screen offhand swap.
+    static volatile boolean noDirt;
     static final Map<BehaviorKey<?>, ItemStack> SEEN = new ConcurrentHashMap<>();
     static StorageAttachment.PlayerStorageAttachment<net.minecraft.core.NonNullList<ItemStack>> BOX;
 
@@ -94,6 +96,8 @@ public class ClickChecks implements ModInitializer, FabricClientGameTest {
             if (group != null) SEEN.put(op, incoming.copy());
             return isBox(ref.slot()) && !SlotGroups.holds(ref, incoming);
         });
+        // A Matching-style veto with no box: refuses dirt landing on any slot.
+        SlotOperations.vetoPut(ModeScope.BOTH, (ref, group, op, incoming) -> noDirt && incoming.is(Items.DIRT));
     }
 
     private static SlotGate gate(boolean keepsItem, boolean sticksOnly) {
@@ -129,6 +133,12 @@ public class ClickChecks implements ModInitializer, FabricClientGameTest {
                 holdsAnswersForMenuAndInventory(server);
             } finally {
                 matching = false;
+            }
+            noDirt = true;
+            try {
+                offhandSwapSeesTheIncomingStack(server);
+            } finally {
+                noDirt = false;
             }
         }
         if (!FAILURES.isEmpty()) throw new AssertionError(String.join("; ", FAILURES));
@@ -372,6 +382,21 @@ public class ClickChecks implements ModInitializer, FabricClientGameTest {
             inv.setItem(3, new ItemStack(Items.STONE));
             check(SlotGroups.holds(SlotRef.of(inv, 5, p), new ItemStack(Items.STONE)), "holds missed stone in the hotbar with no menu");
             check(!SlotGroups.holds(SlotRef.of(inv, 20, p), new ItemStack(Items.STONE)), "holds counted the hotbar's stone as the main inventory's");
+            inv.clearContent();
+        });
+    }
+
+    // F with no screen open is a ServerboundPlayerActionPacket, not a menu click: the put veto must
+    // still see the stack each side is about to receive, or Matching is bypassed on this path.
+    private static void offhandSwapSeesTheIncomingStack(TestServerContext server) {
+        server.runOnServer(s -> {
+            ServerPlayer p = player(s);
+            Inventory inv = p.getInventory();
+            inv.clearContent();
+            inv.setItem(inv.getSelectedSlot(), ItemStack.EMPTY);
+            inv.setItem(Inventory.SLOT_OFFHAND, new ItemStack(Items.DIRT));
+            check(PlayerActions.refuses(p, ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND),
+                    "a no-screen offhand swap let dirt land on the hotbar slot without the put veto seeing it");
             inv.clearContent();
         });
     }
