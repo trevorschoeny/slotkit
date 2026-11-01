@@ -84,7 +84,9 @@ public final class LiveItem {
      */
     public boolean isStale() {
         if (stale) return true;
-        if (container.getItem(path.slot()) != top) return stale = true;
+        // Vanilla's removeItem (a hopper, a take) splits the whole stack off and leaves this
+        // same object in the slot, emptied: by identity it hasn't moved, but it's gone.
+        if (container.getItem(path.slot()) != top || top.isEmpty()) return stale = true;
         if (path.depth() == 0 || chainUnchanged()) return false;
         // Something on the chain changed: still fine if the item at the path is the one we know.
         ItemSources.Ref ref = ItemSources.resolve(container, slots, path);

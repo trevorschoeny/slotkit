@@ -88,6 +88,7 @@ public class StorageChecks implements ModInitializer, FabricClientGameTest {
             shownPanelShowsItsItems(ctx, server);
             serverWritesReachTheClient(ctx, server, chest);
             dimensionChangeKeepsTheLock(ctx, server);
+            liveItemTakenByAHopperIsStale(server);
         }
         // Every check runs, so one run names every path that broke.
         if (!FAILURES.isEmpty()) throw new AssertionError(String.join("; ", FAILURES));
@@ -205,6 +206,21 @@ public class StorageChecks implements ModInitializer, FabricClientGameTest {
         server.runCommand("execute in minecraft:the_nether run tp @a 0 120 0");
         ctx.waitTicks(20);
         ctx.runOnClient(mc -> check(LOCK.get(mc.player.inventoryMenu.slots.get(36)), "the lock is gone on the client after changing dimension"));
+    }
+
+    // A hopper takes with removeItem, which splits the stack off and leaves the same object, emptied.
+    private static void liveItemTakenByAHopperIsStale(TestServerContext server) {
+        server.runOnServer(s -> {
+            net.minecraft.world.SimpleContainer chest = new net.minecraft.world.SimpleContainer(3);
+            chest.setItem(0, new ItemStack(Items.SHULKER_BOX));
+            com.trevlar.slotkit.api.item.LiveItem box = com.trevlar.slotkit.api.item.ItemSources.live(chest,
+                    new com.trevlar.slotkit.api.item.ItemPath(com.trevlar.slotkit.api.item.ItemRef.Source.CONTAINER, 0, List.of(), null));
+            check(box != null && !box.isStale(), "the box in the chest didn't bind");
+            if (box == null) return;
+            ItemStack pulled = chest.removeItem(0, 1);   // what a hopper below the chest does
+            check(pulled.is(Items.SHULKER_BOX), "the hopper pulled " + pulled);
+            check(box.isStale(), "the box a hopper took is still live, so its open menu keeps taking items into nothing");
+        });
     }
 
     private static int diamondsNear(MinecraftServer s, BlockPos pos) {

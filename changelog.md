@@ -22,6 +22,7 @@
 - A `CLICK_TAKE` veto didn't hold on an output slot (crafting, furnace) when the cursor held the same item.
 - A gate on a player inventory slot didn't hold against a number-key or offhand swap, the drop key, or an item picked up into the inventory.
 - An open request for an unknown custom menu logged a warning on every packet; it's a debug line now.
+- A `LiveItem` stayed live after a hopper (or any `removeItem`) took its whole stack, so a menu open on that box kept taking items that went nowhere.
 
 ## 2.2.1
 
