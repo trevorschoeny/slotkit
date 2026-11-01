@@ -92,7 +92,14 @@ public final class SlotStateServer {
     /** Writes a tag for a channel, key and slot. False if the owner could not be resolved. */
     public static boolean writeTag(PersistentContainerKey key, @Nullable Player viewer,
                                     Identifier channelId, int containerSlotIndex, Tag value) {
-        SlotStateBag bag = resolveBag(key, viewer, true, isShared(channelId), null);
+        return writeTag(key, viewer, null, channelId, containerSlotIndex, value);
+    }
+
+    /** The write with {@code explicitServer} when there is no viewer to derive the server from. */
+    public static boolean writeTag(PersistentContainerKey key, @Nullable Player viewer,
+                                    @Nullable MinecraftServer explicitServer,
+                                    Identifier channelId, int containerSlotIndex, Tag value) {
+        SlotStateBag bag = resolveBag(key, viewer, true, isShared(channelId), explicitServer);
         if (bag == null) return false;
         bag.write(channelId, containerSlotIndex, value);
         return true;
@@ -101,8 +108,15 @@ public final class SlotStateServer {
     /** Removes the stored entry for a channel, key and slot. Attaches nothing when there is none. */
     public static void clearTag(PersistentContainerKey key, @Nullable Player viewer,
                                 Identifier channelId, int containerSlotIndex) {
-        if (readTag(key, viewer, channelId, containerSlotIndex) == null) return;
-        SlotStateBag bag = resolveBag(key, viewer, true, isShared(channelId), null);
+        clearTag(key, viewer, null, channelId, containerSlotIndex);
+    }
+
+    /** The removal with {@code explicitServer} when there is no viewer to derive the server from. */
+    public static void clearTag(PersistentContainerKey key, @Nullable Player viewer,
+                                @Nullable MinecraftServer explicitServer,
+                                Identifier channelId, int containerSlotIndex) {
+        if (readTag(key, viewer, explicitServer, channelId, containerSlotIndex) == null) return;
+        SlotStateBag bag = resolveBag(key, viewer, true, isShared(channelId), explicitServer);
         if (bag != null) bag.clear(channelId, containerSlotIndex);
     }
 

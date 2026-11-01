@@ -60,6 +60,10 @@ public final class SlotStateHooks {
                 });
         ServerPlayConnectionEvents.JOIN.register((handler, sender, server) ->
                 server.execute(() -> sendPlayerJoinSnapshot(handler.getPlayer())));
+        // A world change gives the client a new player and inventory, and its cache is
+        // keyed by that inventory, so it needs the player's values again.
+        net.fabricmc.fabric.api.entity.event.v1.ServerEntityLevelChangeEvents.AFTER_PLAYER_CHANGE_LEVEL.register(
+                (player, from, to) -> sendPlayerJoinSnapshot(player));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
                 SlotStateWrites.RATE.forget(handler.getPlayer().getUUID()));
     }
@@ -213,8 +217,15 @@ public final class SlotStateHooks {
     public static <T> void broadcastToViewers(ServerPlayer origin, PersistentContainerKey key, int localSlotIndex,
                                               SlotStateChannel<T> channel, T value, boolean includeOrigin) {
         if (origin == null || !(origin.level() instanceof ServerLevel level)) return;
-        for (ServerPlayer p : level.getServer().getPlayerList().getPlayers()) {
-            if (!includeOrigin && p == origin) continue;
+        broadcastToViewers(level.getServer(), includeOrigin ? null : origin, key, localSlotIndex, channel, value);
+    }
+
+    /** Sends a value to every player viewing the slot, except {@code skip}. */
+    public static <T> void broadcastToViewers(net.minecraft.server.MinecraftServer server, @Nullable ServerPlayer skip,
+                                              PersistentContainerKey key, int localSlotIndex,
+                                              SlotStateChannel<T> channel, T value) {
+        for (ServerPlayer p : server.getPlayerList().getPlayers()) {
+            if (p == skip) continue;
             sendIfViewing(p, key, localSlotIndex, channel, value);
         }
     }

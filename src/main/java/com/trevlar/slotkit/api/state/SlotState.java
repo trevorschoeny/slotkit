@@ -209,30 +209,40 @@ public final class SlotState {
             writeFromClient(channel, slot, viewer, value);
             return;
         }
-        // Store under the owning (half's) key at the owner-local index.
+        // Store under the owning (half's) key at the owner-local index. With no viewer
+        // (automation on a placed container), the server comes from the block entity.
         Optional<ResolvedSlot> resolved = SlotStateRegistry.resolve(slot.container, slot.getContainerSlot());
         if (resolved.isEmpty()) return;
-        writeResolved(channel, resolved.get(), viewer, value);
-        if (viewer instanceof net.minecraft.server.level.ServerPlayer sp) {
-            // Server code wrote it, so no client has it yet. A SHARED value reaches every
-            // viewer of the slot, the writer included; a PRIVATE one only its own viewer.
-            if (channel.visibility() == SlotStateChannel.Visibility.SHARED) {
+        MinecraftServer server = viewer == null ? serverOf(slot.container) : null;
+        writeResolved(channel, resolved.get(), viewer, server, value);
+        notifyViewers(channel, viewer, server, resolved.get(), value);
+    }
+
+    /**
+     * Server code wrote it, so no client has it yet. A SHARED value reaches every viewer
+     * of the slot, the writer included; a PRIVATE one only its own viewer.
+     */
+    private static <T> void notifyViewers(SlotStateChannel<T> channel, @Nullable Player viewer,
+                                          @Nullable MinecraftServer server, ResolvedSlot slot, T value) {
+        if (channel.visibility() == SlotStateChannel.Visibility.SHARED) {
+            if (server == null && viewer instanceof net.minecraft.server.level.ServerPlayer sp) server = sp.level().getServer();
+            if (server != null) {
                 com.trevlar.slotkit.state.SlotStateHooks.broadcastToViewers(
-                        sp, resolved.get().key(), resolved.get().localSlotIndex(), channel, value, true);
-            } else {
-                com.trevlar.slotkit.state.SlotStateHooks.sendIfViewing(
-                        sp, resolved.get().key(), resolved.get().localSlotIndex(), channel, value);
+                        server, null, slot.key(), slot.localSlotIndex(), channel, value);
             }
+        } else if (viewer instanceof net.minecraft.server.level.ServerPlayer sp) {
+            com.trevlar.slotkit.state.SlotStateHooks.sendIfViewing(
+                    sp, slot.key(), slot.localSlotIndex(), channel, value);
         }
     }
 
     /** Stores a value, or removes the entry when it is the channel's default. Server side. */
     private static <T> void writeResolved(SlotStateChannel<T> channel, ResolvedSlot slot,
-                                          @Nullable Player viewer, T value) {
+                                          @Nullable Player viewer, @Nullable MinecraftServer server, T value) {
         if (java.util.Objects.equals(value, channel.defaultValue())) {
-            SlotStateServer.clearTag(slot.key(), viewer, channel.id(), slot.localSlotIndex());
+            SlotStateServer.clearTag(slot.key(), viewer, server, channel.id(), slot.localSlotIndex());
         } else {
-            SlotStateServer.writeTag(slot.key(), viewer, channel.id(), slot.localSlotIndex(),
+            SlotStateServer.writeTag(slot.key(), viewer, server, channel.id(), slot.localSlotIndex(),
                     SlotStateServer.encode(channel, value));
         }
     }
@@ -248,7 +258,6 @@ public final class SlotState {
         // hold is neither sent nor shown, so the cache never shows a value the server
         // never stored.
         if (!com.trevlar.slotkit.api.Presence.serverHasChannel(channel.id())) return;
-        SlotStateClientCache.write(channel, slot.container, slot.getContainerSlot(), value);
         if (viewer == null) return;
         // The menu the server has open. The creative picker is client-only and has the
         // inventory menu's id; the server sees the inventory menu there.
@@ -265,6 +274,8 @@ public final class SlotState {
             LOGGER.warn("[SlotState] channel {} could not encode a value for the wire: {}", channel.id(), e.toString());
             return;
         }
+        // Shown only once it's sure to be sent, so the server can check it and correct it.
+        SlotStateClientCache.write(channel, slot.container, slot.getContainerSlot(), value);
         clientSender.accept(new com.trevlar.slotkit.network.SlotStateUpdateC2SPayload(
                 menu.containerId, index, channel.id(), bytes));
     }
@@ -278,7 +289,9 @@ public final class SlotState {
 
     static <T> void writePersistent(SlotStateChannel<T> channel, @Nullable Player player,
                                      PersistentContainerKey key, int containerSlotIndex, T value) {
-        writeResolved(channel, new ResolvedSlot(key, containerSlotIndex), player, value);
+        ResolvedSlot slot = new ResolvedSlot(key, containerSlotIndex);
+        writeResolved(channel, slot, player, null, value);
+        notifyViewers(channel, player, null, slot, value);
     }
 
     // Read and write by address
