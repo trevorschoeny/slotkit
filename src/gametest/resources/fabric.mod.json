@@ -8,12 +8,18 @@
       "com.trevlar.slotkit.checks.MenuSwitchChecks",
       "com.trevlar.slotkit.checks.DedicatedServerChecks",
       "com.trevlar.slotkit.checks.CarriedChecks",
-      "com.trevlar.slotkit.checks.RevealChecks"
+      "com.trevlar.slotkit.checks.RevealChecks",
+      "com.trevlar.slotkit.checks.StorageChecks"
     ],
     "main": [
       "com.trevlar.slotkit.checks.CarriedChecks",
-      "com.trevlar.slotkit.checks.RevealChecks"
+      "com.trevlar.slotkit.checks.RevealChecks",
+      "com.trevlar.slotkit.checks.StorageChecks"
     ]
   },
-  "custom": { "slotkit": { "bothSides": "required" } }
+  "custom": {
+    "slotkit": {
+      "bothSides": "required"
+    }
+  }
 }
