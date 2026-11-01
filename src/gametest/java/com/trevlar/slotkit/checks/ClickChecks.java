@@ -1,7 +1,12 @@
 package com.trevlar.slotkit.checks;
 
 import com.trevlar.menukit.api.panel.ModeScope;
+import com.trevlar.slotkit.api.group.SlotGroupCategory;
 import com.trevlar.slotkit.api.menu.MenuSwitch;
+import com.trevlar.slotkit.api.slot.CreatedSlot;
+import com.trevlar.slotkit.api.slot.ParityGroup;
+import com.trevlar.slotkit.api.slot.SlotSpec;
+import com.trevlar.slotkit.api.storage.StorageAttachment;
 import com.trevlar.slotkit.api.window.Address;
 import com.trevlar.slotkit.api.window.BehaviorKeys;
 import com.trevlar.slotkit.api.window.GatingContext;
@@ -36,6 +41,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.ContainerInput;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.Blocks;
@@ -47,7 +53,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
  * Clicks and switches: a Fabric extended menu isn't set aside, a provider that throws
  * keeps the cursor stack, a switch from inside a click doesn't mute the set-aside menu,
  * a take veto holds on an output slot, and inventory gates hold on a number-key swap, a
- * drop key and an item pickup.
+ * drop key and an item pickup, and a created shulker-storage group refuses a shulker box
+ * by click, number key, shift-click and drag, as vanilla's shulker box slots do.
  */
 public class ClickChecks implements ModInitializer, FabricClientGameTest {
 
@@ -56,6 +63,7 @@ public class ClickChecks implements ModInitializer, FabricClientGameTest {
     static volatile boolean on;
     static final int NO_PICKUP = 7;   // hotbar slot nothing leaves
     static final int STICKS_ONLY = 8; // hotbar slot only sticks enter
+    static StorageAttachment.PlayerStorageAttachment<net.minecraft.core.NonNullList<ItemStack>> BOX;
 
     @Override
     public void onInitialize() {
@@ -64,6 +72,9 @@ public class ClickChecks implements ModInitializer, FabricClientGameTest {
                         ByteBufCodecs.VAR_INT.cast()));
         Window.slot(ModeScope.BOTH, Address.playerInventory(NO_PICKUP)).gate(gate(true, false));
         Window.slot(ModeScope.BOTH, Address.playerInventory(STICKS_ONLY)).gate(gate(false, true));
+        BOX = StorageAttachment.playerAttached("slotkit_checks", "box", 3);
+        ParityGroup.register("slotkit_checks:box", SlotSpec.at("box", SlotGroupCategory.SHULKER_STORAGE)
+                .count(3).storage(p -> BOX.bind(p)).shiftClickIn(true));
         SlotOperations.veto(ModeScope.BOTH, (ref, op) -> on && op == BehaviorKeys.CLICK_TAKE
                 && ref.slot() instanceof net.minecraft.world.inventory.ResultSlot);
     }
@@ -91,6 +102,7 @@ public class ClickChecks implements ModInitializer, FabricClientGameTest {
             try {
                 takeVetoHoldsOnAnOutput(server);
                 inventoryGatesHold(server);
+                shulkerStorageRefusesShulkers(server);
             } finally {
                 on = false;
             }
@@ -198,6 +210,51 @@ public class ClickChecks implements ModInitializer, FabricClientGameTest {
             for (int i = 0; i < 36; i++) if (i != STICKS_ONLY) inv.setItem(i, new ItemStack(Items.STONE, 64));
             boolean added = inv.add(new ItemStack(Items.DIRT));
             check(!added && inv.getItem(STICKS_ONLY).isEmpty(), "a pickup put dirt in a sticks-only slot");
+            inv.clearContent();
+        });
+    }
+
+    // A created SHULKER_STORAGE slot is a plain Slot, so it carries vanilla's ShulkerBoxSlot rule itself.
+    private static void shulkerStorageRefusesShulkers(TestServerContext server) {
+        server.runOnServer(s -> {
+            ServerPlayer p = player(s);
+            Inventory inv = p.getInventory();
+            inv.clearContent();
+            AbstractContainerMenu menu = p.inventoryMenu;
+            Slot box = null;
+            for (Slot slot : menu.slots) if (slot instanceof CreatedSlot c && c.panelId().equals("slotkit_checks:box:box")) { box = slot; break; }
+            if (box == null) { check(false, "no shulker-storage slot on the inventory menu"); return; }
+            int at = box.index;
+            int hotbarSlot = 36;   // inventory menu slot of hotbar 0
+
+            menu.setCarried(new ItemStack(Items.SHULKER_BOX));
+            menu.clicked(at, 0, ContainerInput.PICKUP, p);
+            check(!box.hasItem() && menu.getCarried().is(Items.SHULKER_BOX), "a click put a shulker box in a shulker-storage slot");
+            menu.setCarried(ItemStack.EMPTY);
+
+            inv.setItem(0, new ItemStack(Items.SHULKER_BOX));
+            menu.clicked(at, 0, ContainerInput.SWAP, p);
+            check(!box.hasItem(), "a number-key swap put a shulker box in a shulker-storage slot");
+
+            menu.clicked(hotbarSlot, 0, ContainerInput.QUICK_MOVE, p);
+            boolean anyBox = false;
+            for (Slot slot : menu.slots) if (slot instanceof CreatedSlot c && c.panelId().equals("slotkit_checks:box:box") && slot.hasItem()) anyBox = true;
+            check(!anyBox, "a shift-click put a shulker box in a shulker-storage slot");
+            inv.clearContent();
+
+            menu.setCarried(new ItemStack(Items.SHULKER_BOX));
+            menu.clicked(-999, AbstractContainerMenu.getQuickcraftMask(0, 0), ContainerInput.QUICK_CRAFT, p);
+            menu.clicked(at, AbstractContainerMenu.getQuickcraftMask(1, 0), ContainerInput.QUICK_CRAFT, p);
+            menu.clicked(-999, AbstractContainerMenu.getQuickcraftMask(2, 0), ContainerInput.QUICK_CRAFT, p);
+            check(!box.hasItem(), "a drag put a shulker box in a shulker-storage slot");
+            menu.setCarried(ItemStack.EMPTY);
+
+            // anything else still goes in
+            menu.setCarried(new ItemStack(Items.DIRT));
+            menu.clicked(at, 0, ContainerInput.PICKUP, p);
+            check(box.getItem().is(Items.DIRT), "a click didn't put dirt in a shulker-storage slot: " + box.getItem());
+            box.set(ItemStack.EMPTY);
+            menu.setCarried(ItemStack.EMPTY);
             inv.clearContent();
         });
     }

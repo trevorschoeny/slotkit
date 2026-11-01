@@ -23,6 +23,7 @@
 - A gate on a player inventory slot didn't hold against a number-key or offhand swap, the drop key, or an item picked up into the inventory.
 - An open request for an unknown custom menu logged a warning on every packet; it's a debug line now.
 - A `LiveItem` stayed live after a hopper (or any `removeItem`) took its whole stack, so a menu open on that box kept taking items that went nowhere.
+- A created slot group declared as `SHULKER_STORAGE` took a shulker box by click, number key, shift-click or drag; like vanilla's shulker box slots, it now refuses anything that can't go inside a container item.
 
 ## 2.2.1
 

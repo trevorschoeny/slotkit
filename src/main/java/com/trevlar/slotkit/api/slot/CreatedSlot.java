@@ -3,6 +3,7 @@ package com.trevlar.slotkit.api.slot;
 import com.trevlar.slotkit.core.CreatedSlotAccess;
 import com.trevlar.slotkit.core.CreatedSlotAdapter;
 import com.trevlar.slotkit.api.menu.MenuPanel;
+import com.trevlar.slotkit.api.group.SlotGroupCategory;
 import com.trevlar.slotkit.api.storage.Storage;
 
 import com.trevlar.slotkit.api.window.Address;
@@ -27,7 +28,9 @@ import org.jspecify.annotations.Nullable;
  * {@code menu.slots} and reads {@code x/y}, treats a created slot and a vanilla slot
  * the same because they go through the same calls. The overrides:
  * <ul>
- *   <li>{@code mayPlace}: false when inert, otherwise super</li>
+ *   <li>{@code mayPlace}: false when inert; in a {@code SHULKER_STORAGE} group, false
+ *       for an item that can't go inside a container item, as vanilla's
+ *       {@code ShulkerBoxSlot}; otherwise super</li>
  *   <li>{@code mayPickup}: false when inert, otherwise super</li>
  *   <li>{@code getItem}: EMPTY when inert, otherwise super</li>
  *   <li>{@code isActive}: false when the panel is hidden, otherwise super</li>
@@ -184,10 +187,16 @@ public class CreatedSlot extends Slot {
      * vanilla's own answer, which SlotKit's slot gate ({@code SKSlotGateMixin}) has
      * already checked against this slot's address. Calls super, so a mixin on
      * {@code Slot.mayPlace} still runs.
+     *
+     * <p>A {@code SHULKER_STORAGE} group holds a shulker box's contents, so it keeps
+     * vanilla's {@code ShulkerBoxSlot} rule: nothing that can't go inside a container
+     * item (a shulker box). Clicks, number keys, drags and shift-clicks all ask here.
      */
     @Override
     public boolean mayPlace(ItemStack stack) {
         if (isInert()) return false;
+        if (group.getCategory() == SlotGroupCategory.SHULKER_STORAGE
+                && !stack.getItem().canFitInsideContainerItems()) return false;
         return super.mayPlace(stack);
     }
 
