@@ -5,6 +5,8 @@
 - `SlotOperations.PutVeto`, registered with `vetoPut`: a veto handed the stack about to land, so a rule can refuse a put by item ("only into a container that already holds it"). Every put seam asks it: click place, shift-click in, drag-fill, number-key and offhand swaps (both slots), world pickup, and clicks a mod sends under `as(...)`.
 - `SlotOperations.allowsPut(ref, operation, incoming)`: `allows`, then every put veto with the incoming stack.
 - `SlotGroups.holds(ref, incoming)`: whether any slot in that slot's group already holds the same item, on the open menu or, with none, in the player's inventory.
+- `ItemContents`: a container showing one item's contents (a shulker box opened from the inventory) says where that item is, and `ItemSources.pathOf` then names its slots as indexes inside the item.
+- `ItemPath.child(index)` and `ItemPath.within(outer)`: the path one level in, and whether a path is an item or anything inside it.
 
 ## 2.2.2
 

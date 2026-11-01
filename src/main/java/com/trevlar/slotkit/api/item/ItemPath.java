@@ -7,7 +7,9 @@ import net.minecraft.resources.Identifier;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * Where one item is, as both sides can name it: a top-level slot in the inventory, the
@@ -52,6 +54,22 @@ public record ItemPath(ItemRef.Source source, int slot, List<Integer> inside, @N
 
     /** How many containers deep the item is: 0 for a top-level slot. */
     public int depth() { return inside.size(); }
+
+    /** The item at {@code index} inside this one. Since 2.3.0. */
+    public ItemPath child(int index) {
+        List<Integer> deeper = new ArrayList<>(inside);
+        deeper.add(index);
+        return new ItemPath(source, slot, deeper, attachment);
+    }
+
+    /**
+     * True when this path is {@code outer} or an item anywhere inside it: same top-level
+     * slot, and {@code outer}'s indexes first. Since 2.3.0.
+     */
+    public boolean within(ItemPath outer) {
+        return source == outer.source && slot == outer.slot && Objects.equals(attachment, outer.attachment)
+                && inside.size() >= outer.inside.size() && inside.subList(0, outer.inside.size()).equals(outer.inside);
+    }
 
     private static final StreamCodec<ByteBuf, List<Integer>> INSIDE = ByteBufCodecs.VAR_INT.apply(ByteBufCodecs.list(16));
 

@@ -1,5 +1,6 @@
 package com.trevlar.slotkit.checks;
 
+import com.trevlar.slotkit.api.item.ItemContents;
 import com.trevlar.slotkit.api.item.ItemPath;
 import com.trevlar.slotkit.api.item.ItemRef;
 import com.trevlar.slotkit.api.item.ItemSources;
@@ -15,6 +16,8 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -68,6 +71,22 @@ public class CarriedChecks implements ModInitializer, FabricClientGameTest {
                 new Slot(new StorageContainerAdapter(POCKET.bind(p)), 0, 0, 0).set(ItemStack.EMPTY);
                 check(kept.getItem(0).isEmpty(), "the kept container still shows the taken box");
                 POCKET.bind(p).setStack(0, top);
+
+                // a container that declares the item it shows: its slots are named inside that item
+                ItemPath box = new ItemPath(ItemRef.Source.INVENTORY, 14, List.of());
+                class Opened extends SimpleContainer implements ItemContents {
+                    Opened() { super(27); }
+                    @Override public ItemPath itemPath(Player asker) { return asker == p ? box : null; }
+                }
+                Slot boxSlot = new Slot(new Opened(), 3, 0, 0);
+                ItemPath named = ItemSources.pathOf(p, boxSlot);
+                check(box.child(3).equals(named), "a declared box's slot 3 is named " + named);
+                check(named.within(box) && box.within(box), "a box's slot isn't within the box");
+                check(!box.within(named) && !named.within(new ItemPath(ItemRef.Source.INVENTORY, 15, List.of())),
+                        "within matched the wrong item");
+                check(ItemSources.pathOf(p, new Slot(new Opened() {
+                    @Override public ItemPath itemPath(Player asker) { return null; }
+                }, 3, 0, 0)) == null, "a box that names nothing named a slot");
             });
             ctx.waitTicks(3);
 

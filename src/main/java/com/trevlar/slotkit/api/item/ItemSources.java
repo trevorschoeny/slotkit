@@ -149,13 +149,16 @@ public final class ItemSources {
     /**
      * The path of the item in a menu slot, for acting on a slot the player clicked: an
      * inventory main slot, an ender chest slot, or a slot over one of this player's carried
-     * attachments. {@code null} for any other slot (armor, offhand, crafting, a chest).
+     * attachments, or a slot of a container that declares the item it shows
+     * ({@link ItemContents}, such as a box opened from the inventory), as the index inside
+     * that item. {@code null} for any other slot (armor, offhand, crafting, a chest).
      *
      * <p>Either side, with the same answer for the same slot: a client drawing a slot names
      * its item as the server will. A creative tab's slot names the slot it shows. On a
      * client an ender chest's menu slots aren't the player's ender chest (vanilla gives
      * the client a stand-in container), so there they are {@code null}: a mod that knows
-     * the ender chest is open names them itself. Since 2.2.0.
+     * the ender chest is open names them itself; an {@link ItemContents} slot is named only
+     * on a side whose container declares it. Since 2.2.0; {@code ItemContents} since 2.3.0.
      */
     public static @Nullable ItemPath pathOf(Player player, Slot shown) {
         Slot slot = com.trevlar.slotkit.core.Slots.target(shown);
@@ -165,6 +168,10 @@ public final class ItemSources {
         if (slot.container instanceof StorageContainerAdapter a && a.getStorage() instanceof AttachedPlayerStorage s
                 && s.owner() == player && StorageAttachments.carried().containsKey(s.attachment())) {
             return new ItemPath(ItemRef.Source.CARRIED, i, List.of(), s.attachment());
+        }
+        if (slot.container instanceof ItemContents c) {
+            ItemPath item = c.itemPath(player);
+            if (item != null) return item.child(i);
         }
         return null;
     }

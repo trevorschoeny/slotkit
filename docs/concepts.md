@@ -299,6 +299,8 @@ A player attachment declared `playerAttached(...).carried()` holds the player's 
 
 `pathOf(player, slot)` names the item in a menu slot: an inventory main slot, an ender chest slot or a carried attachment's slot. The client and the server give the same answer for the same slot, so a client drawing a slot can name its item as the server will. Creative's tabs name the slot they show. On the client an ender chest's own menu shows a stand-in container, so its slots there are `null`.
 
+A container that shows one item's contents, such as a shulker box a mod opened from the inventory, can implement `ItemContents` and return that item's path; `pathOf` then names its slot `i` as `itemPath.child(i)`, on the side whose container declares it. `path.within(outer)` tells whether an item is `outer` or inside it, so a move can skip the box an item was just taken from.
+
 ## Item state and slot looks
 
 An `ItemState` is a value that rides on an item. It is a data component SlotKit registers for the mod, so it follows the item into a shulker box and back and vanilla syncs it to every client with the stack. `ItemState.Saved.YES` saves it with the item; `Saved.NO` drops it at a relog or a restart. The server sets it with `set` and `clear`, on a stack or through an `ItemRef` so the change writes back up the chain. Only a mod that declares `bothSides: required` declares a state, because a client without the mod can't read the stack.
