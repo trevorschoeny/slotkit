@@ -9,6 +9,9 @@ import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.level.gamerules.GameRules;
+
+import com.trevlar.slotkit.api.slot.DropRule;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -55,6 +58,7 @@ public final class PlayerSlotCapture {
      */
     public static List<CapturedSlot> captureAndClear(ServerPlayer player) {
         List<CapturedSlot> captured = new ArrayList<>();
+        boolean keepInventory = player.level().getGameRules().get(GameRules.KEEP_INVENTORY);
         for (AttachmentType<ItemContainerContents> type : StorageAttachments.playerDeathDropAttachments()) {
             if (!player.hasAttached(type)) continue;
             ItemContainerContents contents = player.getAttached(type);
@@ -69,7 +73,13 @@ public final class PlayerSlotCapture {
             for (int i = 0; i < slotCount; i++) {
                 ItemStack stack = items.get(i);
                 if (stack.isEmpty()) continue;
-                captured.add(new CapturedSlot(id, i, stack.copy()));
+                // The same per-stack rule as the plain death drop: a kept stack stays
+                // with the player, a destroyed one (Curse of Vanishing) is gone, and
+                // only a dropped one goes in the grave.
+                DropRule configured = StorageAttachments.deathDropRuleOf(type);
+                DropRule rule = (configured == null ? DropRule.DEFAULT : configured).resolve(stack, keepInventory);
+                if (rule == DropRule.KEEP) continue;
+                if (rule == DropRule.DROP) captured.add(new CapturedSlot(id, i, stack.copy()));
                 items.set(i, ItemStack.EMPTY);
                 changed = true;
             }
@@ -99,6 +109,9 @@ public final class PlayerSlotCapture {
                 ? player.getAttached(type)
                 : StorageAttachments.defaultEmpty(slotCount);
         NonNullList<ItemStack> items = StorageAttachments.contentsToList(contents, slotCount);
+        // Something new went in the slot since death: leave it, and let the caller
+        // place the grave's stack elsewhere or drop it.
+        if (!items.get(slot.index()).isEmpty()) return false;
         items.set(slot.index(), slot.stack());
         player.setAttached(type, StorageAttachments.listToContents(items));
         return true;

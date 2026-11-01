@@ -61,6 +61,11 @@ public final class BlockScopedDropHandler {
                             stack);
                 }
             }
+            // Empty the storage too, as a vanilla container's drop does: a menu left
+            // open on the broken block (one with no validWhen stays open) would
+            // otherwise still hand out the stacks that were just dropped.
+            be.setAttached(type, StorageAttachments.listToContents(
+                    NonNullList.withSize(slotCount, ItemStack.EMPTY)));
         }
     }
 }

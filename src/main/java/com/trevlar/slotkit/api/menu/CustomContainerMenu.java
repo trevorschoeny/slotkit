@@ -4,6 +4,7 @@ import com.trevlar.slotkit.api.slot.CreatedSlot;
 import com.trevlar.slotkit.api.menu.MenuPanel;
 import com.trevlar.slotkit.api.slot.CreatedSlotGroup;
 import com.trevlar.slotkit.api.slot.CreatedSlots;
+import com.trevlar.slotkit.api.storage.EphemeralStorage;
 import com.trevlar.slotkit.api.storage.StorageContainerAdapter;
 
 import net.minecraft.world.entity.player.Player;
@@ -78,6 +79,8 @@ public class CustomContainerMenu extends AbstractContainerMenu {
     // clickMenuButton id.
     private final List<MenuPanel> panels;
     private final boolean[] shown;
+    // The shown flag the data slot sends, set ahead of shown so the client hears it before the slots' contents.
+    private final boolean[] announced;
     private final boolean[] toggleable;
     private final Map<String, Integer> indexById = new LinkedHashMap<>();
 
@@ -100,6 +103,7 @@ public class CustomContainerMenu extends AbstractContainerMenu {
         super(type, syncId);
         int n = declared.size();
         this.shown = new boolean[n];
+        this.announced = new boolean[n];
         this.toggleable = new boolean[n];
         List<MenuPanel> built = new ArrayList<>(n);
         for (int i = 0; i < n; i++) {
@@ -109,12 +113,13 @@ public class CustomContainerMenu extends AbstractContainerMenu {
             }
             final int index = i;
             shown[i] = decl.startsShown();
+            announced[i] = shown[i];
             toggleable[i] = decl.toggleable();
             built.add(new MenuPanel(decl.id(), () -> shown[index]));
             groupsByPanel.put(decl.id(), List.copyOf(decl.groups()));
             // Server -> client: the server's shown flag, sent when it changes.
             addDataSlot(new DataSlot() {
-                @Override public int get() { return shown[index] ? 1 : 0; }
+                @Override public int get() { return announced[index] ? 1 : 0; }
                 @Override public void set(int value) { shown[index] = value != 0; }
             });
         }
@@ -175,6 +180,15 @@ public class CustomContainerMenu extends AbstractContainerMenu {
     public void setPanelVisible(String panelId, boolean visible) {
         Integer i = indexById.get(panelId);
         if (i == null || shown[i] == visible) return;
+        show(i, visible);
+    }
+
+    // Vanilla's broadcastChanges sends slots before data slots, and the client drops
+    // writes to a slot whose panel it thinks is hidden. So the flag goes out alone
+    // first, then the contents the change brings, which the client now takes.
+    private void show(int i, boolean visible) {
+        announced[i] = visible;
+        broadcastChanges();
         shown[i] = visible;
         broadcastChanges();
     }
@@ -192,8 +206,8 @@ public class CustomContainerMenu extends AbstractContainerMenu {
                         panels.get(buttonId).id(), player.getName().getString());
                 return false;
             }
-            shown[buttonId] = !shown[buttonId];
-            return true; // vanilla broadcasts the change
+            show(buttonId, !shown[buttonId]);
+            return true;
         }
         return super.clickMenuButton(player, buttonId);
     }
@@ -249,6 +263,24 @@ public class CustomContainerMenu extends AbstractContainerMenu {
     /** {@code moveItemStackTo} for the router, forward, over {@code [start, end)}. */
     boolean moveInto(ItemStack stack, int start, int end) {
         return moveItemStackTo(stack, start, end, false);
+    }
+
+    /**
+     * Hands an {@link EphemeralStorage} group's items back to the player as the menu
+     * closes, the way a crafting grid does: into the inventory, or dropped when the
+     * player is dead or leaving. Nothing else holds them once the menu is gone.
+     */
+    @Override
+    public void removed(Player player) {
+        super.removed(player);
+        if (player.level().isClientSide()) return;
+        int i = 0;
+        for (MenuPanel panel : panels) {
+            for (CreatedSlotGroup group : groupsByPanel.get(panel.id())) {
+                StorageContainerAdapter adapter = adapters.get(i++);
+                if (group.getStorage() instanceof EphemeralStorage) clearContainer(player, adapter);
+            }
+        }
     }
 
     @Override

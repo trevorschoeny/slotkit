@@ -14,7 +14,6 @@ import org.jetbrains.annotations.ApiStatus;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.WeakHashMap;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -35,7 +34,11 @@ public final class ActiveCounts {
     private static final Map<String, Integer> MAXIMA = new ConcurrentHashMap<>();
 
     // Server: per player object, so a respawned player starts fresh. Server thread only.
-    private static final Map<ServerPlayer, Map<String, Integer>> SERVER = new WeakHashMap<>();
+    // Weak keys compared by identity: an Entity equals any entity with its id, and a
+    // respawned player keeps its id, so a WeakHashMap would carry a death's counts over
+    // and tie a living respawn's counts to the old object, lost once it's collected.
+    private static final Map<ServerPlayer, Map<String, Integer>> SERVER =
+            new com.google.common.collect.MapMaker().weakKeys().makeMap();
     // Client: the local player's, whichever LocalPlayer instance is current.
     private static final Map<String, Integer> CLIENT = new ConcurrentHashMap<>();
 

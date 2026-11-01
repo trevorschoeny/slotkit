@@ -132,8 +132,9 @@ public abstract class StorageAttachment<O, C> {
     // Factories
 
     /**
-     * In-memory storage that lasts only while the menu is open. Its content is lost
-     * when the menu closes unless the handler's close-drop rule catches it. The same
+     * In-memory storage that lasts only while the menu is open. When a custom menu
+     * closes, its content goes back to the player's inventory (dropped if it's full or
+     * the player is dead or leaving), as a crafting grid's does. The same
      * as wrapping an {@link EphemeralStorage}, through the common API.
      *
      * <p>Owner type is {@link Void}; callers pass {@code null} to {@link #bind}.

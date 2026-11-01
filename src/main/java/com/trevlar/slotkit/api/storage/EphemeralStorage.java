@@ -6,8 +6,8 @@ import net.minecraft.core.NonNullList;
 import net.minecraft.world.item.ItemStack;
 
 /**
- * In-memory storage that is never saved. Its contents are dropped through the usual
- * {@code dropInventory} pattern when the screen closes.
+ * In-memory storage that is never saved. When a custom menu holding it closes, its
+ * contents go back to the player, as a crafting grid's do.
  */
 public class EphemeralStorage implements Storage {
 
