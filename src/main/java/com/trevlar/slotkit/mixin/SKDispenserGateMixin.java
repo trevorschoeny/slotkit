@@ -11,15 +11,26 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-/** The gate at a dispenser or dropper: a gated slot is skipped when it picks a random slot to fire. */
+/**
+ * The gate at a dispenser or dropper: a gated slot is skipped when it picks a random slot
+ * to fire. Vanilla's pick, with gated slots left out of the draw, so a dispenser still
+ * fires from its other slots when the one it would have picked is gated.
+ */
 @Mixin(DispenserBlockEntity.class)
 public class SKDispenserGateMixin {
 
-    @Inject(method = "getRandomSlot", at = @At("RETURN"), cancellable = true)
+    @Inject(method = "getRandomSlot", at = @At("HEAD"), cancellable = true)
     private void sk$gateDispense(RandomSource random, CallbackInfoReturnable<Integer> cir) {
-        int slot = cir.getReturnValueI();
-        if (slot >= 0 && !SlotGating.mayExtractFrom((Container) (Object) this, slot)) {
-            cir.setReturnValue(-1);
+        DispenserBlockEntity self = (DispenserBlockEntity) (Object) this;
+        self.unpackLootTable(null);
+        // Reservoir pick over the non-empty, ungated slots, as vanilla draws over the non-empty ones.
+        int picked = -1;
+        int seen = 1;
+        for (int k = 0; k < self.getContainerSize(); k++) {
+            if (!self.getItem(k).isEmpty() && SlotGating.mayExtractFrom(self, k) && random.nextInt(seen++) == 0) {
+                picked = k;
+            }
         }
+        cir.setReturnValue(picked);
     }
 }
