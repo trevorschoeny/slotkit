@@ -14,7 +14,7 @@ repositories {
 }
 dependencies {
     implementation 'maven.modrinth:menukit:7.5.0+26.3'
-    implementation 'maven.modrinth:xQUBXV8I:2.2.0+26.3'   // SlotKit
+    implementation 'maven.modrinth:xQUBXV8I:2.3.0+26.3'   // SlotKit
 }
 ```
 
@@ -23,7 +23,7 @@ dependencies {
 Declare both in `fabric.mod.json`, each against its own version:
 
 ```json
-"depends": { "menukit": ">=7.5.0 <8.0.0", "slotkit": ">=2.2.0 <3.0.0" }
+"depends": { "menukit": ">=7.5.0 <8.0.0", "slotkit": ">=2.3.0 <3.0.0" }
 ```
 
 Separate the bounds with a space. Fabric splits on spaces, so a comma leaves one malformed bound and the mod does not load. [Versioning](versioning.md) has the full contract. Import only from the `api` packages (`com.trevlar.slotkit.api.*`).
