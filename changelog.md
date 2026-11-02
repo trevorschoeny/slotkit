@@ -8,8 +8,6 @@
 - `ItemContents`: a container showing one item's contents (a shulker box opened from the inventory) says where that item is, and `ItemSources.pathOf` then names its slots as indexes inside the item.
 - `ItemPath.child(index)` and `ItemPath.within(outer)`: the path one level in, and whether a path is an item or anything inside it.
 
-## 2.2.2
-
 #### Fixed
 
 - `MenuSwitch.back` brings a trading screen back with its trades, the trader's xp and level, instead of an empty trade list.
@@ -21,27 +19,18 @@
 - Restoring from a grave overwrote whatever the player had put in the slot since; the grave's stack now goes elsewhere and the slot's item stays.
 - A grave took every stack from a player attachment; it now leaves `KEEP` stacks with the player and destroys `DESTROY` ones, as a death without a grave does.
 - An `EphemeralStorage` group in a custom menu lost its items when the menu closed; they go back to the player, as a crafting grid's do.
-- A panel the server shows arrived with empty slots until something changed them.
-- A death kept a player's active slot counts instead of starting them over, and leaving the End could lose them.
-- A slot state value set by server code with `set(player, key, index, value)`, or on a placed container with no player, never reached the clients viewing it; the second wasn't stored either.
-- A player's slot state values went missing on the client after a dimension change.
-- A dispenser or dropper whose random pick landed on a gated slot fired nothing, even with other slots ready.
-- `MenuSwitch` set aside a menu opened through Fabric's `ExtendedMenuProvider`, and `back` then sent an open packet its client can't build it from; such a menu now closes normally on a switch.
-- A `MenuSwitch.open` whose provider threw lost the player's cursor stack.
-- A menu set aside by a switch made from inside a click (a right-click handler) sent no updates after `back` until its next click.
-- A `CLICK_TAKE` veto didn't hold on an output slot (crafting, furnace) when the cursor held the same item.
-- A gate on a player inventory slot didn't hold against a number-key or offhand swap, the drop key, or an item picked up into the inventory.
-- An open request for an unknown custom menu logged a warning on every packet; it's a debug line now.
-- A `LiveItem` stayed live after a hopper (or any `removeItem`) took its whole stack, so a menu open on that box kept taking items that went nowhere.
 - A created slot group declared as `SHULKER_STORAGE` took a shulker box by click, number key, shift-click or drag; like vanilla's shulker box slots, it now refuses anything that can't go inside a container item.
+- A gate on a player inventory slot didn't hold against a number-key or offhand swap, the drop key, or an item picked up into the inventory.
+- The F key's offhand swap with no screen open didn't hand a put veto the real incoming stack, so a plain swap could put through an item a veto would have refused.
+- A `LiveItem` stayed live after a hopper (or any `removeItem`) took its whole stack, so a menu open on that box kept taking items that went nowhere.
 
-## 2.2.1
+### 2.2.1
 
 #### Fixed
 
-- A slot hidden only on the client (not the server) now keeps a server write instead of dropping it, fixing pocket items that showed as present and clickable but invisible in the inventory and HUD.
+- A slot hidden only by the client's reveal check now keeps a write the server syncs to it, instead of dropping it. This fixed pocket items that stayed invisible on the client after a pickup, Restock, or a cycle.
 
-## 2.2.0
+### 2.2.0
 
 #### Added
 

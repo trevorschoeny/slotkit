@@ -89,7 +89,7 @@ repositories {
 }
 dependencies {
     implementation 'maven.modrinth:menukit:7.5.0+26.3'
-    implementation 'maven.modrinth:xQUBXV8I:2.2.0+26.3'   // SlotKit
+    implementation 'maven.modrinth:xQUBXV8I:2.3.0+26.3'   // SlotKit
 }
 ```
 
@@ -98,7 +98,7 @@ dependencies {
 Declare both in `fabric.mod.json`, each against its own version, with both bounds ([why](https://github.com/trevorschoeny/slotkit/blob/main/docs/versioning.md)). Separate the bounds with a space, since Fabric doesn't read a comma there.
 
 ```json
-"depends": { "menukit": ">=7.5.0 <8.0.0", "slotkit": ">=2.2.0 <3.0.0" }
+"depends": { "menukit": ">=7.5.0 <8.0.0", "slotkit": ">=2.3.0 <3.0.0" }
 ```
 
 Players install SlotKit as its own mod, next to the mods that use it. List it as a required dependency on the mod's Modrinth page so it's installed with them.
