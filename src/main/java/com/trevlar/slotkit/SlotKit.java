@@ -47,6 +47,8 @@ public class SlotKit implements ModInitializer {
         com.trevlar.slotkit.state.PortableSlotState.installWireStrip();
         com.trevlar.slotkit.state.SlotStateHooks.registerCommon();
         com.trevlar.slotkit.state.SlotStateHooks.registerServer();
+        // Reserved slots: their slot-state channel, the veto every put asks, the client's request.
+        com.trevlar.slotkit.api.reserve.Reservations.init();
         com.trevlar.slotkit.core.ActiveCounts.registerCommon();
         // On-demand group instances the server adds to and removes from an open menu.
         net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.clientboundPlay().register(
@@ -130,5 +132,7 @@ public class SlotKit implements ModInitializer {
         SlotOperations.define(BehaviorKeys.DROP_STACK, SlotOperations.Role.TAKE, takes);
         SlotOperations.define(BehaviorKeys.INVENTORY_INSERT, SlotOperations.Role.PUT, SlotOperations.AppliesTo.vanilla(
                 SlotGroupCategory.PLAYER_HOTBAR, SlotGroupCategory.PLAYER_INVENTORY, SlotGroupCategory.PLAYER_OFFHAND));
+        SlotOperations.define(BehaviorKeys.AUTOMATION_PUT, SlotOperations.Role.PUT, puts);
+        SlotOperations.define(BehaviorKeys.AUTOMATION_TAKE, SlotOperations.Role.TAKE, takes);
     }
 }

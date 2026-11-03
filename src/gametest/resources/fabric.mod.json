@@ -10,7 +10,8 @@
       "com.trevlar.slotkit.checks.CarriedChecks",
       "com.trevlar.slotkit.checks.RevealChecks",
       "com.trevlar.slotkit.checks.StorageChecks",
-      "com.trevlar.slotkit.checks.ClickChecks"
+      "com.trevlar.slotkit.checks.ClickChecks",
+      "com.trevlar.slotkit.checks.ReservationChecks"
     ],
     "main": [
       "com.trevlar.slotkit.checks.CarriedChecks",

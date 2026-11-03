@@ -194,8 +194,9 @@ public final class SlotState {
         // container the local index is the global one.
         Optional<ResolvedSlot> resolved = SlotStateRegistry.resolve(slot.container, slot.getContainerSlot());
         if (resolved.isEmpty()) return channel.defaultValue();
-        Tag tag = SlotStateServer.readTag(
-                resolved.get().key(), viewer, channel.id(), resolved.get().localSlotIndex());
+        // With no viewer (a SHARED read by automation or a seam), the server comes from the block entity.
+        Tag tag = SlotStateServer.readTag(resolved.get().key(), viewer,
+                viewer == null ? serverOf(slot.container) : null, channel.id(), resolved.get().localSlotIndex());
         if (tag == null) return channel.defaultValue();
         return SlotStateServer.decode(channel, tag);
     }

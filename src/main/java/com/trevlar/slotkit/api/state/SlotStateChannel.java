@@ -13,6 +13,13 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.nbt.Tag;
+import net.minecraft.world.entity.player.Inventory;
+import com.trevlar.slotkit.api.item.ItemContents;
+import com.trevlar.slotkit.state.PortableSlotState;
+import com.trevlar.slotkit.state.SlotStateServer;
+import com.trevlar.slotkit.window.SlotGating;
 
 import org.jetbrains.annotations.ApiStatus;
 
@@ -285,5 +292,52 @@ public record SlotStateChannel<T>(
      */
     public T get(Container container, int containerSlotIndex) {
         return SlotState.readShared(this, container, containerSlotIndex);
+    }
+
+    // Wherever a veto's slot lives. Since 2.4.0.
+
+    /**
+     * Reads this channel's value at the slot a veto is asked about, wherever it lives: a
+     * menu slot, an inventory slot reached off-menu, a placed container reached by
+     * automation, or a slot inside an item ({@link ItemContents}: a box opened from the
+     * inventory, a shulker box inside a chest), whose value is read off the item.
+     * {@link #defaultValue} where none of those reach it.
+     */
+    public T get(SlotRef ref) {
+        if (ref.container() instanceof ItemContents contents) {
+            ItemStack item = contents.item(ref.player());
+            return item == null ? defaultValue : get(item, ref.containerSlot());
+        }
+        Slot slot = ref.slot();
+        if (slot == null && ref.container() instanceof Inventory inventory) {
+            slot = SlotGating.inventorySlot(inventory.player, ref.containerSlot());
+        }
+        if (slot != null) return SlotState.read(this, slot, ref.player());
+        return SlotState.readShared(this, ref.container(), ref.containerSlot());
+    }
+
+    // On an item. SHARED only: what a portable container (a shulker box) carries on its
+    // item, slot by slot, seen on every side. Since 2.4.0.
+
+    /**
+     * The SHARED value at index {@code index} of the container {@code item} carries (a
+     * shulker box's slot), read off the item, either side. {@link #defaultValue} for a
+     * PRIVATE channel, which an item never shows.
+     */
+    public T get(ItemStack item, int index) {
+        if (visibility != Visibility.SHARED) return defaultValue;
+        Tag tag = PortableSlotState.readShared(item, id, index);
+        return tag == null ? defaultValue : SlotStateServer.tryDecode(this, tag).orElse(defaultValue);
+    }
+
+    /**
+     * Writes the SHARED value at index {@code index} onto {@code item}, which carries it
+     * wherever it goes; placed, its block holds it. The default removes it. The caller puts
+     * the item back where it lives. Throws for a PRIVATE channel.
+     */
+    public void set(ItemStack item, int index, T value) {
+        if (visibility != Visibility.SHARED) throw new IllegalStateException("only a SHARED channel is stored on an item: " + id);
+        PortableSlotState.writeShared(item, id, index,
+                java.util.Objects.equals(value, defaultValue) ? null : SlotStateServer.encode(this, value));
     }
 }

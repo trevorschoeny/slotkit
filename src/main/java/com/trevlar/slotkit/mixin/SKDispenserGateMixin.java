@@ -1,5 +1,6 @@
 package com.trevlar.slotkit.mixin;
 
+import com.trevlar.slotkit.api.window.Automation;
 import com.trevlar.slotkit.window.SlotGating;
 
 import net.minecraft.util.RandomSource;
@@ -14,7 +15,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 /**
  * The gate at a dispenser or dropper: a gated slot is skipped when it picks a random slot
  * to fire. Vanilla's pick, with gated slots left out of the draw, so a dispenser still
- * fires from its other slots when the one it would have picked is gated.
+ * fires from its other slots when the one it would have picked is gated. A slot that
+ * refuses {@code AUTOMATION_TAKE} is left out the same way.
  */
 @Mixin(DispenserBlockEntity.class)
 public class SKDispenserGateMixin {
@@ -27,7 +29,8 @@ public class SKDispenserGateMixin {
         int picked = -1;
         int seen = 1;
         for (int k = 0; k < self.getContainerSize(); k++) {
-            if (!self.getItem(k).isEmpty() && SlotGating.mayExtractFrom(self, k) && random.nextInt(seen++) == 0) {
+            if (!self.getItem(k).isEmpty() && SlotGating.mayExtractFrom(self, k)
+                    && Automation.mayTake(self, k) && random.nextInt(seen++) == 0) {
                 picked = k;
             }
         }

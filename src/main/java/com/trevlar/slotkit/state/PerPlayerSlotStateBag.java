@@ -81,6 +81,19 @@ public final class PerPlayerSlotStateBag {
         return new SlotStateBag(backing.getCompoundOrEmpty(key));
     }
 
+    /** A new bag holding a copy of only the shared bag, or {@code null} when there is none. */
+    public @org.jspecify.annotations.Nullable PerPlayerSlotStateBag sharedOnly() {
+        if (!backing.contains(SHARED_KEY)) return null;
+        CompoundTag tag = new CompoundTag();
+        tag.put(SHARED_KEY, backing.getCompoundOrEmpty(SHARED_KEY).copy());
+        return new PerPlayerSlotStateBag(tag);
+    }
+
+    /** Removes the shared bag when it holds nothing, so an emptied item carries no key. */
+    public void dropEmptyShared() {
+        if (backing.contains(SHARED_KEY) && backing.getCompoundOrEmpty(SHARED_KEY).isEmpty()) backing.remove(SHARED_KEY);
+    }
+
     public boolean isEmpty() {
         return backing.isEmpty();
     }

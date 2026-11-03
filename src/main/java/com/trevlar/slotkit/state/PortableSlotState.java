@@ -12,6 +12,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.CustomData;
 
 import org.jetbrains.annotations.ApiStatus;
@@ -43,10 +44,11 @@ import java.util.Map;
  *       runs forever: old chunks, offline players and structure files keep the old
  *       form for years.</li>
  *   <li><b>Private and unforgeable on the wire.</b> custom_data syncs to clients, so
- *       {@link #installWireStrip} drops the key from custom_data's stream codec both ways: a
- *       client never reads another player's marks, and a creative client cannot write
- *       slot state by sending an item back. A creative stack never carries slot state,
- *       as with 6.x's empty network codec.</li>
+ *       {@link #installWireStrip} drops the per-player marks from custom_data's stream codec
+ *       both ways: a client never reads another player's marks, and a creative client cannot
+ *       write them by sending an item back. The SHARED part crosses (2.4.0): it is the same
+ *       for every viewer, so a client draws a box's reservations; a creative client, which
+ *       can make any item, can send one back with SHARED values of its choosing.</li>
  *   <li><b>A placed box owns its state.</b> Placing consumes the key (it moves into the
  *       block entity's attachment and leaves the leftover components), and breaking
  *       writes it back only when the bag holds something, so marks cleared while the
@@ -90,6 +92,27 @@ public final class PortableSlotState {
         return tag.isEmpty() ? null : CustomData.of(tag);
     }
 
+    /** The SHARED value stored for {@code channelId} at {@code index} on {@code item}, or {@code null}. */
+    public static @Nullable Tag readShared(ItemStack item, Identifier channelId, int index) {
+        PerPlayerSlotStateBag bag = read(item.get(DataComponents.CUSTOM_DATA));
+        SlotStateBag shared = bag == null ? null : bag.getShared();
+        return shared == null ? null : shared.read(channelId, index);
+    }
+
+    /** Stores {@code value} (or removes the entry, for {@code null}) as {@code item}'s SHARED value at {@code index}. */
+    public static void writeShared(ItemStack item, Identifier channelId, int index, @Nullable Tag value) {
+        CustomData data = item.get(DataComponents.CUSTOM_DATA);
+        PerPlayerSlotStateBag bag = read(data);
+        if (bag == null) {
+            if (value == null) return;
+            bag = new PerPlayerSlotStateBag();
+        }
+        if (value != null) bag.getOrCreateShared().write(channelId, index, value);
+        else if (bag.getShared() != null) bag.getShared().clear(channelId, index);
+        bag.dropEmptyShared();
+        item.set(DataComponents.CUSTOM_DATA, bag.isEmpty() ? without(data) : with(data, bag));
+    }
+
     /** {@code components} with custom_data replaced by {@code data} (removed when {@code null}). */
     public static DataComponentMap withCustomData(DataComponentMap components, @Nullable CustomData data) {
         return DataComponentMap.builder().addAll(components).set(DataComponents.CUSTOM_DATA, data).build();
@@ -97,9 +120,16 @@ public final class PortableSlotState {
 
     // The wire
 
-    /** custom_data as it crosses the network: the key dropped, so it never reaches or comes from a client. */
+    /**
+     * custom_data as it crosses the network: the key keeps only its SHARED part, which every
+     * viewer sees anyway (a box's reservations, drawn on any client), and the per-player
+     * marks never reach or come from a client.
+     */
     public static CustomData stripped(CustomData data) {
         if (!data.copyTag().contains(KEY)) return data;
+        PerPlayerSlotStateBag bag = read(data);
+        PerPlayerSlotStateBag shared = bag == null ? null : bag.sharedOnly();
+        if (shared != null && !shared.isEmpty()) return with(data, shared);
         CustomData without = without(data);
         return without == null ? CustomData.EMPTY : without;
     }

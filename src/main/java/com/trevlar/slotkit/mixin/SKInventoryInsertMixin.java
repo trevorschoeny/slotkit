@@ -2,6 +2,9 @@ package com.trevlar.slotkit.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
+import com.trevlar.slotkit.api.reserve.Reservations;
 import com.trevlar.slotkit.api.window.BehaviorKeys;
 import com.trevlar.slotkit.api.window.SlotOperations;
 import com.trevlar.slotkit.api.window.SlotRef;
@@ -18,6 +21,7 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.Unique;
+import org.spongepowered.asm.mixin.injection.At;
 
 /**
  * Enforces {@link BehaviorKeys#INVENTORY_INSERT}: whether an item given to the
@@ -97,6 +101,14 @@ public abstract class SKInventoryInsertMixin {
             if (hasRemainingSpaceForItem(items.get(i), stack) && sk$allows(i, stack)) return i;
         }
         return -1;
+    }
+
+    /** A reserved slot's cap holds for a pickup too: vanilla fills a slot to the stack size. */
+    @WrapOperation(method = "addResource(ILnet/minecraft/world/item/ItemStack;)I",
+            at = @At(value = "INVOKE",
+                    target = "Lnet/minecraft/world/entity/player/Inventory;getMaxStackSize(Lnet/minecraft/world/item/ItemStack;)I"))
+    private int sk$reservedCap(Inventory self, ItemStack stack, Operation<Integer> original, @Local(argsOnly = true) int slot) {
+        return Math.min(original.call(self, stack), Reservations.limit(SlotRef.of(self, slot, player), stack));
     }
 
     @WrapMethod(method = "getFreeSlot")

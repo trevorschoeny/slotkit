@@ -97,6 +97,8 @@ public class SlotKitClient implements ClientModInitializer {
         SlotStateClient.register();
         com.trevlar.slotkit.api.state.SlotState.installClientPlayer(() -> Minecraft.getInstance().player);
         com.trevlar.slotkit.api.state.SlotState.installClientSender(ClientPlayNetworking::send);
+        com.trevlar.slotkit.api.reserve.Reservations.installClientSender(ClientPlayNetworking::send);
+        com.trevlar.slotkit.core.ReservationGhosts.register();
 
         // The server's active counts for this player's groups.
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(

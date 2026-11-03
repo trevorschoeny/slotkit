@@ -1,6 +1,8 @@
 package com.trevlar.slotkit.api.item;
 
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 
 import org.jspecify.annotations.Nullable;
 
@@ -27,4 +29,18 @@ public interface ItemContents {
      * so a container that follows its item to a new place answers with the new path.
      */
     @Nullable ItemPath itemPath(Player player);
+
+    /**
+     * The item itself, as {@code player} reaches it, or {@code null}. By default the item at
+     * {@link #itemPath} on the server, and {@code null} on a client or with no player. A
+     * container that holds its item directly (a box inside a chest, seen by automation)
+     * returns it. What slot state on the item is read from ({@code SlotStateChannel.get(SlotRef)}).
+     * Since 2.4.0.
+     */
+    default @Nullable ItemStack item(@Nullable Player player) {
+        if (!(player instanceof ServerPlayer server)) return null;
+        ItemPath path = itemPath(server);
+        ItemRef ref = path == null ? null : ItemSources.at(server, path);
+        return ref == null ? null : ref.stack();
+    }
 }

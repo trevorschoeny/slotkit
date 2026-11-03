@@ -1,3 +1,16 @@
+## 2.4.0
+
+#### Added
+
+- Reserved slots (`Reservations`, `Reservation`): a slot that holds out for one item, matched by type or also by name, enchantments or other components, up to an optional count cap. Clicks, shift-clicks, drags, number keys, pickups, hoppers, droppers and copper golems put only that item there. An empty reserved slot draws its item as a ghost. A shulker box carries its reservations as an item and keeps them when broken; a chest or barrel drops them when broken. `Reservations.reserve` reserves a slot of the open menu as the player's own action, moving out whatever no longer belongs.
+- Automation operations `AUTOMATION_PUT` and `AUTOMATION_TAKE`, with `Automation.room` and `Automation.mayTake`: what hoppers, droppers, dispensers and copper golems ask before moving items, and what a mod's own automation can ask, also for a slot inside a shulker box in a chest. A put veto on `AUTOMATION_PUT` (a mod's lock) holds for all of them.
+- `SlotStateChannel.get(SlotRef)`, and `get`/`set` on an item: a SHARED channel's value wherever a veto's slot lives, including slots inside a box item.
+
+#### Fixed
+
+- A shulker box broken in survival dropped its slot state; the loot table copied only its name and contents.
+- A copper golem filling a chest now follows slot rules, whichever mod chose its slots.
+
 ## 2.3.0
 
 #### Added

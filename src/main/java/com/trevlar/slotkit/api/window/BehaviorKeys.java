@@ -136,10 +136,25 @@ public final class BehaviorKeys {
      */
     public static final BehaviorKey<TriBool> INVENTORY_INSERT = operation("world_pickup");
 
+    /**
+     * Operation: whether automation may put items into this slot of a placed container:
+     * a hopper or hopper minecart, a dropper, a copper golem, an item a hopper pulls off
+     * the ground. Nobody is acting, so only a veto for both modes speaks. Asked through
+     * {@link Automation#room}, which a mod's own automation asks too. Since 2.4.0.
+     */
+    public static final BehaviorKey<TriBool> AUTOMATION_PUT = operation("automation_put");
+
+    /**
+     * Operation: whether automation may take items out of this slot: a hopper pulling or
+     * emptying itself, a dispenser or dropper firing. Asked through {@link Automation#mayTake}.
+     * Since 2.4.0.
+     */
+    public static final BehaviorKey<TriBool> AUTOMATION_TAKE = operation("automation_take");
+
     /** Every operation vanilla ships, in the order a settings list would show them. */
     public static final java.util.List<BehaviorKey<TriBool>> VANILLA_OPERATIONS = java.util.List.of(
             CLICK_TAKE, CLICK_PUT, SHIFT_CLICK_OUT, SHIFT_CLICK_IN, COLLECT, DRAG_FILL,
-            HOTBAR_SWAP, OFFHAND_SWAP, DROP, DROP_STACK, INVENTORY_INSERT);
+            HOTBAR_SWAP, OFFHAND_SWAP, DROP, DROP_STACK, INVENTORY_INSERT, AUTOMATION_PUT, AUTOMATION_TAKE);
 
     /**
      * Whether items in this slot take part in XP-orb Mending. An opted-in slot joins
