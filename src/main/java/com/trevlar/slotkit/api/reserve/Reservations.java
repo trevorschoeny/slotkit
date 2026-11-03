@@ -22,6 +22,7 @@ import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.Container;
+import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
@@ -52,7 +53,12 @@ import java.util.function.Consumer;
  * A put into a reserved slot is refused unless the stack {@linkplain Reservation#matches
  * matches}, and stops at the reservation's cap. The refusal is a {@link SlotOperations.PutVeto}
  * SlotKit registers for both modes, so it rides every put seam and {@code Automation.room}.
- * Needs SlotKit on the server for anything but a client's own prediction.
+ *
+ * <h2>A server without SlotKit</h2>
+ * There the client keeps the inventory's reservations itself, per world or server (in
+ * {@code config/slotkit/reservations.json}), and its clicks honor them before they are sent:
+ * the same calls, the same values. Containers and boxes reserve only where the server runs
+ * SlotKit, and automation is the server's.
  *
  * <p>Since 2.4.0.
  */
@@ -72,6 +78,9 @@ public final class Reservations {
 
     /** The reservation on the slot a veto or seam is asked about, wherever it lives. {@link Reservation#NONE} for none. */
     public static Reservation get(SlotRef ref) {
+        if (local != null && ref.container() instanceof Inventory inventory && keptLocally(inventory.player)) {
+            return local.get(ref.containerSlot());
+        }
         return CHANNEL.get(ref);
     }
 
@@ -92,11 +101,18 @@ public final class Reservations {
      * Reserves {@code slot} of {@code player}'s open menu (or clears it with
      * {@link Reservation#NONE}), as the player's own action. Whatever no longer belongs
      * (a different item, or more than the cap) goes into the player's inventory, or is
-     * dropped when it doesn't fit. On a client, asks the server to (needs SlotKit there);
-     * the slot shows the result once the server applies it. What the editor calls.
+     * dropped when it doesn't fit. On a client, asks the server to, and the slot shows the
+     * result once the server applies it. Where the server lacks SlotKit, the client keeps an
+     * inventory slot's reservation itself and moves nothing. What the editor calls.
      */
     public static void reserve(Player player, Slot slot, Reservation reservation) {
         AbstractContainerMenu menu = player.containerMenu;
+        if (local != null && keptLocally(player)) {
+            // No server to ask: the inventory's slots are reserved here; nothing is moved out.
+            Slot target = Slots.target(slot);
+            if (target.container instanceof Inventory) local.set(target.getContainerSlot(), reservation);
+            return;
+        }
         if (!(player instanceof ServerPlayer server)) {
             int index = menu.slots.indexOf(slot);
             if (index >= 0 && Presence.serverHasChannel(ID)) {
@@ -176,6 +192,27 @@ public final class Reservations {
                 : player.inventoryMenu.containerId == payload.containerId() ? player.inventoryMenu : null;
         if (menu == null || payload.menuSlot() < 0 || payload.menuSlot() >= menu.slots.size()) return;
         reserve(player, menu.slots.get(payload.menuSlot()), payload.reservation());
+    }
+
+    // The client's own store, for a server without SlotKit; installed by SlotKitClient.
+
+    /** The inventory's reservations a client keeps for a server without SlotKit, by inventory index. */
+    @ApiStatus.Internal
+    public interface LocalStore {
+        Reservation get(int index);
+        void set(int index, Reservation reservation);
+    }
+
+    private static volatile @Nullable LocalStore local;
+
+    @ApiStatus.Internal
+    public static void installLocalStore(LocalStore store) {
+        local = store;
+    }
+
+    // A client player whose server can't hold reservations.
+    private static boolean keptLocally(Player player) {
+        return player.level().isClientSide() && !Presence.serverHasChannel(ID);
     }
 
     // The client's play-packet sender, installed by SlotKitClient: common code never names

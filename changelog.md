@@ -3,6 +3,7 @@
 #### Added
 
 - Reserved slots (`Reservations`, `Reservation`): a slot that holds out for one item, matched by type or also by name, enchantments or other components, up to an optional count cap. Clicks, shift-clicks, drags, number keys, pickups, hoppers, droppers and copper golems put only that item there. An empty reserved slot draws its item as a ghost. A shulker box carries its reservations as an item and keeps them when broken; a chest or barrel drops them when broken. `Reservations.reserve` reserves a slot of the open menu as the player's own action, moving out whatever no longer belongs.
+- On a server without SlotKit, the client keeps the inventory's reservations itself, per world or server, and its clicks honor them. Same calls, same values; containers and boxes reserve only where the server runs SlotKit.
 - Automation operations `AUTOMATION_PUT` and `AUTOMATION_TAKE`, with `Automation.room` and `Automation.mayTake`: what hoppers, droppers, dispensers and copper golems ask before moving items, and what a mod's own automation can ask, also for a slot inside a shulker box in a chest. A put veto on `AUTOMATION_PUT` (a mod's lock) holds for all of them.
 - `SlotStateChannel.get(SlotRef)`, and `get`/`set` on an item: a SHARED channel's value wherever a veto's slot lives, including slots inside a box item.
 
