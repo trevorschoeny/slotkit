@@ -100,6 +100,7 @@ public class SlotKitClient implements ClientModInitializer {
         com.trevlar.slotkit.api.reserve.Reservations.installClientSender(ClientPlayNetworking::send);
         com.trevlar.slotkit.core.ReservationGhosts.register();
         com.trevlar.slotkit.core.LocalReservations.register();
+        com.trevlar.slotkit.api.reserve.ReservationEditor.register();
 
         // The server's active counts for this player's groups.
         net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking.registerGlobalReceiver(

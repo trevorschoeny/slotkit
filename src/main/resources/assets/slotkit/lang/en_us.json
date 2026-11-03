@@ -67,5 +67,16 @@
   "slot_group.menukit.beacon_payment": "Beacon payment",
   "slot_group.menukit.mount_saddle": "Mount saddle",
   "slot_group.menukit.mount_body_armor": "Mount armor",
-  "slot_group.menukit.mount_storage": "Mount storage"
+  "slot_group.menukit.mount_storage": "Mount storage",
+  "slotkit.reserve.title": "Reserve slot",
+  "slotkit.reserve.title_item": "Reserve slot: %s",
+  "slotkit.reserve.search": "Search items",
+  "slotkit.reserve.no_match": "No items match",
+  "slotkit.reserve.count": "Count:",
+  "slotkit.reserve.no_limit": "No limit",
+  "slotkit.reserve.advanced": "Advanced",
+  "slotkit.reserve.match_name": "Match name",
+  "slotkit.reserve.match_enchantments": "Match enchantments",
+  "slotkit.reserve.match_components": "Match other components",
+  "slotkit.reserve.remove": "Remove"
 }
