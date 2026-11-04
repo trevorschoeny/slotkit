@@ -98,7 +98,7 @@ public class SlotKitClient implements ClientModInitializer {
         com.trevlar.slotkit.api.state.SlotState.installClientPlayer(() -> Minecraft.getInstance().player);
         com.trevlar.slotkit.api.state.SlotState.installClientSender(ClientPlayNetworking::send);
         com.trevlar.slotkit.api.reserve.Reservations.installClientSender(ClientPlayNetworking::send);
-        com.trevlar.slotkit.core.ReservationGhosts.register();
+        com.trevlar.slotkit.api.reserve.ReservationDisplay.register();
         com.trevlar.slotkit.core.LocalReservations.register();
         com.trevlar.slotkit.api.reserve.ReservationEditor.register();
 
