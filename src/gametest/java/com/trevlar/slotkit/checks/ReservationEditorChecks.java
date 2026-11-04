@@ -54,7 +54,7 @@ public class ReservationEditorChecks implements FabricClientGameTest {
                 ItemStack diamond = ReservationEditor.entries("diamond").stream()
                         .filter(e -> e.is(Items.DIAMOND)).findFirst().orElse(ItemStack.EMPTY);
                 ReservationEditor.pick(diamond);
-                for (int i = 0; i < 4; i++) ReservationEditor.stepCount(1);
+                ReservationEditor.setCount(4);
                 ReservationEditor.setMatch(Reservation.Match.ENCHANTMENTS, true);
             });
             ctx.waitTicks(2);

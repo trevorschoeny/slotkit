@@ -10,6 +10,7 @@ import com.trevlar.menukit.api.element.InputContext;
 import com.trevlar.menukit.api.element.RenderContext;
 import com.trevlar.menukit.api.element.ScrollContainer;
 import com.trevlar.menukit.api.element.Section;
+import com.trevlar.menukit.api.element.Slider;
 import com.trevlar.menukit.api.element.SlotRendering;
 import com.trevlar.menukit.api.element.TextField;
 import com.trevlar.menukit.api.element.TextLabel;
@@ -60,9 +61,9 @@ import java.util.Locale;
  * }</pre>
  *
  * <p>Top to bottom: a search box over a grid of every item (the creative search tab's,
- * each variant its own entry), exactly one of them selected; Count, − / value / +, from
- * "No limit" (cap 0) up to the item's stack size; an Advanced fold with the three
- * {@link Match} fields; Remove and Done. It opens pre-filled from the slot's reservation,
+ * each variant its own entry), exactly one of them selected; an Advanced fold holding
+ * Count (a slider from 1 to the item's stack size) and the three {@link Match} fields;
+ * Remove and Done. It opens pre-filled from the slot's reservation,
  * or with no reservation from the item in the slot, so that item's name and enchantments
  * are there to match. Done applies it through {@link Reservations#reserve}, Remove clears
  * it, Escape leaves it as it was. A new screen closes it unapplied.
@@ -74,7 +75,6 @@ public final class ReservationEditor {
     private ReservationEditor() {}
 
     private static final int COLUMNS = 9, ROWS = 3, SIZE = SlotRendering.DEFAULT_SIZE, GAP = 4;
-    private static final Component NO_LIMIT = Component.translatable("slotkit.reserve.no_limit");
 
     // Vanilla's slot highlight, behind and in front of the selected item.
     private static final Identifier HIGHLIGHT_BACK = Identifier.withDefaultNamespace("container/slot_highlight_back");
@@ -159,10 +159,25 @@ public final class ReservationEditor {
         cap = Math.min(cap, item.getMaxStackSize());
     }
 
-    /** Count's − and +: from No limit (0) up to the item's stack size, and back. */
-    public static void stepCount(int by) {
+    /** Count's slider: sets the cap directly, clamped to 1..the item's stack size. */
+    public static void setCount(int count) {
         if (item.isEmpty()) return;
-        cap = Math.max(0, Math.min(item.getMaxStackSize(), cap + by));
+        cap = Math.max(1, Math.min(item.getMaxStackSize(), count));
+    }
+
+    /** Count as a fraction of the slider's track (1 at the left, the item's stack size at the right). */
+    private static double countFraction() {
+        int max = item.getMaxStackSize();
+        if (max <= 1) return 0;
+        int count = cap == 0 ? max : cap;
+        return (count - 1) / (double) (max - 1);
+    }
+
+    /** The slider's drag/key callback: {@code f} back to a count, applied through {@link #setCount}. */
+    private static void setCountFraction(double f) {
+        int max = item.getMaxStackSize();
+        if (max <= 1) return;
+        setCount(1 + (int) Math.round(f * (max - 1)));
     }
 
     /** Turns an Advanced field on or off. */
@@ -235,20 +250,21 @@ public final class ReservationEditor {
                 .state(() -> scroll, v -> scroll = v)
                 .build();
 
-        TextLabel value = TextLabel.builder().text(() -> cap == 0 ? NO_LIMIT : Component.literal(String.valueOf(cap)))
+        Slider<Double> countSlider = Slider.builder().size(120, 16)
+                .state(ReservationEditor::countFraction, ReservationEditor::setCountFraction)
+                .label(f -> Component.literal(String.valueOf(1 + (int) Math.round(f * (item.getMaxStackSize() - 1)))))
                 .build();
         Flow count = Flow.builder().gap(GAP).crossAlign(CrossAlign.CENTER)
                 // An item that doesn't stack has no count to cap.
                 .visibleWhen(() -> item.getMaxStackSize() > 1)
                 .add(TextLabel.builder().text(Component.translatable("slotkit.reserve.count")).build())
-                .add(Button.builder().label(Component.literal("−")).size(20, 20).onClick(() -> stepCount(-1)).build())
-                .add(value)
-                .add(Button.builder().label(Component.literal("+")).size(20, 20).onClick(() -> stepCount(1)).build())
+                .add(countSlider)
                 .build();
 
         Section fold = Section.builder(Component.translatable("slotkit.reserve.advanced"))
                 .state(() -> advanced, v -> advanced = v)
                 .add(Flow.builder().vertical().gap(GAP)
+                        .add(count)
                         .add(matchBox(Match.NAME, "slotkit.reserve.match_name"))
                         .add(matchBox(Match.ENCHANTMENTS, "slotkit.reserve.match_enchantments"))
                         .add(matchBox(Match.COMPONENTS, "slotkit.reserve.match_components"))
@@ -269,7 +285,6 @@ public final class ReservationEditor {
                         : Component.translatable("slotkit.reserve.title_item", item.getHoverName())).build())
                 .add(search)
                 .add(grid)
-                .add(count)
                 .add(Divider.horizontal().build())
                 .add(fold)
                 .add(buttons);
