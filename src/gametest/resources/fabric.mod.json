@@ -11,10 +11,7 @@
       "com.trevlar.slotkit.checks.RevealChecks",
       "com.trevlar.slotkit.checks.StorageChecks",
       "com.trevlar.slotkit.checks.ClickChecks",
-      "com.trevlar.slotkit.checks.LimitChecks",
-      "com.trevlar.slotkit.checks.ReservationChecks",
-      "com.trevlar.slotkit.checks.LocalReservationChecks",
-      "com.trevlar.slotkit.checks.ReservationEditorChecks"
+      "com.trevlar.slotkit.checks.LimitChecks"
     ],
     "main": [
       "com.trevlar.slotkit.checks.CarriedChecks",

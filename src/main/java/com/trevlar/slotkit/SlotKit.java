@@ -48,8 +48,6 @@ public class SlotKit implements ModInitializer {
         com.trevlar.slotkit.state.PortableSlotState.installWireStrip();
         com.trevlar.slotkit.state.SlotStateHooks.registerCommon();
         com.trevlar.slotkit.state.SlotStateHooks.registerServer();
-        // Reserved slots: their slot-state channel, the veto every put asks, the client's request.
-        com.trevlar.slotkit.api.reserve.Reservations.init();
         com.trevlar.slotkit.core.ActiveCounts.registerCommon();
         // On-demand group instances the server adds to and removes from an open menu.
         net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.clientboundPlay().register(
