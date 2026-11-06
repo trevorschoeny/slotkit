@@ -3,6 +3,7 @@
 #### Added
 
 - Automation operations `AUTOMATION_PUT` and `AUTOMATION_TAKE`, with `Automation.room` and `Automation.mayTake`: what hoppers, droppers, dispensers and copper golems ask before moving items, and what a mod's own automation can ask, also for a slot inside a shulker box in a chest. A put veto on `AUTOMATION_PUT` (a mod's lock) holds for all of them.
+- `SlotOperations.Preference`, registered with `prefer`: a slot a mod prefers for an item is tried first when a pickup or a shift-click picks where to land, partial stacks before empty slots as before. Vetoes and limits still judge every slot; with nothing preferred the order is vanilla's.
 - `SlotStateChannel.get(SlotRef)`, and `get`/`set` on an item: a SHARED channel's value wherever a veto's slot lives, including slots inside a box item.
 
 #### Fixed

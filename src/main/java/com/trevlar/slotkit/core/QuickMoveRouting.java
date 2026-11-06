@@ -7,7 +7,10 @@ import com.trevlar.slotkit.api.slot.CreatedSlot;
 import com.trevlar.slotkit.api.slot.ParityGroup;
 import com.trevlar.slotkit.api.slot.QuickMoveRoutes;
 import com.trevlar.slotkit.api.slot.QuickMoveRoutes.Dest;
+import com.trevlar.slotkit.api.window.SlotOperations;
+import com.trevlar.slotkit.api.window.SlotRef;
 import com.trevlar.slotkit.mixin.AbstractContainerMenuInvoker;
+import com.trevlar.slotkit.window.ActingPlayer;
 
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -127,8 +130,19 @@ public final class QuickMoveRouting {
 
     // Merge into partial stacks, then fill empty slots, one slot at a time, as
     // vanilla's moveItemStackTo does over a range, so each slot judges the move.
+    // Preferred slots go first in both passes (SlotOperations.Preference).
     private static void moveInto(AbstractContainerMenu menu, ItemStack live, List<Integer> targets) {
         AbstractContainerMenuInvoker move = (AbstractContainerMenuInvoker) menu;
+        if (SlotOperations.anyPreference() && !live.isEmpty()) {
+            Player player = ActingPlayer.current();
+            List<Integer> preferred = new ArrayList<>(), rest = new ArrayList<>();
+            for (int i : targets) {
+                boolean prefers = SlotOperations.prefers(SlotRef.of(menu, menu.slots.get(i), player), live);
+                (prefers ? preferred : rest).add(i);
+            }
+            preferred.addAll(rest);
+            targets = preferred;
+        }
         for (int pass = 0; pass < 2 && !live.isEmpty(); pass++) {
             for (int i : targets) {
                 if (live.isEmpty()) break;

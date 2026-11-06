@@ -2,6 +2,7 @@ package com.trevlar.slotkit.mixin;
 
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
+import com.trevlar.slotkit.core.PreferredMoves;
 import com.trevlar.slotkit.window.ActingPlayer;
 import com.trevlar.slotkit.window.ClickTags;
 
@@ -29,7 +30,8 @@ import org.spongepowered.asm.mixin.Mixin;
  * <p>A move with no click behind it (a mod calling {@code quickMoveStack} on the
  * server) reaches {@code moveItemStackTo} with no player on the thread. That
  * method is wrapped too: if nothing set the player, the menu's own player
- * ({@link ActingPlayer#ownerOf}) is acting for the duration.
+ * ({@link ActingPlayer#ownerOf}) is acting for the duration. With the player known,
+ * the move puts preferred slots first ({@link PreferredMoves}).
  */
 @Mixin(AbstractContainerMenu.class)
 public class SKClickContextMixin {
@@ -54,10 +56,13 @@ public class SKClickContextMixin {
     @WrapMethod(method = "moveItemStackTo")
     private boolean sk$menuOwnerActs(ItemStack stack, int start, int end, boolean backwards,
                                      Operation<Boolean> original) {
-        if (ActingPlayer.current() != null) return original.call(stack, start, end, backwards); // a click set it
-        Player outer = ActingPlayer.enter(ActingPlayer.ownerOf((AbstractContainerMenu) (Object) this));
+        AbstractContainerMenu self = (AbstractContainerMenu) (Object) this;
+        if (ActingPlayer.current() != null) {   // a click set it
+            return PreferredMoves.moveItemStackTo(self, stack, start, end, backwards, original::call);
+        }
+        Player outer = ActingPlayer.enter(ActingPlayer.ownerOf(self));
         try {
-            return original.call(stack, start, end, backwards);
+            return PreferredMoves.moveItemStackTo(self, stack, start, end, backwards, original::call);
         } finally {
             ActingPlayer.exit(outer);
         }

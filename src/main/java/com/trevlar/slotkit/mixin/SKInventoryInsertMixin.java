@@ -43,6 +43,10 @@ import org.spongepowered.asm.mixin.injection.At;
  * so the slot resolves from its own declaration or the key's default, then the
  * vetoes.
  *
+ * <p>A {@link SlotOperations.Preference} goes first in each pass: the first preferred,
+ * allowed slot in the pass's order wins before the original is asked at all. With no
+ * preference registered the original's answer is the only one.
+ *
  * <p>The re-scan copies vanilla 26.2's order (selected, offhand, then the list). If
  * a Minecraft update changes that order, change it here too.
  */
@@ -89,6 +93,8 @@ public abstract class SKInventoryInsertMixin {
 
     @WrapMethod(method = "getSlotWithRemainingSpace")
     private int sk$pickupIntoPartial(ItemStack stack, Operation<Integer> original) {
+        int preferred = sk$preferred(stack, true);
+        if (preferred >= 0) return preferred;
         int chosen = original.call(stack);
         if (chosen < 0 || sk$allows(chosen, stack)) return chosen;   // no answer, or an allowed one: stands
         int selected = getSelectedSlot();
@@ -102,6 +108,31 @@ public abstract class SKInventoryInsertMixin {
         return -1;
     }
 
+    /**
+     * The first slot a {@link SlotOperations.Preference} prefers for {@code stack} in
+     * this pass, in the pass's own order, or -1: a partial stack with room (selected,
+     * offhand, then the list) or an empty slot (the list). Only an allowed slot counts.
+     */
+    private int sk$preferred(@Nullable ItemStack stack, boolean partial) {
+        if (stack == null || stack.isEmpty() || !SlotOperations.anyPreference()) return -1;
+        Inventory self = (Inventory) (Object) this;
+        if (partial) {
+            for (int i : new int[] {getSelectedSlot(), Inventory.SLOT_OFFHAND}) {
+                if (hasRemainingSpaceForItem(getItem(i), stack) && sk$isPreferred(self, i, stack)) return i;
+            }
+        }
+        for (int i = 0; i < items.size(); i++) {
+            ItemStack there = items.get(i);
+            boolean fits = partial ? hasRemainingSpaceForItem(there, stack) : there.isEmpty();
+            if (fits && sk$isPreferred(self, i, stack)) return i;
+        }
+        return -1;
+    }
+
+    private boolean sk$isPreferred(Inventory self, int index, ItemStack stack) {
+        return SlotOperations.prefers(SlotRef.of(self, index, player), stack) && sk$allows(index, stack);
+    }
+
     /** A slot's {@link SlotOperations.Limit} holds for a pickup too: vanilla fills a slot to the stack size. */
     @WrapOperation(method = "addResource(ILnet/minecraft/world/item/ItemStack;)I",
             at = @At(value = "INVOKE",
@@ -112,6 +143,8 @@ public abstract class SKInventoryInsertMixin {
 
     @WrapMethod(method = "getFreeSlot")
     private int sk$pickupIntoEmpty(Operation<Integer> original) {
+        int preferred = sk$preferred(sk$incoming, false);
+        if (preferred >= 0) return preferred;
         int chosen = original.call();
         if (chosen < 0 || sk$allows(chosen)) return chosen;   // no answer, or an allowed one: stands
         for (int i = 0; i < items.size(); i++) {

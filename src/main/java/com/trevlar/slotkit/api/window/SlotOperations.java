@@ -597,6 +597,55 @@ public final class SlotOperations {
         }
     }
 
+    /**
+     * A preferred home for an item: "pickups of this item land here first". Handed the
+     * slot, its group as a {@link GroupVeto} gets it, and the stack about to land
+     * ({@code incoming}, never empty; read it, don't change it). Only reorders: within
+     * each pass that picks a slot (a pickup's partial stacks, then its empty slots; a
+     * shift-click's merge, then its empty slots), preferred slots are tried first and
+     * the rest follow in vanilla's order. Vetoes and limits still judge every slot, so
+     * a preferred slot that refuses is passed over. Consulted per slot per move, so
+     * keep it a lookup. Since 2.4.0.
+     */
+    @FunctionalInterface
+    public interface Preference {
+        boolean prefers(SlotRef slot, @Nullable SlotGroupId group, ItemStack incoming);
+    }
+
+    private static final List<Preference> PREFERENCES = new CopyOnWriteArrayList<>();
+
+    /**
+     * Registers a {@link Preference} that applies while the acting player's mode is in
+     * {@code scope}, read per question as {@link #veto(ModeScope, Veto)} is. Since 2.4.0.
+     */
+    public static void prefer(ModeScope scope, Preference preference) {
+        com.trevlar.menukit.api.Declarations.requireOpen("SlotOperations.prefer");
+        Objects.requireNonNull(scope, "scope");
+        Objects.requireNonNull(preference, "preference");
+        PREFERENCES.add(scope == ModeScope.BOTH ? preference
+                : (slot, group, incoming) -> scope.includes(slot.player()) && preference.prefers(slot, group, incoming));
+    }
+
+    /** Whether any registered {@link Preference} prefers this slot for {@code incoming}. Since 2.4.0. */
+    public static boolean prefers(SlotRef ref, ItemStack incoming) {
+        if (PREFERENCES.isEmpty() || incoming.isEmpty()) return false;
+        SlotGroupId group = SlotGroups.of(Objects.requireNonNull(ref, "ref"));
+        for (Preference preference : PREFERENCES) {
+            if (BROKEN.contains(preference)) continue;
+            try {
+                if (preference.prefers(ref, group, incoming)) return true;
+            } catch (RuntimeException e) {
+                disable(preference, e);
+            }
+        }
+        return false;
+    }
+
+    /** Whether any {@link Preference} is registered, so a move with none keeps vanilla's order untouched. */
+    public static boolean anyPreference() {
+        return !PREFERENCES.isEmpty();
+    }
+
     private static final List<GroupVeto> VETOES = new CopyOnWriteArrayList<>();
     private static final List<PutVeto> PUT_VETOES = new CopyOnWriteArrayList<>();
     /** Whether any veto asked for the group, so a question with none never resolves it. */
@@ -774,7 +823,7 @@ public final class SlotOperations {
 
     private static void disable(Object veto, RuntimeException e) {
         BROKEN.add(veto);
-        LOGGER.error("[SlotKit] a slot operation veto or limit threw and is disabled from here on: {}", veto, e);
+        LOGGER.error("[SlotKit] a slot operation veto, limit or preference threw and is disabled from here on: {}", veto, e);
     }
 
     /** {@link #allows(SlotRef, BehaviorKey)} for a slot on an open menu. */
