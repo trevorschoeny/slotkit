@@ -2,7 +2,6 @@ package com.trevlar.slotkit.api.window;
 
 import com.trevlar.slotkit.api.item.ItemContents;
 import com.trevlar.slotkit.api.item.ItemPath;
-import com.trevlar.slotkit.api.reserve.Reservations;
 
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.SimpleContainer;
@@ -35,7 +34,7 @@ public final class Automation {
     /**
      * How many of {@code incoming} automation may put into {@code container}'s slot now:
      * 0 when the slot refuses it or holds a different stack, else what fits under the
-     * slot's limit (the stack size, or a reservation's cap) beside what is there. Doesn't
+     * slot's limit (the stack size, or a {@link SlotOperations.Limit}'s cap) beside what is there. Doesn't
      * ask the container's own {@code canPlaceItem}; vanilla's movers already do.
      */
     public static int room(Container container, int slot, ItemStack incoming) {
@@ -43,7 +42,7 @@ public final class Automation {
         SlotRef ref = SlotRef.of(container, slot, null);
         if (!SlotOperations.allowsPut(ref, BehaviorKeys.AUTOMATION_PUT, incoming)) return 0;
         ItemStack there = container.getItem(slot);
-        int limit = Reservations.limit(ref, incoming);
+        int limit = Math.min(incoming.getMaxStackSize(), SlotOperations.limitOf(ref, incoming));
         if (there.isEmpty()) return Math.min(incoming.getCount(), limit);
         if (!ItemStack.isSameItemSameComponents(there, incoming)) return 0;
         return Math.max(0, Math.min(incoming.getCount(), limit - there.getCount()));

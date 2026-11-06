@@ -15,7 +15,6 @@ import com.trevlar.slotkit.api.window.SlotRef;
 import com.trevlar.slotkit.core.Slots;
 import com.trevlar.slotkit.network.Handshake;
 import com.trevlar.slotkit.network.ReserveC2SPayload;
-import com.trevlar.slotkit.window.ActingPlayer;
 
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
@@ -160,6 +159,7 @@ public final class Reservations {
     @ApiStatus.Internal
     public static void init() {
         SlotOperations.vetoPut(ModeScope.BOTH, Reservations::refuses);
+        SlotOperations.limit(ModeScope.BOTH, Reservations::cap);
         PayloadTypeRegistry.serverboundPlay().register(ReserveC2SPayload.TYPE, ReserveC2SPayload.STREAM_CODEC);
         ServerPlayNetworking.registerGlobalReceiver(ReserveC2SPayload.TYPE, (payload, ctx) -> {
             if (!Handshake.hears(ctx.player())) return;
@@ -167,23 +167,16 @@ public final class Reservations {
         });
     }
 
-    /** A put the reservation refuses: another item, or the slot already at its cap. */
+    /** A put the reservation refuses: another item. Its cap is {@link #cap}. */
     private static boolean refuses(SlotRef ref, @Nullable SlotGroupId group, BehaviorKey<?> operation, ItemStack incoming) {
         Reservation r = get(ref);
-        if (r.isNone()) return false;
-        if (!r.matches(incoming)) return true;
-        ItemStack there = ref.container().getItem(ref.containerSlot());
-        return !there.isEmpty() && there.getCount() >= r.limit(incoming);
+        return !r.isNone() && !r.matches(incoming);
     }
 
-    /** A slot's stack cap for a click: {@code max}, or lower under a matching reservation. */
-    @ApiStatus.Internal
-    public static int capAt(Slot slot, ItemStack stack, int max) {
-        if (stack.isEmpty()) return max;
-        Slot target = Slots.target(slot);
-        Reservation r = get(new SlotRef(target.container, target.getContainerSlot(), slot, null,
-                ActingPlayer.current(), null, null));
-        return r.isNone() || !r.matches(stack) ? max : Math.min(max, r.limit(stack));
+    /** A matching reservation's cap, as a {@link SlotOperations.Limit}. */
+    private static int cap(SlotRef ref, @Nullable SlotGroupId group, ItemStack incoming) {
+        Reservation r = get(ref);
+        return r.isNone() || !r.matches(incoming) ? SlotOperations.NO_LIMIT : r.limit(incoming);
     }
 
     // A client's request: a slot of the menu it has open, as a click names one.

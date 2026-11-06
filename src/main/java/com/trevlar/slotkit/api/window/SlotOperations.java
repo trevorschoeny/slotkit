@@ -531,6 +531,72 @@ public final class SlotOperations {
         boolean denies(SlotRef slot, @Nullable SlotGroupId group, BehaviorKey<?> operation, ItemStack incoming);
     }
 
+    /**
+     * A cap on how many of an item a slot may hold, below its stack size: "at most 16
+     * here". Handed the slot, its group as a {@link GroupVeto} gets it, and the stack
+     * about to land ({@code incoming}, never empty; read it, don't change it). Answers
+     * {@link #NO_LIMIT} when it has nothing to say. Every registered limit is asked and
+     * the lowest answer wins, at every hand that fills a slot: a click, a shift-click, a
+     * drag, a pickup, automation ({@link Automation#room}), and slots inside a box item.
+     * A slot already holding that many of the item refuses the put. Since 2.4.0.
+     */
+    @FunctionalInterface
+    public interface Limit {
+        int max(SlotRef slot, @Nullable SlotGroupId group, ItemStack incoming);
+    }
+
+    /** What a {@link Limit} answers when it doesn't cap the slot. */
+    public static final int NO_LIMIT = Integer.MAX_VALUE;
+
+    private static final List<Limit> LIMITS = new CopyOnWriteArrayList<>();
+
+    /**
+     * Registers a {@link Limit} that applies while the acting player's mode is in
+     * {@code scope}, read per question as {@link #veto(ModeScope, Veto)} is. Since 2.4.0.
+     */
+    public static void limit(ModeScope scope, Limit limit) {
+        com.trevlar.menukit.api.Declarations.requireOpen("SlotOperations.limit");
+        Objects.requireNonNull(scope, "scope");
+        Objects.requireNonNull(limit, "limit");
+        LIMITS.add(scope == ModeScope.BOTH ? limit : new ScopedLimit(scope, limit));
+    }
+
+    /**
+     * The most of {@code incoming} the slot may hold under every registered {@link Limit}:
+     * the lowest answer, or {@link #NO_LIMIT} when none caps it (an empty {@code incoming}
+     * included). Not clamped to the stack size; the caller takes the smaller. Since 2.4.0.
+     */
+    public static int limitOf(SlotRef ref, ItemStack incoming) {
+        if (LIMITS.isEmpty() || incoming.isEmpty()) return NO_LIMIT;
+        return limitOf(ref, SlotGroups.of(Objects.requireNonNull(ref, "ref")), incoming);
+    }
+
+    private static int limitOf(SlotRef ref, @Nullable SlotGroupId group, ItemStack incoming) {
+        int max = NO_LIMIT;
+        for (Limit limit : LIMITS) {
+            if (BROKEN.contains(limit)) continue;
+            try {
+                max = Math.min(max, limit.max(ref, group, incoming));
+            } catch (RuntimeException e) {
+                disable(limit, e);
+            }
+        }
+        return Math.max(0, max);
+    }
+
+    /** A limit that only speaks while the acting player's mode is in its scope. */
+    private record ScopedLimit(ModeScope scope, Limit limit) implements Limit {
+        @Override
+        public int max(SlotRef slot, @Nullable SlotGroupId group, ItemStack incoming) {
+            return scope.includes(slot.player()) ? limit.max(slot, group, incoming) : NO_LIMIT;
+        }
+
+        @Override
+        public String toString() {
+            return limit + " (" + scope + ")";
+        }
+    }
+
     private static final List<GroupVeto> VETOES = new CopyOnWriteArrayList<>();
     private static final List<PutVeto> PUT_VETOES = new CopyOnWriteArrayList<>();
     /** Whether any veto asked for the group, so a question with none never resolves it. */
@@ -680,7 +746,7 @@ public final class SlotOperations {
         Objects.requireNonNull(ref, "ref");
         Objects.requireNonNull(operation, "operation");
         if (!cascade(ref, operation)) return false;
-        boolean askPut = !incoming.isEmpty() && !PUT_VETOES.isEmpty();
+        boolean askPut = !incoming.isEmpty() && (!PUT_VETOES.isEmpty() || !LIMITS.isEmpty());
         SlotGroupId group = anyGroupVeto || askPut ? SlotGroups.of(ref) : null;   // once per question
         for (GroupVeto veto : VETOES) {
             if (BROKEN.contains(veto)) continue;
@@ -699,12 +765,16 @@ public final class SlotOperations {
                 disable(veto, e);
             }
         }
-        return true;
+        // A slot at its limit has no room: refused, so a pickup or a shift-click looks
+        // for the next slot rather than stopping on this one.
+        if (LIMITS.isEmpty()) return true;
+        ItemStack there = ref.container().getItem(ref.containerSlot());
+        return !ItemStack.isSameItemSameComponents(there, incoming) || there.getCount() < limitOf(ref, group, incoming);
     }
 
     private static void disable(Object veto, RuntimeException e) {
         BROKEN.add(veto);
-        LOGGER.error("[SlotKit] a slot operation veto threw and is disabled from here on: {}", veto, e);
+        LOGGER.error("[SlotKit] a slot operation veto or limit threw and is disabled from here on: {}", veto, e);
     }
 
     /** {@link #allows(SlotRef, BehaviorKey)} for a slot on an open menu. */

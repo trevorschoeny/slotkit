@@ -4,6 +4,7 @@ import com.trevlar.slotkit.api.window.Address;
 import com.trevlar.slotkit.api.window.BehaviorKeys;
 import com.trevlar.slotkit.api.window.GatingContext;
 import com.trevlar.slotkit.api.window.SlotGate;
+import com.trevlar.slotkit.api.window.SlotOperations;
 import com.trevlar.slotkit.api.window.SlotRef;
 import com.trevlar.slotkit.api.window.WindowEngine;
 import com.trevlar.slotkit.core.Slots;
@@ -72,6 +73,17 @@ public final class SlotGating {
         SlotGate gate = gateOf(slot);
         return gate == SlotGate.OPEN ? vanillaMax
                 : Math.min(GatingContext.judging(slot, () -> gate.maxStackSize(stack, vanillaMax)), vanillaMax);
+    }
+
+    /**
+     * {@code max} lowered to what the {@link SlotOperations.Limit}s allow {@code stack} in
+     * {@code slot}, judged on the slot it stands for and the acting player.
+     */
+    public static int limitAt(Slot slot, ItemStack stack, int max) {
+        if (stack.isEmpty()) return max;
+        Slot target = Slots.target(slot);
+        return Math.min(max, SlotOperations.limitOf(new SlotRef(target.container, target.getContainerSlot(), slot, null,
+                ActingPlayer.current(), null, null), stack));
     }
 
     // The merge pass of a shift-click, with the menu in hand.

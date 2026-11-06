@@ -2,7 +2,6 @@ package com.trevlar.slotkit.mixin;
 
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.sugar.Local;
-import com.trevlar.slotkit.api.reserve.Reservations;
 import com.trevlar.slotkit.window.SlotGating;
 
 import net.minecraft.world.entity.player.Player;
@@ -43,6 +42,6 @@ public class SKSlotGateMixin {
 
     @ModifyReturnValue(method = "getMaxStackSize(Lnet/minecraft/world/item/ItemStack;)I", at = @At("RETURN"))
     private int sk$gateMaxStack(int vanillaMax, @Local(argsOnly = true) ItemStack stack) {
-        return Reservations.capAt((Slot) (Object) this, stack, SlotGating.maxStackAt((Slot) (Object) this, stack, vanillaMax));
+        return SlotGating.limitAt((Slot) (Object) this, stack, SlotGating.maxStackAt((Slot) (Object) this, stack, vanillaMax));
     }
 }
