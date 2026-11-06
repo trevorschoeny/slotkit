@@ -1,6 +1,6 @@
 # SlotKit
 
-SlotKit is a slot library for Fabric mods, built on [MenuKit](https://modrinth.com/mod/menukit). A mod uses it to find and act on the slots in any menu, vanilla or modded, or to build real slots and custom menus that persist and sync. I built it for my own mods and opened it up so other modders can use it too.
+SlotKit is a slot library for Fabric mods, built on [MenuKit](https://modrinth.com/mod/menukit). A mod uses it to find and act on the slots in any menu, vanilla or modded, or to build real slots that persist and sync. I built it for my own mods and opened it up so other modders can use it too.
 
 If you're a player and another mod asked for SlotKit, install it alongside that mod and you're done.
 
@@ -131,7 +131,7 @@ A mod states in its `fabric.mod.json` whether it needs SlotKit on both sides.
 "custom": { "slotkit": { "bothSides": "required" } }
 ```
 
-- `required` is for a mod that builds slots or custom menus. A server with the mod admits only clients that have SlotKit and the mod.
+- `required` is for a mod that builds slots. A server with the mod admits only clients that have SlotKit and the mod.
 - `preferred` is for a mod that works on one side and does more with both, such as shared slot state. Nobody is refused for it.
 - A mod with no `slotkit` block only finds and acts on slots. It works on any server and never causes a refusal.
 
@@ -163,7 +163,7 @@ An operation is something done to a slot. Vanilla's eleven are `CLICK_TAKE`, `CL
 
 ### Build created slots
 
-A created slot is a real `Slot` a mod adds to a menu. `ParityGroup.register(owner, spec)` registers a group of them once, in common code, on the player's inventory menu and every container menu, as in the second example above. SlotKit builds no panel for it. The mod shows the group in its own MenuKit panel with `SlotFlowElement`, which lays the slots out in rows, or `SlotElement`, which places one slot. The contents persist through a `StorageAttachment` on the slot's owner, built with `StorageAttachment.playerAttached(namespace, key, size)` for a player or `EphemeralStorage.of(size)` for one menu session.
+A created slot is a real `Slot` a mod adds to a menu. `ParityGroup.register(owner, spec)` registers a group of them once, in common code, on the player's inventory menu and every container menu, as in the second example above. SlotKit builds no panel for it. The mod shows the group in its own MenuKit panel with `SlotFlowElement`, which lays the slots out in rows, or `SlotElement`, which places one slot. The contents persist through a `StorageAttachment` on the slot's owner, built with `StorageAttachment.playerAttached(namespace, key, size)` for a player, or `StorageAttachment.ephemeral(size)` for contents that are never saved.
 
 - The owner id's namespace is the mod's id. `register` throws at startup when it isn't, or when the mod doesn't declare `required`. The message names the group and the line to add.
 - `SlotSpec.shiftClickIn(true)` makes a group a shift-click target, and `SlotSpec.emptyIcon(...)` draws an outline in its empty slots.
@@ -184,10 +184,6 @@ This needs SlotKit on both sides. See [Parity group](https://github.com/trevorsc
 ### Scroll slots in a scroll area
 
 A `SlotElement` inside a MenuKit `ScrollContainer` scrolls and clips like any other element. A slot across the edge of the scroll area draws, hovers, and takes clicks only where it shows. A mod that uses `SlotElement` needs no extra code for this.
-
-### Open a custom menu
-
-`CustomMenu.define(id, ...)` builds a container menu with its own slots, laid out with MenuKit panels. The server decides which panels are shown, a player can toggle only a panel declared `toggleable()`, and a client can open the menu only while its `validWhen` holds. The same definition check as `ParityGroup` applies. See [Open a custom menu with its own slots](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#open-a-custom-menu-with-its-own-slots).
 
 ### Attach state to a slot
 

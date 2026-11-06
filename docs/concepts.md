@@ -4,7 +4,7 @@ Definitions of the terms SlotKit coins and the rules that bind consumer code. Ev
 
 ## SlotKit and MenuKit
 
-SlotKit is one mod, `slotkit`, built on MenuKit. It holds everything about slots: slot groups and categories, slot operations and vetoes, addresses and the window, created slots, custom menus, storage, and per-slot state. SlotKit 2.2 depends on MenuKit 7.5 and uses only MenuKit's public API. MenuKit does not depend on SlotKit.
+SlotKit is one mod, `slotkit`, built on MenuKit. It holds everything about slots: slot groups and categories, slot operations and vetoes, addresses and the window, created slots, storage, and per-slot state. SlotKit 2.2 depends on MenuKit 7.5 and uses only MenuKit's public API. MenuKit does not depend on SlotKit.
 
 SlotKit was MenuKit: Containers, plus the slot code MenuKit carried before 7.0.0. [upgrading.md](upgrading.md) moves a mod from Containers or from MenuKit 6's slot code.
 
@@ -47,13 +47,13 @@ A mod states in its `fabric.mod.json` whether it needs SlotKit on both sides:
 
 | Value | Use it when | Effect |
 |---|---|---|
-| `required` | The mod builds slots or custom menus. | A server with the mod admits only clients that have SlotKit and the mod. On a server without the mod, the client builds none of its slots. |
+| `required` | The mod builds slots. | A server with the mod admits only clients that have SlotKit and the mod. On a server without the mod, the client builds none of its slots. |
 | `preferred` | The mod works on one side and does more with both, for example shared slot state. | Nobody is refused for it. The handshake lists it, so the other side can ask `Presence` about it. |
 | No block | The mod only finds and acts on slots. | The mod works on any server and never causes a refusal. |
 
 Any other value throws when the mod loads. The message names the mod and the line to write.
 
-**The definition check.** `ParityGroup.register(owner, ...)` and `CustomMenu.define(id, ...)` throw unless the id's namespace is the id of a loaded mod that declares `required`. A group's owner id is namespaced by the id of the mod that defines it: `"mymod:pockets"` for a mod whose id is `mymod`. The message names the group or menu and what to change:
+**The definition check.** `ParityGroup.register(owner, ...)` throws unless the id's namespace is the id of a loaded mod that declares `required`. A group's owner id is namespaced by the id of the mod that defines it: `"mymod:pockets"` for a mod whose id is `mymod`. The message names the group and what to change:
 
 - An id with no namespace: `ParityGroup 'pockets': an id that builds slots is namespaced by the id of the mod that defines it ('mymod:pockets').`
 - A namespace that is no loaded mod: `... its namespace 'my-mod' is not a loaded mod's id.`
@@ -199,9 +199,9 @@ A gate is not a lock. A lock is another mod's policy laid over a slot, and that 
 
 A created slot is a real `Slot` that a mod adds to a menu. It syncs through vanilla's slot protocol. Its contents persist through a `StorageAttachment` on the slot's owner, which is a player, block entity, entity, or item stack.
 
-`ParityGroup` creates slots on the player's inventory menu and projects them onto every container menu. `CustomContainerMenu` creates slots on a custom menu. `CreatedSlot.of(slot)` tells a created slot from any other, on any screen, creative's included.
+`ParityGroup` creates slots on the player's inventory menu and projects them onto every container menu. `CreatedSlot.of(slot)` tells a created slot from any other, on any screen, creative's included.
 
-The code that builds slots, stores state and judges writes is common, and runs on the server and the client alike. The code that draws is client-only: `SlotElement`, `SlotFlowElement`, `CustomContainerScreen`, `ClientMenu` and `ClientSlots`. SlotKit builds no panel. A slot is an element the mod puts in its own MenuKit panel, next to buttons and labels, and the mod's panel decides where it sits, how it looks and which screens show it. A custom menu's handler holds each panel's id, its slot groups and whether it is shown. The panel itself is a MenuKit `Panel` the mod declares with `ClientMenu.of(menu).panel(id, ...)`, slots included. The server decides whether a panel is shown and syncs that to the client. A player may toggle only a panel declared `toggleable()`, and a client may open a menu only when its `validWhen` holds, which is also how long it stays open.
+The code that builds slots, stores state and judges writes is common, and runs on the server and the client alike. The code that draws is client-only: `SlotElement`, `SlotFlowElement` and `ClientSlots`. SlotKit builds no panel. A slot is an element the mod puts in its own MenuKit panel, next to buttons and labels, and the mod's panel decides where it sits, how it looks and which screens show it.
 
 Only a `required` mod builds created slots ([Declaring sides](#declaring-sides)). A client on a server without SlotKit, or without the mod, builds none of that mod's slots and sends nothing SlotKit-only there, instead of desyncing.
 
@@ -281,7 +281,7 @@ Inventory Profiles Next treats every slot that is not the player's as one contai
 
 ## Storage
 
-A `Storage` is the item container behind a created slot group. `StorageAttachment.playerAttached(namespace, key, size)` builds one that persists on the player. Only that player's client sees its contents, through the menu. `StorageAttachment.playerAttachedVisible(...)` is the same, and also sends the contents to every client tracking the player, for gear drawn on the player model. Another client reads them with `bind(thatPlayer)`. `EphemeralStorage.of(size)` builds one that lasts for the menu session. `blockScoped`, `entityAttached` and `itemContainer` keep contents on a block entity, an entity, or an item stack's container component.
+A `Storage` is the item container behind a created slot group. `StorageAttachment.playerAttached(namespace, key, size)` builds one that persists on the player. Only that player's client sees its contents, through the menu. `StorageAttachment.playerAttachedVisible(...)` is the same, and also sends the contents to every client tracking the player, for gear drawn on the player model. Another client reads them with `bind(thatPlayer)`. `StorageAttachment.ephemeral(size)` builds one that is never saved. `blockScoped`, `entityAttached` and `itemContainer` keep contents on a block entity, an entity, or an item stack's container component.
 
 ## Item sources
 

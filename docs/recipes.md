@@ -89,7 +89,7 @@ The category is required. It tells other mods what the group is. `SlotGroupCateg
 
 `SlotSpec.shiftClickOut(false)`, `shiftClickIn(false)`, `collect(false)` and `dragFill(false)` keep a group out of the bulk shortcuts (shift-click, double-click collect, drag-fill). The slot stays storage, and the shortcuts skip it.
 
-`SlotSpec.accepts(Predicate<ItemStack>)` limits what a slot takes. `SlotSpec.revealWhen(BooleanSupplier)` hides the slots on the client until the supplier returns true. Death, keepInventory, Curse of Vanishing and Curse of Binding behave as they do for vanilla slots. `POCKETS.dropsOnDeath(DropRule.KEEP)` overrides the death rule. For gear other players see, declare the storage with `StorageAttachment.playerAttachedVisible(...)` ([above the offhand](#put-a-slot-above-the-offhand)).
+`SlotSpec.accepts(Predicate<ItemStack>)` limits what a slot takes. `SlotSpec.revealWhen(BooleanSupplier)` hides the slots on the client until the supplier returns true. Death, keepInventory, Curse of Vanishing and Curse of Binding behave as they do for vanilla slots. For gear other players see, declare the storage with `StorageAttachment.playerAttachedVisible(...)` ([above the offhand](#put-a-slot-above-the-offhand)).
 
 `SlotSpec.shiftClickIn(true)`, said explicitly, makes the group a shift-click target (since 1.1.0): in the player's inventory a shift-clicked stack tries its partial stacks, then its empty slots, before vanilla's routing, and each slot's gate decides. On other menus it is tried after the menu's own routing moved nothing, so a chest still takes a stack first. The menu's own routing never lands in these slots by accident (since 2.0.0). Shift-click out of one goes to the player on every menu: on the inventory screen the main inventory, then the hotbar; elsewhere the hotbar end first, as vanilla moves a container's stack. To send shift-clicks somewhere else, register a [route](#decide-where-a-shift-click-goes).
 
@@ -360,49 +360,6 @@ The last argument is the channel's writer rule. The server judges every write a 
 On a server without SlotKit, or without this channel, the client neither sends the write nor shows it. To gray a control the server cannot hold, read `Presence.serverHasChannel(id)`.
 
 With no open menu, use `CHANNEL.get(player, key, index)` with a `PersistentContainerKey`, or `CHANNEL.get(container, index)` for a shared value at a placed container.
-
-## Open a custom menu with its own slots
-
-Needs: SlotKit on both sides, and `bothSides: required`. Define at common init.
-
-```java
-public static final CustomMenu CUSTOM = CustomMenu
-        .define(Identifier.fromNamespaceAndPath(MOD_ID, "custom_menu"), MyMod::buildHandler)
-        .title(Component.literal("My Custom Menu"))
-        .validWhen(player -> player.isAlive())   // who may open it, and for how long
-        .register();
-
-public static CustomContainerMenu buildHandler(
-        MenuType<CustomContainerMenu> type, int syncId, Inventory inv) {
-    return CustomContainerMenu.builder(type)
-            .panel("mymod:menu:main", p -> p.group("items", MY_CATEGORY, EphemeralStorage.of(9)))
-            .panel("mymod:menu:extra", p -> p.group("extra", MY_CATEGORY, EphemeralStorage.of(3))
-                    .hidden().toggleable())
-            .build(syncId);
-}
-```
-
-```java
-// Client initializer: each panel, its slots included, on MenuKit's Panel.Builder.
-ClientMenu.of(CUSTOM)
-        .panel("mymod:menu:main", p -> p.in(ModeScope.BOTH, Placement.screen(PanelPosition.main()))
-                .add(TextLabel.builder().text(Component.literal("Items")).at(0, -12).build())
-                .add(SlotFlowElement.of(SlotGroupId.created("mymod:menu:main", "items"), 9)))
-        .panel("mymod:menu:extra", p -> p.in(ModeScope.BOTH, Placement.screen(PanelPosition.region(OutsideRegion.RIGHT_ALIGN_TOP)))
-                .toggleKey(InputConstants.KEY_E)
-                .add(SlotFlowElement.of(SlotGroupId.created("mymod:menu:extra", "extra"), 3)));
-
-// Client:
-ClientMenu.of(CUSTOM).requestOpen();
-// Server:
-CUSTOM.open(serverPlayer);
-```
-
-Result: `requestOpen()` sends one payload. The server opens the menu because `validWhen` holds for the player, and the client shows a screen with a nine-slot panel. E shows and hides the extra panel. The handler factory runs on both sides and must build the same storages in the same order. Pass the `type` argument straight to `CustomContainerMenu.builder(type)`. `MOD_ID` is your mod id: the menu id's namespace goes through the same definition check as a container panel's.
-
-The handler is structure only: panels, their groups, `hidden()`, `toggleable()`, `pairsWith`, `rightClick`. A `rightClick` handler runs instead of vanilla's click, as a click, on both sides. The client's run is its prediction and the server's run is the one that counts, so put a one-sided effect behind `player.level().isClientSide()`. `p.group(id, category, storage, priority)` sets shift-click priority. The panels are the client's. `ClientMenu.of(menu).panel(id, p -> ...)` takes MenuKit's `Panel.Builder` (elements, style, placement, toggle key), raised unless you say otherwise, and the panel's slots are elements you add to it, as in any panel: a group's id is `SlotGroupId.created(panelId, groupId)`. Every panel the handler declares needs one, or the screen refuses to open and names it. `.screen(MyScreen::new)` sets a `CustomContainerScreen` subclass. A panel that declares no placement takes the standalone default, where the first is the main panel and later ones stack below it.
-
-The server decides whether a panel is shown, with `setPanelVisible(id, visible)`, and syncs it to the client. A player's toggle key sends a request to the server, which honors it only for a panel declared `toggleable()`. Without `validWhen` a client cannot open the menu at all. The server can, and the menu stays open while the player is alive.
 
 ## Gate a slot by its address
 

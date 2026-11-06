@@ -1,5 +1,17 @@
 # Upgrading
 
+## From SlotKit 2.x to 3.0
+
+3.0 removes API no mod used. Change the dependency to `slotkit` `>=3.0.0 <4.0.0` ([versioning](versioning.md#what-to-declare)). A mod that uses none of the removed classes needs no other change, and no saved data needs migration.
+
+| Removed | Instead |
+|---|---|
+| `CustomMenu`, `CustomContainerMenu`, `SlotLayout`, `QuickMoveRouter`, and their client half `ClientMenu`, `CustomContainerScreen`, `MenuScreenFactory` | A vanilla menu with created slots (`ParityGroup`, `OnDemandGroup`, `CreatedSlots.onto`), or the mod's own `AbstractContainerMenu`. Shift-click routes are `QuickMoveRoutes`. |
+| `EphemeralStorage` | `StorageAttachment.ephemeral(size).bind((Void) null)` |
+| `StorageAttachment.custom(spec)`, `customPlayerAttached(spec)`, `CustomAttachmentSpec` | A built-in factory (`playerAttached`, `blockScoped`, `entityAttached`, `itemContainer`), or the mod's own `Storage`. |
+| `PlayerStorage`, `VirtualStorage`, `KeyedStorage`, `KeyedStorages` | A plain `Storage`. Slot state saved under a `KeyedStorages.player(...)` key still loads. |
+| `DropRule`, `PlayerStorageAttachment.dropsOnDeath(rule)` | Nothing: every player attachment dies the vanilla way, which is what `DropRule.DEFAULT` did. |
+
 ## From SlotKit 2.1 to 2.2
 
 2.2 needs MenuKit 7.5.0. Change the dependencies to `menukit` `>=7.5.0 <8.0.0` and `slotkit` `>=2.2.0 <3.0.0` ([versioning](versioning.md#what-to-declare)).

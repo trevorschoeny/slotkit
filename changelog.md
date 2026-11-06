@@ -1,3 +1,13 @@
+## 3.0.0
+
+#### Removed (breaking)
+
+API no mod used is gone. [Upgrading](docs/upgrading.md#from-slotkit-2x-to-30) lists what to use instead.
+
+- The custom-menu framework: `CustomMenu`, `CustomContainerMenu`, `SlotLayout`, `QuickMoveRouter`, and the client's `ClientMenu`, `CustomContainerScreen` and `MenuScreenFactory`.
+- The extra storage kinds: `PlayerStorage`, `VirtualStorage`, `KeyedStorage`, `KeyedStorages`, `EphemeralStorage`, and `CustomAttachmentSpec` with `StorageAttachment.custom` and `customPlayerAttached`. `StorageAttachment.ephemeral` stays.
+- `DropRule` and `PlayerStorageAttachment.dropsOnDeath`. Every player attachment dies the vanilla way, as it did by default: `keepInventory` keeps it, Curse of Vanishing destroys it, otherwise it drops.
+
 ## 2.4.0
 
 #### Added
