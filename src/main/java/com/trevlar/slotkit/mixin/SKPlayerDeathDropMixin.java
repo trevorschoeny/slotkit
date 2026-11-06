@@ -25,7 +25,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <p>The injection doesn't cancel anything. {@code dropEquipment} runs inside
  * {@code die()} after the totem check, so this fires only when the player actually
  * dies, never on a totem save. The {@code keepInventory} read and the per-stack
- * {@link com.trevlar.slotkit.api.slot.DropRule} resolution live in
+ * resolution live in
  * {@link PlayerDeathDropHandler}. Server side only, since the method takes a
  * {@code ServerLevel}.
  */

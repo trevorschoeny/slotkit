@@ -11,7 +11,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
 import net.minecraft.world.level.gamerules.GameRules;
 
-import com.trevlar.slotkit.api.slot.DropRule;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,10 +75,9 @@ public final class PlayerSlotCapture {
                 // The same per-stack rule as the plain death drop: a kept stack stays
                 // with the player, a destroyed one (Curse of Vanishing) is gone, and
                 // only a dropped one goes in the grave.
-                DropRule configured = StorageAttachments.deathDropRuleOf(type);
-                DropRule rule = (configured == null ? DropRule.DEFAULT : configured).resolve(stack, keepInventory);
-                if (rule == DropRule.KEEP) continue;
-                if (rule == DropRule.DROP) captured.add(new CapturedSlot(id, i, stack.copy()));
+                PlayerDeathDropHandler.Fate fate = PlayerDeathDropHandler.fateOf(stack, keepInventory);
+                if (fate == PlayerDeathDropHandler.Fate.KEEP) continue;
+                if (fate == PlayerDeathDropHandler.Fate.DROP) captured.add(new CapturedSlot(id, i, stack.copy()));
                 items.set(i, ItemStack.EMPTY);
                 changed = true;
             }

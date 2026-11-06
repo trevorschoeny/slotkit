@@ -8,7 +8,6 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
 
 import com.mojang.serialization.Codec;
-import com.trevlar.slotkit.api.slot.DropRule;
 
 import org.jspecify.annotations.Nullable;
 
@@ -53,14 +52,12 @@ public final class StorageAttachments {
             BLOCK_SCOPED_ATTACHMENTS =
                     new java.util.concurrent.CopyOnWriteArrayList<>();
 
-    // Player content attachments enrolled for death handling. Like
-    // BLOCK_SCOPED_ATTACHMENTS, but maps each type to its DropRule. Mutable, so the
-    // consumer can change the rule through StorageAttachment.dropsOnDeath() after
-    // registration. copyOnDeath is already set at registration, so a change is a
-    // plain map update, not a new registration. PlayerDeathDropHandler and the grave
-    // adapters both read it. Filled by registerPlayerContentAttachment.
-    private static final ConcurrentHashMap<AttachmentType<ItemContainerContents>, DropRule>
-            PLAYER_DEATH_DROP = new ConcurrentHashMap<>();
+    // Player content attachments enrolled for death handling, like
+    // BLOCK_SCOPED_ATTACHMENTS. Every one follows vanilla's death rule
+    // (PlayerDeathDropHandler.fateOf). PlayerDeathDropHandler and the grave adapters
+    // both read it. Filled by registerPlayerContentAttachment.
+    private static final java.util.Set<AttachmentType<ItemContainerContents>>
+            PLAYER_DEATH_DROP = ConcurrentHashMap.newKeySet();
 
     /**
      * Registers (or returns) an attachment storing {@link ItemContainerContents}.
@@ -90,10 +87,9 @@ public final class StorageAttachments {
      * Registers (or returns) a player content attachment. Like
      * {@link #registerContainerAttachment(Identifier, int)}, but with Fabric's
      * {@code copyOnDeath()} flag, so a kept bag carries across respawn, and enrolled
-     * in the player death-drop registry at {@link DropRule#DEFAULT}, which matches
-     * vanilla with no setup. {@link PlayerDeathDropHandler} walks the registry and
-     * does the {@code keepInventory} check. The consumer changes the rule per
-     * attachment with {@code StorageAttachment.dropsOnDeath(...)}. Called by
+     * in the player death-drop registry, which follows vanilla's death rule.
+     * {@link PlayerDeathDropHandler} walks the registry and does the
+     * {@code keepInventory} check. Called by
      * {@link com.trevlar.slotkit.api.storage.StorageAttachment#playerAttached(String, String, int)}.
      */
     public static AttachmentType<ItemContainerContents> registerPlayerContentAttachment(
@@ -130,7 +126,7 @@ public final class StorageAttachments {
             return builder.buildAndRegister(k);
         });
         ATTACHMENT_SIZES.putIfAbsent(type, defaultSlots);
-        PLAYER_DEATH_DROP.putIfAbsent(type, DropRule.DEFAULT);
+        PLAYER_DEATH_DROP.add(type);
         return type;
     }
 
@@ -156,24 +152,9 @@ public final class StorageAttachments {
         return java.util.List.copyOf(BLOCK_SCOPED_ATTACHMENTS);
     }
 
-    /**
-     * Changes the death-drop rule for a player content attachment. Called by
-     * {@code StorageAttachment.dropsOnDeath(...)}. A plain map update, valid after
-     * registration because {@code copyOnDeath} was already set when the attachment
-     * registered.
-     */
-    public static void setDeathDropRule(AttachmentType<ItemContainerContents> type, DropRule rule) {
-        PLAYER_DEATH_DROP.put(type, rule);
-    }
-
-    /** The configured death-drop rule for a type, or {@code null} if it isn't death-enrolled. */
-    public static DropRule deathDropRuleOf(AttachmentType<ItemContainerContents> type) {
-        return PLAYER_DEATH_DROP.get(type);
-    }
-
     /** Snapshot of all death-droppable player content attachments, for the death handler. */
     public static java.util.Set<AttachmentType<ItemContainerContents>> playerDeathDropAttachments() {
-        return java.util.Set.copyOf(PLAYER_DEATH_DROP.keySet());
+        return java.util.Set.copyOf(PLAYER_DEATH_DROP);
     }
 
     /** Slot count for a registered attachment, used at drop-on-break to size the list. */

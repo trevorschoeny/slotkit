@@ -1,7 +1,6 @@
 package com.trevlar.slotkit.core.attachment;
 
 import com.trevlar.slotkit.compat.GraveModPresence;
-import com.trevlar.slotkit.api.slot.DropRule;
 
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.minecraft.core.NonNullList;
@@ -10,6 +9,8 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.component.ItemContainerContents;
+import net.minecraft.world.item.enchantment.EnchantmentEffectComponents;
+import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.gamerules.GameRules;
 
 /**
@@ -23,8 +24,8 @@ import net.minecraft.world.level.gamerules.GameRules;
  * <p>A {@code playerAttached} content attachment is registered {@code copyOnDeath},
  * so a kept bag carries across respawn. Fabric's copy ignores gamerules, though, so
  * the library does the {@code keepInventory} check and the per-stack drop here. Each
- * stack resolves a {@link DropRule}: {@code KEEP} stays (copyOnDeath carries it),
- * {@code DROP} spawns a vanilla player drop, {@code DESTROY} vanishes.
+ * stack gets vanilla's fate ({@link #fateOf}): {@code KEEP} stays (copyOnDeath carries
+ * it), {@code DROP} spawns a vanilla player drop, {@code DESTROY} vanishes.
  *
  * <p>Clearing after the drop matters. Dropped and destroyed slots are written back
  * empty before respawn's {@code copyOnDeath} runs. Otherwise copyOnDeath would carry
@@ -37,9 +38,27 @@ public final class PlayerDeathDropHandler {
 
     private PlayerDeathDropHandler() {}
 
+    /** What death does to one stack in a player-attached slot. */
+    enum Fate { KEEP, DROP, DESTROY }
+
+    /**
+     * Vanilla's death rule for one stack, in vanilla's order: {@code keepInventory}
+     * keeps it, otherwise Curse of Vanishing destroys it, otherwise it drops. Every
+     * player-attached slot follows it, so a registered slot dies like a vanilla one.
+     */
+    static Fate fateOf(ItemStack stack, boolean keepInventory) {
+        if (keepInventory) return Fate.KEEP;
+        // Curse of Vanishing: the item destroys itself on death. Vanilla's own
+        // destroyVanishingCursedItems() uses this same PREVENT_EQUIPMENT_DROP check.
+        if (EnchantmentHelper.has(stack, EnchantmentEffectComponents.PREVENT_EQUIPMENT_DROP)) {
+            return Fate.DESTROY;
+        }
+        return Fate.DROP;
+    }
+
     /**
      * For every death-droppable player content attachment the player carries,
-     * resolves each stack's {@link DropRule} and acts on it: drop (a vanilla player
+     * resolves each stack's {@link #fateOf fate} and acts on it: drop (a vanilla player
      * drop) and clear, destroy and clear, or keep. Server side only.
      *
      * @param player the dying player (server-side)
@@ -62,9 +81,6 @@ public final class PlayerDeathDropHandler {
             int slotCount = StorageAttachments.slotCountOf(type);
             if (slotCount <= 0) continue;
 
-            DropRule configured = StorageAttachments.deathDropRuleOf(type);
-            if (configured == null) configured = DropRule.DEFAULT;
-
             NonNullList<ItemStack> items = StorageAttachments.contentsToList(contents, slotCount);
             NonNullList<ItemStack> remaining = NonNullList.withSize(slotCount, ItemStack.EMPTY);
             boolean changed = false;
@@ -72,8 +88,7 @@ public final class PlayerDeathDropHandler {
             for (int i = 0; i < slotCount; i++) {
                 ItemStack stack = items.get(i);
                 if (stack.isEmpty()) continue;
-                DropRule effective = configured.resolve(stack, keepInventory);
-                switch (effective) {
+                switch (fateOf(stack, keepInventory)) {
                     case DROP -> {
                         // The vanilla player-death drop: eye-level spawn, random
                         // scatter, 40-tick pickup delay, no thrower (any player can
@@ -94,9 +109,8 @@ public final class PlayerDeathDropHandler {
                     case DESTROY ->
                         // Leave the slot empty in `remaining`, with no drop.
                         changed = true;
-                    default ->
-                        // KEEP (and the unreachable DEFAULT): the stack stays, and
-                        // copyOnDeath carries it across respawn.
+                    case KEEP ->
+                        // The stack stays, and copyOnDeath carries it across respawn.
                         remaining.set(i, stack);
                 }
             }
@@ -107,7 +121,6 @@ public final class PlayerDeathDropHandler {
                 player.setAttached(type, StorageAttachments.listToContents(remaining));
             }
         }
-
     }
 
     // Since 26.3, Player.drop has no random-scatter option and always swings the

@@ -2,7 +2,6 @@ package com.trevlar.slotkit.api.storage;
 
 import org.jspecify.annotations.Nullable;
 
-import com.trevlar.slotkit.api.slot.DropRule;
 import com.trevlar.slotkit.api.storage.Storage;
 
 import com.trevlar.slotkit.core.attachment.AttachedPlayerStorage;
@@ -92,23 +91,14 @@ public abstract class StorageAttachment<O, C> {
      * player-anchored factories ({@link #playerAttached} and
      * {@link #playerAttachedVisible}). Death handling only means something for player
      * content; content on a block, item, entity or ephemeral storage has no player
-     * death. So {@code dropsOnDeath(DropRule)} is here and not on the base type, and
-     * calling it on a non-player attachment is a compile error rather than the old
-     * runtime {@link UnsupportedOperationException}.
+     * death. Every player attachment follows vanilla's death rule: on death a stack
+     * drops when {@code keepInventory} is off (Curse of Vanishing destroys it instead),
+     * and is kept across respawn when it is on.
      *
      * @param <C> content type (carried through from the base)
      */
     public abstract static class PlayerStorageAttachment<C>
             extends StorageAttachment<Player, C> {
-
-        /**
-         * Sets this attachment's death-drop rule. Player content attachments start at
-         * {@link DropRule#DEFAULT}, which matches vanilla. Call this to change it to
-         * {@code KEEP} (soulbound), {@code DESTROY} (cursed) or {@code DROP} (always
-         * drop, even with {@code keepInventory} on). Chains:
-         * {@code playerAttached(...).dropsOnDeath(KEEP)}.
-         */
-        public abstract PlayerStorageAttachment<C> dropsOnDeath(DropRule rule);
 
         /**
          * Marks this attachment's contents as items the player carries, so
@@ -139,12 +129,10 @@ public abstract class StorageAttachment<O, C> {
      *
      * <h4>Death handling</h4>
      *
-     * Player content attachments start at {@link DropRule#DEFAULT}, which matches
-     * vanilla with no setup. On death the content drops at the death spot when
-     * {@code keepInventory} is off (Curse of Vanishing destroys it instead), and is
-     * kept across respawn when {@code keepInventory} is on. Change it per attachment
-     * with {@code dropsOnDeath(DropRule)}, for example {@code KEEP} for a soulbound
-     * slot. The attachment registers {@code copyOnDeath} so kept content carries
+     * Player content attachments match vanilla with no setup. On death the content
+     * drops at the death spot when {@code keepInventory} is off (Curse of Vanishing
+     * destroys it instead), and is kept across respawn when {@code keepInventory} is
+     * on. The attachment registers {@code copyOnDeath} so kept content carries
      * across respawn, and the library does the gamerule-gated drop.
      *
      * @param namespace attachment-id namespace (consumer's mod id)
@@ -282,12 +270,6 @@ public abstract class StorageAttachment<O, C> {
                     () -> player.getAttached(type),
                     contents -> player.setAttached(type, contents),
                     () -> { /* Fabric saves player attachments; no setChanged */ });
-        }
-
-        @Override
-        public PlayerStorageAttachment<NonNullList<ItemStack>> dropsOnDeath(DropRule rule) {
-            StorageAttachments.setDeathDropRule(type, rule);
-            return this;
         }
 
         @Override
