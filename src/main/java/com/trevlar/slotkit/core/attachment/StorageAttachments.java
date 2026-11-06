@@ -1,6 +1,5 @@
 package com.trevlar.slotkit.core.attachment;
 
-import com.trevlar.slotkit.api.storage.CustomAttachmentSpec;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentRegistry;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
 import net.minecraft.core.NonNullList;
@@ -63,23 +62,12 @@ public final class StorageAttachments {
     private static final ConcurrentHashMap<AttachmentType<ItemContainerContents>, DropRule>
             PLAYER_DEATH_DROP = new ConcurrentHashMap<>();
 
-    // Custom (consumer-defined) player-anchored content specs enrolled for death
-    // handling. A custom spec has no library-owned AttachmentType to set copyOnDeath
-    // on, since the consumer owns the storage, so it can't sit in PLAYER_DEATH_DROP.
-    // The library only does the gamerule-gated DROP/DESTROY at the death site,
-    // reading and writing through the spec. Keeping items across respawn is the
-    // consumer storage's job: it sets copyOnDeath on its own Fabric attachment or
-    // uses a persistent store, because the library can't set copyOnDeath on storage
-    // it doesn't own. Keyed by spec so dropsOnDeath() can change the rule later.
-    private static final ConcurrentHashMap<CustomAttachmentSpec<?, ?>, DropRule>
-            CUSTOM_PLAYER_DEATH_DROP = new ConcurrentHashMap<>();
-
     /**
      * Registers (or returns) an attachment storing {@link ItemContainerContents}.
      * Fabric's {@code .persistent(Codec)} handles persistence.
      *
      * <p>For attachments that are not block-scoped (player-attached, item-attached,
-     * ephemeral, custom). Block-scoped attachments use
+     * ephemeral). Block-scoped attachments use
      * {@link #registerBlockScopedAttachment(Identifier, int)}, which does the same
      * registration and also adds the entry for drop-on-break.
      *
@@ -186,24 +174,6 @@ public final class StorageAttachments {
     /** Snapshot of all death-droppable player content attachments, for the death handler. */
     public static java.util.Set<AttachmentType<ItemContainerContents>> playerDeathDropAttachments() {
         return java.util.Set.copyOf(PLAYER_DEATH_DROP.keySet());
-    }
-
-    /**
-     * Enrolls a player-anchored custom spec for death handling at {@code rule}, or
-     * changes the rule for a spec already enrolled. Called by
-     * {@code StorageAttachment.customPlayerAttached(spec).dropsOnDeath(rule)}. The
-     * typed factory makes the owner type {@code Player}, so a non-player spec can
-     * never reach this. The library does the gamerule-gated DROP/DESTROY, and the
-     * consumer's storage is responsible for keeping items across respawn.
-     */
-    public static void registerCustomPlayerDeathSpec(CustomAttachmentSpec<?, ?> spec, DropRule rule) {
-        com.trevlar.menukit.api.Declarations.requireOpen("a death drop spec");
-        CUSTOM_PLAYER_DEATH_DROP.put(spec, rule);
-    }
-
-    /** Snapshot of the death-enrolled custom player specs and their rules, for the death handler. */
-    public static java.util.Map<CustomAttachmentSpec<?, ?>, DropRule> customPlayerDeathSpecs() {
-        return java.util.Map.copyOf(CUSTOM_PLAYER_DEATH_DROP);
     }
 
     /** Slot count for a registered attachment, used at drop-on-break to size the list. */

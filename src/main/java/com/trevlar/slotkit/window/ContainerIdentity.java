@@ -38,7 +38,6 @@ import java.util.function.Function;
  * <h3>Resolution order</h3>
  *
  * <ol>
- *   <li>A storage that carries its own key ({@code KeyedStorage}).</li>
  *   <li>The player's inventory.</li>
  *   <li>A block entity: a registered resolver for its class, else its position.
  *       (Until 6.0.0 a registered block-entity resolver was never reached: the
@@ -114,12 +113,6 @@ public final class ContainerIdentity {
     /** The persistent container {@code container} is, when it has one. */
     public static Optional<PersistentContainerKey> resolve(Container container) {
         if (container == null) return Optional.empty();
-        // A storage that carries its own key is recognized first, so a slot backed by
-        // it is addressed by that key.
-        if (container instanceof com.trevlar.slotkit.api.storage.StorageContainerAdapter adapter
-                && adapter.getStorage() instanceof com.trevlar.slotkit.api.storage.KeyedStorage keyed) {
-            return Optional.of(keyed.storageKey());
-        }
         if (container instanceof Inventory inv) {
             return Optional.of(new PersistentContainerKey.PlayerInventory(inv.player.getUUID()));
         }

@@ -5,7 +5,6 @@ import org.jspecify.annotations.Nullable;
 import com.trevlar.slotkit.api.slot.DropRule;
 import com.trevlar.slotkit.api.storage.Storage;
 
-import com.trevlar.slotkit.api.storage.CustomAttachmentSpec;
 import com.trevlar.slotkit.core.attachment.AttachedPlayerStorage;
 import com.trevlar.slotkit.core.attachment.StorageAttachments;
 
@@ -30,8 +29,7 @@ import java.util.Map;
  *
  * <p>Each factory gives a {@link Storage} bound to one owner. The storage reads and
  * writes wherever the factory keeps its data: a Fabric attachment (player, block
- * entity, entity), a data component (item stack), an in-memory list (ephemeral), or
- * consumer-supplied hooks ({@link CustomAttachmentSpec}).
+ * entity, entity), a data component (item stack), or an in-memory list (ephemeral).
  *
  * <h3>Usage</h3>
  *
@@ -48,8 +46,7 @@ import java.util.Map;
  * @param <O> owner type (Void for ephemeral, Player, BlockEntity and so on for the
  *            persistent variants)
  * @param <C> content type: a {@link NonNullList} of {@link ItemStack} for most
- *            factories, {@link ItemContainerContents} for {@link #itemContainer(int)},
- *            and consumer-defined for custom specs
+ *            factories, {@link ItemContainerContents} for {@link #itemContainer(int)}
  */
 public abstract class StorageAttachment<O, C> {
 
@@ -93,7 +90,7 @@ public abstract class StorageAttachment<O, C> {
     /**
      * A {@link StorageAttachment} with death handling, returned only by the
      * player-anchored factories ({@link #playerAttached} and
-     * {@link #customPlayerAttached}). Death handling only means something for player
+     * {@link #playerAttachedVisible}). Death handling only means something for player
      * content; content on a block, item, entity or ephemeral storage has no player
      * death. So {@code dropsOnDeath(DropRule)} is here and not on the base type, and
      * calling it on a non-player attachment is a compile error rather than the old
@@ -121,21 +118,14 @@ public abstract class StorageAttachment<O, C> {
          * that holds the player's own things (a pocket, a carried ender chest), not for
          * worn gear whose use is its slot. Call at init, where it's declared. Chains:
          * {@code playerAttached(...).carried()}. Since 2.2.0.
-         *
-         * @throws UnsupportedOperationException for a {@link #customPlayerAttached} attachment
          */
-        public PlayerStorageAttachment<C> carried() {
-            throw new UnsupportedOperationException("carried() is for playerAttached and playerAttachedVisible attachments");
-        }
+        public abstract PlayerStorageAttachment<C> carried();
     }
 
     // Factories
 
     /**
-     * In-memory storage that lasts only while the menu is open. When a custom menu
-     * closes, its content goes back to the player's inventory (dropped if it's full or
-     * the player is dead or leaving), as a crafting grid's does. The same
-     * as wrapping an {@link EphemeralStorage}, through the common API.
+     * In-memory storage that is never saved: each {@link #bind} returns a new, empty list.
      *
      * <p>Owner type is {@link Void}; callers pass {@code null} to {@link #bind}.
      */
@@ -257,52 +247,23 @@ public abstract class StorageAttachment<O, C> {
         return new ItemContainerAttachment(slotCount);
     }
 
-    /**
-     * Wraps a {@link CustomAttachmentSpec} as a {@code StorageAttachment}. For owner
-     * types the built-in factories don't cover, and for consumers whose save and load
-     * don't go through a {@code CustomContainerMenu}.
-     *
-     * <p>This is the non-player path: the returned {@code StorageAttachment} has no
-     * {@code dropsOnDeath}, because death handling is player-only. For a
-     * player-anchored custom spec that needs death handling, use
-     * {@link #customPlayerAttached}, which returns a {@link PlayerStorageAttachment}.
-     *
-     * @param <O> owner type
-     * @param <C> content type
-     */
-    public static <O, C> StorageAttachment<O, C> custom(CustomAttachmentSpec<O, C> spec) {
-        return new CustomAttachmentWrapper<>(spec);
-    }
-
-    /**
-     * Wraps a player-anchored {@link CustomAttachmentSpec} as a
-     * {@link PlayerStorageAttachment}, so it can opt in to death handling with
-     * {@link PlayerStorageAttachment#dropsOnDeath(DropRule)}. The spec's owner type
-     * must be {@link Player}, which the typed factory checks at compile time (the old
-     * base {@code dropsOnDeath} threw at runtime on a non-player spec).
-     *
-     * <p>The library does the gamerule-gated DROP/DESTROY at the death site. Keeping
-     * items across respawn is up to the consumer's storage: set {@code copyOnDeath} on
-     * your Fabric attachment, or use a persistent store. The library can't set
-     * {@code copyOnDeath} on storage it does not own, which is the point of a custom
-     * spec.
-     *
-     * @param <C> content type
-     */
-    public static <C> PlayerStorageAttachment<C> customPlayerAttached(
-            CustomAttachmentSpec<Player, C> spec) {
-        return new CustomPlayerAttachmentWrapper<>(spec);
-    }
-
     // Implementations
 
-    // Owner is Void; bind(null) returns a new EphemeralStorage.
+    // Owner is Void; bind(null) returns a new in-memory list, never saved.
     private static final class EphemeralAttachment
             extends StorageAttachment<Void, NonNullList<ItemStack>> {
         private final int slotCount;
         EphemeralAttachment(int slotCount) { this.slotCount = slotCount; }
         @Override public int slotCount() { return slotCount; }
-        @Override public Storage bind(Void ignored) { return EphemeralStorage.of(slotCount); }
+        @Override public Storage bind(Void ignored) {
+            NonNullList<ItemStack> items = NonNullList.withSize(slotCount, ItemStack.EMPTY);
+            return new Storage() {
+                @Override public ItemStack getStack(int i) { return items.get(i); }
+                @Override public void setStack(int i, ItemStack s) { items.set(i, s); }
+                @Override public int size() { return items.size(); }
+                @Override public void markDirty() { /* nothing is saved */ }
+            };
+        }
     }
 
     private static final class PlayerAttachment
@@ -317,8 +278,6 @@ public abstract class StorageAttachment<O, C> {
         }
         @Override public int slotCount() { return slotCount; }
         @Override public Storage bind(Player player) {
-            // A PlayerStorage, so shift-click routing in CustomContainerMenu treats
-            // this as the player side.
             return new PlayerFabricStorage(slotCount, player, id, type,
                     () -> player.getAttached(type),
                     contents -> player.setAttached(type, contents),
@@ -338,8 +297,8 @@ public abstract class StorageAttachment<O, C> {
         }
     }
 
-    // FabricAttachmentStorage with the PlayerStorage marker, for shift-click routing,
-    // and its owner and attachment id, so ItemSources.pathOf can name a slot over it.
+    // FabricAttachmentStorage with its owner and attachment id, so ItemSources.pathOf
+    // can name a slot over it.
     private static final class PlayerFabricStorage implements AttachedPlayerStorage {
         private final FabricAttachmentStorage delegate;
         private final Player owner;
@@ -455,39 +414,6 @@ public abstract class StorageAttachment<O, C> {
                 }
             };
         }
-    }
-
-    private static final class CustomAttachmentWrapper<O, C>
-            extends StorageAttachment<O, C> {
-        private final CustomAttachmentSpec<O, C> spec;
-        CustomAttachmentWrapper(CustomAttachmentSpec<O, C> spec) { this.spec = spec; }
-        @Override public int slotCount() { return spec.slotCount(); }
-        @Override public Storage bind(O owner) { return bindCustomSpec(spec, owner); }
-    }
-
-    private static final class CustomPlayerAttachmentWrapper<C>
-            extends PlayerStorageAttachment<C> {
-        private final CustomAttachmentSpec<Player, C> spec;
-        CustomPlayerAttachmentWrapper(CustomAttachmentSpec<Player, C> spec) { this.spec = spec; }
-        @Override public int slotCount() { return spec.slotCount(); }
-        @Override public Storage bind(Player owner) { return bindCustomSpec(spec, owner); }
-
-        @Override
-        public PlayerStorageAttachment<C> dropsOnDeath(DropRule rule) {
-            // The typed customPlayerAttached(...) factory guarantees a Player owner,
-            // so this is never reached for a non-player spec.
-            StorageAttachments.registerCustomPlayerDeathSpec(spec, rule);
-            return this;
-        }
-    }
-
-    // Shared by both custom-spec wrappers.
-    private static <O, C> Storage bindCustomSpec(CustomAttachmentSpec<O, C> spec, O owner) {
-        return new LiveListStorage<>(spec.slotCount(), new Live<>(),
-                () -> spec.read(owner),
-                spec::toItemList,
-                list -> spec.write(owner, spec.fromItemList(list)),
-                () -> spec.markDirty(owner));
     }
 
     /**

@@ -1,6 +1,5 @@
 package com.trevlar.slotkit.api.slot;
 
-import com.trevlar.slotkit.api.storage.KeyedStorage;
 import com.trevlar.slotkit.api.menu.MenuPanel;
 import com.trevlar.slotkit.api.storage.StorageAttachment;
 import com.trevlar.slotkit.api.storage.StorageContainerAdapter;
@@ -43,7 +42,7 @@ import java.util.function.BooleanSupplier;
  * <h3>What you get</h3>
  *
  * The slots are {@link CreatedSlot}s over a standalone {@link MenuPanel} and
- * {@link CreatedSlotGroup}, neither of which needs a {@code CustomContainerMenu}. That gives
+ * {@link CreatedSlotGroup}, neither of which needs a menu of its own. That gives
  * the usual inertness rules: when the panel is hidden the slots are invisible and
  * inert, {@code getItem} returns EMPTY, they refuse placement and pickup, and vanilla
  * skips them for rendering and hover. The reveal predicate below shows and hides the
@@ -75,9 +74,7 @@ import java.util.function.BooleanSupplier;
  *
  * Item content persists when the slot is backed by a player- or block-attached
  * {@link Storage} (see {@link StorageAttachment}), and vanilla's slot protocol syncs
- * it at no extra cost. For per-slot state (lock flags and the like), back the slot
- * with a {@link KeyedStorage} that returns a stable {@link PersistentContainerKey};
- * the {@code SlotStateChannel} API then works on these slots.
+ * it at no extra cost.
  *
  * <h3>Creative and survival</h3>
  *
@@ -115,7 +112,7 @@ import java.util.function.BooleanSupplier;
  *     StorageAttachment.playerAttached("inventory-plus", "pockets", 3);
  *
  * // Consumer mixin, @Inject(method = "<init>", at = @At("TAIL")) on InventoryMenu:
- * Storage storage = POCKETS.bind(player);              // or a KeyedStorage for metadata
+ * Storage storage = POCKETS.bind(player);
  * CreatedSlots.RegisteredSlots pockets = CreatedSlots.onto((AbstractContainerMenu)(Object) this, player)
  *     .panel("inventory-plus:pockets")
  *     .group("pockets")
@@ -224,8 +221,7 @@ public final class CreatedSlots {
 
         /**
          * Where items live. Required. Use storage bound from a {@link StorageAttachment}
-         * to persist content, or a {@link KeyedStorage} (which declares its own
-         * {@link PersistentContainerKey}) to persist per-slot state as well.
+         * to persist content.
          */
         public Builder storage(Storage storage) { this.storage = storage; return this; }
 

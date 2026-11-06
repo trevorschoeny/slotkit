@@ -1,8 +1,8 @@
 package com.trevlar.slotkit.api.slot;
 
 import com.trevlar.slotkit.api.group.SlotGroupId;
-import com.trevlar.slotkit.api.storage.EphemeralStorage;
 import com.trevlar.slotkit.api.storage.Storage;
+import com.trevlar.slotkit.api.storage.StorageAttachment;
 import com.trevlar.slotkit.api.window.Address;
 import com.trevlar.slotkit.core.ParitySlotRegistry;
 import com.trevlar.slotkit.network.GroupInstanceS2CPayload;
@@ -348,7 +348,7 @@ public final class OnDemandGroup {
                             + "this menu at {}; not built", p.kind(), p.number(), p.at(), at);
                     return;
                 }
-                kind.build(menu, player, null, p.number(), EphemeralStorage.of(kind.count()), old, at, p.count());
+                kind.build(menu, player, null, p.number(), StorageAttachment.ephemeral(kind.count()).bind((Void) null), old, at, p.count());
             }
             case GroupInstanceS2CPayload.COUNT -> {
                 Instance i = kind.find(all, p.number(), false);

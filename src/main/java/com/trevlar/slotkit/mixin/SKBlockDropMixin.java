@@ -28,11 +28,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
  * <p>The injection only reads the attachment. It doesn't cancel or change vanilla's
  * removal, so other mods can inject at the same point. Drops happen on the server
  * only, because {@link BlockScopedDropHandler#dropAllAt(Level, BlockPos, BlockEntity)}
- * checks {@code level.isClientSide()}.
- *
- * <p>Consumers who want their attachment's contents lost instead declare it with
- * {@code StorageAttachment.custom(spec)} rather than {@code blockScoped(...)}. Only
- * blockScoped attachments are in the registry this mixin reads.
+ * checks {@code level.isClientSide()}. Only blockScoped attachments are in the
+ * registry this mixin reads.
  */
 @ApiStatus.Internal
 @Mixin(BlockEntity.class)

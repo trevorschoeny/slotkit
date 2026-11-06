@@ -12,9 +12,7 @@ import net.minecraft.world.item.ItemStack;
  * constructor takes a Container while consumers declare storage through the
  * narrower {@link Storage} interface.
  *
- * <p>{@link com.trevlar.slotkit.api.menu.CustomContainerMenu} uses it for
- * its own slots. Consumers adding slots to vanilla handlers also wrap a
- * Storage in this adapter when calling {@code addSlot} with a
+ * <p>Consumers adding slots to vanilla handlers wrap a Storage in this adapter when calling {@code addSlot} with a
  * {@link net.minecraft.world.inventory.Slot}.
  */
 public class StorageContainerAdapter implements Container {
@@ -27,8 +25,8 @@ public class StorageContainerAdapter implements Container {
 
     /**
      * Returns the backing {@link Storage}. Exposed so internal code (notably
-     * {@code ContainerIdentity}) can check what kind of storage it is, such as a
-     * {@link KeyedStorage}, without going through {@link Container}. Consumer code
+     * {@code ItemSources}) can check what kind of storage it is, without going
+     * through {@link Container}. Consumer code
      * should almost always use the {@link Container} methods instead.
      */
     public Storage getStorage() {

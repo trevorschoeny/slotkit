@@ -2,7 +2,6 @@ package com.trevlar.slotkit.state;
 
 import com.mojang.serialization.Codec;
 import com.mojang.serialization.DynamicOps;
-import com.trevlar.slotkit.api.storage.KeyedStorages;
 import com.trevlar.slotkit.api.window.PersistentContainerKey;
 import com.trevlar.slotkit.api.state.SlotStateChannel;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentTarget;
@@ -224,14 +223,15 @@ public final class SlotStateServer {
         }
 
         if (key instanceof PersistentContainerKey.Modded modded) {
-            // Player-scoped registered slots (pockets, equipment). Keys made by
-            // KeyedStorages.player(...) carry the owning player; other Modded keys have
-            // no library-known owner and resolve to nothing.
+            // Player-scoped registered slots (pockets, equipment). A key whose payload
+            // names its owning player (the shape the removed KeyedStorages.player(...)
+            // made, still read so state saved under it keeps resolving); other Modded
+            // keys have no library-known owner and resolve to nothing.
             CompoundTag payload = modded.payload();
-            if (!KeyedStorages.SCOPE_PLAYER.equals(payload.getStringOr(KeyedStorages.SCOPE_KEY, ""))) return null;
+            if (!"player".equals(payload.getStringOr("menukit:scope", ""))) return null;
             UUID ownerId;
             try {
-                ownerId = UUID.fromString(payload.getStringOr(KeyedStorages.OWNER_KEY, ""));
+                ownerId = UUID.fromString(payload.getStringOr("menukit:owner", ""));
             } catch (IllegalArgumentException e) {
                 return null;
             }
