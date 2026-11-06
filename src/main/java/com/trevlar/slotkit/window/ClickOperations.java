@@ -34,29 +34,17 @@ import org.jetbrains.annotations.ApiStatus;
  *   <li>{@code QUICK_CRAFT} adding a slot to a drag: drag-fill on that slot.</li>
  * </ul>
  * Double-click collect is judged per swept slot at {@code canTakeItemForPickAll},
- * and creative clone touches nothing. A click the menu runs itself instead of
- * vanilla's (a custom menu's right-click handler) moves nothing, so
- * it names no operation.
+ * and creative clone touches nothing.
  */
 @ApiStatus.Internal
 public final class ClickOperations {
 
     private ClickOperations() {}
 
-    /**
-     * Whether a menu runs this click itself instead of vanilla's: a custom menu runs a
-     * right click on a slot with a handler, so the click names no take or put operation.
-     */
-    private static boolean runsItself(AbstractContainerMenu menu, int slotId, int button, ContainerInput input) {
-        return menu instanceof com.trevlar.slotkit.api.menu.CustomContainerMenu custom
-                && custom.rightClickHandler(slotId, button, input) != null;
-    }
-
     /** Whether the click SlotKit is about to run or send is refused on the slot(s) it names. */
     public static boolean refuses(AbstractContainerMenu menu, int slotId, int button, ContainerInput input,
                                   Player player) {
         if (slotId < 0 || slotId >= menu.slots.size()) return false; // outside the menu: no slot to judge
-        if (runsItself(menu, slotId, button, input)) return false; // moves nothing vanilla would
         Slot slot = menu.slots.get(slotId);
         return switch (input) {
             case PICKUP -> {

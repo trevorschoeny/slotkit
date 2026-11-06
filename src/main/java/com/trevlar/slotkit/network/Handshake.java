@@ -69,8 +69,7 @@ import java.util.function.Consumer;
  * <h3>Known limit, narrowed</h3>
  * The check is by mod presence, not version. Two versions of one {@code required} mod
  * whose created slot panels or slot counts differ are refused with "doesn't match the
- * server's"; two that differ only in a custom menu's slots still meet, and desync when
- * that menu opens.
+ * server's".
  */
 @ApiStatus.Internal
 public final class Handshake {

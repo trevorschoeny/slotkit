@@ -1,13 +1,8 @@
 package com.trevlar.slotkit.checks;
 
 import com.trevlar.menukit.api.panel.ModeScope;
-import com.trevlar.slotkit.api.group.SlotGroupCategory;
-import com.trevlar.slotkit.api.menu.CustomContainerMenu;
-import com.trevlar.slotkit.api.menu.CustomMenu;
-import com.trevlar.slotkit.api.slot.DropRule;
 import com.trevlar.slotkit.api.state.SlotState;
 import com.trevlar.slotkit.api.state.SlotStateChannel;
-import com.trevlar.slotkit.api.storage.EphemeralStorage;
 import com.trevlar.slotkit.api.storage.StorageAttachment;
 import com.trevlar.slotkit.api.window.PersistentContainerKey;
 import com.trevlar.slotkit.core.ActiveCounts;
@@ -22,15 +17,15 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.NonNullList;
+import net.minecraft.core.registries.Registries;
 import net.minecraft.network.codec.ByteBufCodecs;
-import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.item.ItemEntity;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.phys.AABB;
@@ -39,36 +34,24 @@ import java.util.List;
 
 /**
  * Items and slot state across the paths that end something: a block breaking, a grave
- * restoring, a death, a custom menu closing, a panel showing, a dimension change, and
- * server code writing with no player.
+ * restoring, a death, a dimension change, and server code writing with no player.
  */
 public class StorageChecks implements ModInitializer, FabricClientGameTest {
 
     static StorageAttachment<BlockEntity, NonNullList<ItemStack>> BOX;
     static StorageAttachment.PlayerStorageAttachment<NonNullList<ItemStack>> DROPPED;
-    static StorageAttachment.PlayerStorageAttachment<NonNullList<ItemStack>> KEPT;
     static SlotStateChannel<Boolean> MARK;
     static SlotStateChannel<Boolean> LOCK;
-    static CustomMenu MENU;
     static final String COUNTED = "slotkit_checks:counted";
 
     @Override
     public void onInitialize() {
         BOX = StorageAttachment.blockScoped("slotkit_checks", "box", 3);
-        DROPPED = StorageAttachment.playerAttached("slotkit_checks", "dropped", 2).dropsOnDeath(DropRule.DROP);
-        KEPT = StorageAttachment.playerAttached("slotkit_checks", "kept", 1).dropsOnDeath(DropRule.KEEP);
+        DROPPED = StorageAttachment.playerAttached("slotkit_checks", "dropped", 2);
         MARK = SlotState.register(ModeScope.BOTH, id("mark"), Codec.BOOL, ByteBufCodecs.BOOL.cast(), false,
                 SlotStateChannel.Visibility.SHARED);
         LOCK = SlotState.register(ModeScope.BOTH, id("lock"), Codec.BOOL, ByteBufCodecs.BOOL.cast(), false);
         ActiveCounts.declare(COUNTED, 1, 3);
-        MENU = CustomMenu.define(id("menu"), (type, syncId, inv) -> CustomContainerMenu.builder(type)
-                        .panel("slotkit_checks:menu:main", p -> p.group("items", SlotGroupCategory.CHEST_STORAGE, EphemeralStorage.of(2)))
-                        .panel("slotkit_checks:menu:extra", p -> p.group("extra", SlotGroupCategory.CHEST_STORAGE, EphemeralStorage.of(1))
-                                .hidden().toggleable())
-                        .build(syncId))
-                .title(Component.literal("Checks"))
-                .validWhen(p -> p.isAlive())
-                .register();
     }
 
     @Override
@@ -82,10 +65,8 @@ public class StorageChecks implements ModInitializer, FabricClientGameTest {
 
             brokenBlockDropsOnce(ctx, server, chest);
             graveRestoreKeepsWhatIsThere(server);
-            graveCaptureFollowsDropRules(server);
+            graveCaptureFollowsTheDeathRule(server);
             deathResetsActiveCounts(ctx, server);
-            customMenuHandsBackItsItems(ctx, server);
-            shownPanelShowsItsItems(ctx, server);
             serverWritesReachTheClient(ctx, server, chest);
             dimensionChangeKeepsTheLock(ctx, server);
             liveItemTakenByAHopperIsStale(server);
@@ -125,17 +106,19 @@ public class StorageChecks implements ModInitializer, FabricClientGameTest {
         });
     }
 
-    // A grave takes only what would drop: a kept stack stays with the player.
-    private static void graveCaptureFollowsDropRules(TestServerContext server) {
+    // A grave takes only what would drop, by vanilla's rule (keepInventory is off here):
+    // a plain stack goes in the grave, a Curse of Vanishing stack vanishes, both slots clear.
+    private static void graveCaptureFollowsTheDeathRule(TestServerContext server) {
         server.runOnServer(s -> {
             ServerPlayer p = player(s);
+            ItemStack cursed = new ItemStack(Items.IRON_SWORD);
+            cursed.enchant(s.registryAccess().lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(Enchantments.VANISHING_CURSE), 1);
+            DROPPED.bind(p).setStack(0, cursed);
             DROPPED.bind(p).setStack(1, new ItemStack(Items.GOLD_INGOT));
-            KEPT.bind(p).setStack(0, new ItemStack(Items.IRON_INGOT));
             List<PlayerSlotCapture.CapturedSlot> captured = PlayerSlotCapture.captureAndClear(p);
             check(captured.size() == 1 && captured.get(0).stack().is(Items.GOLD_INGOT), "the grave captured " + captured);
-            check(KEPT.bind(p).getStack(0).is(Items.IRON_INGOT), "the grave took a kept stack: " + KEPT.bind(p).getStack(0));
+            check(DROPPED.bind(p).getStack(0).isEmpty(), "the cursed stack survived the capture: " + DROPPED.bind(p).getStack(0));
             check(DROPPED.bind(p).getStack(1).isEmpty(), "the captured slot wasn't cleared");
-            KEPT.bind(p).setStack(0, ItemStack.EMPTY);
         });
     }
 
@@ -149,42 +132,6 @@ public class StorageChecks implements ModInitializer, FabricClientGameTest {
         int count = server.computeOnServer(s -> ActiveCounts.get(player(s), COUNTED));
         check(count == 1, "after death the count is " + count + ", not its start of 1");
         server.runCommand("gamemode survival @a");
-    }
-
-    // An ephemeral group's items go back to the player when the menu closes.
-    private static void customMenuHandsBackItsItems(ClientGameTestContext ctx, TestServerContext server) {
-        server.runOnServer(s -> {
-            player(s).getInventory().clearContent();
-            MENU.open(player(s));
-        });
-        ctx.waitTicks(3);
-        server.runOnServer(s -> player(s).containerMenu.slots.get(0).set(new ItemStack(Items.DIAMOND, 2)));
-        server.runOnServer(s -> player(s).closeContainer());
-        ctx.waitTicks(3);
-        int held = server.computeOnServer(s -> player(s).getInventory().countItem(Items.DIAMOND));
-        check(held == 2, "closing the menu left the player " + held + " of 2 diamonds");
-        server.runOnServer(s -> player(s).getInventory().clearContent());
-    }
-
-    // A panel the server shows arrives with its items, not empty.
-    private static void shownPanelShowsItsItems(ClientGameTestContext ctx, TestServerContext server) {
-        server.runOnServer(s -> MENU.open(player(s)));
-        ctx.waitTicks(3);
-        server.runOnServer(s -> {
-            CustomContainerMenu menu = (CustomContainerMenu) player(s).containerMenu;
-            menu.getGroupsFor("slotkit_checks:menu:extra").get(0).getStorage().setStack(0, new ItemStack(Items.EMERALD));
-            menu.broadcastChanges();
-            menu.setPanelVisible("slotkit_checks:menu:extra", true);
-        });
-        ctx.waitTicks(3);
-        ctx.runOnClient(mc -> {
-            AbstractContainerMenu menu = mc.player.containerMenu;
-            check(menu instanceof CustomContainerMenu, "the client has no custom menu open");
-            check(menu.slots.get(2).getItem().is(Items.EMERALD), "the shown panel's slot shows " + menu.slots.get(2).getItem());
-        });
-        server.runOnServer(s -> player(s).closeContainer());
-        ctx.waitTicks(2);
-        server.runOnServer(s -> player(s).getInventory().clearContent());
     }
 
     // Server code writing with no player, or by key, reaches the client viewing the slot.

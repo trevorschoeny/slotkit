@@ -222,16 +222,13 @@ public final class QuickMoveRouting {
     }
 
     /**
-     * The first slot SlotKit appended to this menu, or -1. On a vanilla or modded menu
-     * that is any created slot (parity, projected, or {@code CreatedSlots.onto}): the
-     * menu built its own slots first, so a created slot is never one of them. A custom
-     * menu's own groups are its slots, so there only parity slots count as appended.
+     * The first slot SlotKit appended to this menu, or -1: any created slot (parity,
+     * projected, or {@code CreatedSlots.onto}). The menu built its own slots first, so a
+     * created slot is never one of them.
      */
     public static int firstAppendedSlot(AbstractContainerMenu menu) {
-        boolean custom = menu instanceof com.trevlar.slotkit.api.menu.CustomContainerMenu;
         for (Slot s : menu.slots) {
-            CreatedSlot c = CreatedSlotAccess.asMKCSlot(s);
-            if (c != null && (!custom || ParitySlotRegistry.isParity(c.panelId()))) return s.index;
+            if (CreatedSlotAccess.asMKCSlot(s) != null) return s.index;
         }
         return -1;
     }

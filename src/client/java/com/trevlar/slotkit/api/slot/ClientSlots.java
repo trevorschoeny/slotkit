@@ -10,7 +10,7 @@ import net.minecraft.world.inventory.Slot;
 /**
  * What the client can ask about a slot group while a screen is open. A mod's own
  * panel reads it to follow the server: SlotKit keeps each group's shown state (a
- * custom menu's panel flag, a hidden reveal), and the panel shows only what is live.
+ * hidden reveal), and the panel shows only what is live.
  *
  * <pre>{@code
  * panel.visibleWhen(() -> ClientSlots.isShown(MY_GROUP.id()));

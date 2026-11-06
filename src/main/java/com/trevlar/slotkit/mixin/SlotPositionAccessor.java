@@ -12,8 +12,7 @@ import org.spongepowered.asm.mixin.gen.Accessor;
  * moved at runtime.
  *
  * <p>{@code SlotElement} uses it to write a created slot's position (or its creative
- * {@code SlotWrapper}'s) each frame, and {@code CustomContainerScreen} to lay out its
- * own slots.
+ * {@code SlotWrapper}'s) each frame.
  */
 @ApiStatus.Internal
 @Mixin(Slot.class)

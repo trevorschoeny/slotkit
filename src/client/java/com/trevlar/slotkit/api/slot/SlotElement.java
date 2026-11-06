@@ -57,8 +57,7 @@ import java.util.Objects;
  * for a vanilla slot, and its {@code getHoveredSlot} finds it the same way. So a
  * third party's slot hook, or any mod reading {@code slot.x/y}, treats a created slot
  * and a vanilla slot the same, because SlotKit has no separate slot pass for them
- * to differ in. {@code CustomContainerScreen} has always worked this way on its own
- * screens.
+ * to differ in.
  *
  * <h3>In a clipping container</h3>
  *

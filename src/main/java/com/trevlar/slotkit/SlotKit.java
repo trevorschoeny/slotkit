@@ -30,7 +30,7 @@ public class SlotKit implements ModInitializer {
 
     /** Common-side init: slot-state attachment types, shared payloads and the
      *  server-side hooks. Must run before any consumer code that references
-     *  {@code CustomContainerMenu}, {@code SlotState} or {@code StorageAttachment}. */
+     *  {@code SlotState} or {@code StorageAttachment}. */
     public static void init() {
         LOGGER.info("[SlotKit] Initialized");
         // The shared vocabularies, on both sides: every vanilla slot category, and
@@ -61,20 +61,6 @@ public class SlotKit implements ModInitializer {
                 com.trevlar.slotkit.network.OpenInventoryS2CPayload.STREAM_CODEC);
         net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents.DISCONNECT.register(
                 (handler, server) -> com.trevlar.slotkit.api.menu.MenuSwitch.left(handler.getPlayer()));
-
-        // The one generic open request every CustomMenu shares. The server checks it:
-        // the menu must declare validWhen, and it must hold for the player.
-        net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry.serverboundPlay().register(
-                com.trevlar.slotkit.network.OpenMenuC2SPayload.TYPE,
-                com.trevlar.slotkit.network.OpenMenuC2SPayload.STREAM_CODEC);
-        net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking.registerGlobalReceiver(
-                com.trevlar.slotkit.network.OpenMenuC2SPayload.TYPE,
-                (payload, context) -> {
-                    if (!com.trevlar.slotkit.network.Handshake.hears(context.player())) return;
-                    // Fabric runs this on the server thread already; deferring it again
-                    // could open the menu on a player a respawn just replaced.
-                    com.trevlar.slotkit.api.menu.CustomMenu.handleOpenRequest(context.player(), payload.menuId());
-                });
 
         // The negotiation, in the configuration phase: refuse a client only for a mod
         // that needs SlotKit on both sides, and record what every client has.

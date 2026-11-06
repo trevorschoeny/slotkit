@@ -19,7 +19,7 @@ import java.util.TreeMap;
  * <pre>{@code "custom": { "slotkit": { "bothSides": "required" } }}</pre>
  *
  * <ul>
- *   <li>{@link Need#REQUIRED}: the mod builds slots or custom menus. A server with it
+ *   <li>{@link Need#REQUIRED}: the mod builds slots. A server with it
  *       admits only clients that have SlotKit and the mod.</li>
  *   <li>{@link Need#PREFERRED}: the mod works one-sided and does more with both. It
  *       never refuses anyone; it is listed in the handshake, so either side can ask
@@ -103,7 +103,7 @@ public final class ModSides {
      * namespace. This is what keeps a server with only {@code preferred} mods safe for
      * vanilla clients: such a server never changes a menu's slot count.
      *
-     * @param what "ParityGroup" or "CustomMenu", for the message
+     * @param what "ParityGroup", for the message
      * @param id   the panel or menu id; its namespace must be the defining mod's id
      * @throws IllegalStateException naming the id and the line to add
      */

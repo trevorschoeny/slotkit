@@ -13,10 +13,9 @@ import java.util.function.BooleanSupplier;
  * {@code Panel} exists.
  *
  * <p>A hidden panel's slots are inert: {@link CreatedSlot#getItem()} returns
- * empty, and they refuse placement and pickup. On a custom menu the server decides
- * whether a panel is shown and the client follows ({@code CustomContainerMenu});
- * on a vanilla menu ({@link CreatedSlots#onto}) the server always shows it and the client
- * shows it according to its reveal predicate.
+ * empty, and they refuse placement and pickup. On a vanilla menu
+ * ({@link CreatedSlots#onto}) the server always shows it and the client shows it
+ * according to its reveal predicate.
  *
  * @param id    the panel id the menu's created slots carry
  * @param shown whether the panel is shown now; read every time a slot asks
