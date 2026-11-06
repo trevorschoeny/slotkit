@@ -112,11 +112,18 @@ public final class ReservationEditor {
         match.addAll(r.match());
         advanced = !match.isEmpty();
         query = "";
-        scroll = 0;
+        // The grid opens on the selection's row, so a pre-filled popup shows what it holds.
+        int at = item.isEmpty() ? -1 : indexOf(entries(""), item);
+        scroll = at < 0 ? 0 : (double) (at / COLUMNS) * SIZE;
         screen = mc.gui.screen();
         // Typing goes straight to the search.
         Focus.clear(screen);
         if (search != null && search.widget() != null) screen.setFocused(search.widget());
+    }
+
+    private static int indexOf(List<ItemStack> entries, ItemStack item) {
+        for (int i = 0; i < entries.size(); i++) if (entries.get(i).is(item.getItem())) return i;
+        return -1;
     }
 
     /** Whether the popup is open on the current screen. */

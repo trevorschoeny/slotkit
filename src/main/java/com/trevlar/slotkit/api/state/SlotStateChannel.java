@@ -29,7 +29,7 @@ import org.jetbrains.annotations.ApiStatus;
  * (PRIVATE) or {@link SlotState#register(Identifier, Codec, StreamCodec, Object, Visibility)}.
  *
  * <p>A channel has two codecs. {@link #codec} is for persistence and encodes to NBT
- * through {@code NbtOps.INSTANCE}, so stored values are readable with vanilla's
+ * through {@code NbtOps} (with the registries, so values may name registry entries), so stored values are readable with vanilla's
  * {@code /data get}. {@link #streamCodec} is the compact binary form sent over the
  * network.
  *

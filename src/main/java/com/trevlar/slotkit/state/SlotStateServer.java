@@ -1,15 +1,19 @@
 package com.trevlar.slotkit.state;
 
 import com.mojang.serialization.Codec;
+import com.mojang.serialization.DynamicOps;
 import com.trevlar.slotkit.api.storage.KeyedStorages;
 import com.trevlar.slotkit.api.window.PersistentContainerKey;
 import com.trevlar.slotkit.api.state.SlotStateChannel;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentTarget;
 import net.fabricmc.fabric.api.attachment.v1.AttachmentType;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
+import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.NbtOps;
 import net.minecraft.nbt.Tag;
 import net.minecraft.resources.Identifier;
+import net.minecraft.resources.RegistryOps;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -43,22 +47,45 @@ public final class SlotStateServer {
 
     // Codec helpers
 
+    // A value that names a registry entry (an enchanted ghost item) only encodes with the
+    // registries at hand. The server's on its own thread; the client's elsewhere (a box
+    // item's state read on the render thread); plain NBT before either exists.
+    private static @Nullable MinecraftServer server;
+    private static Supplier<HolderLookup.@Nullable Provider> clientRegistries = () -> null;
+
+    /** SlotKit's common init: tracks the running server for {@link #ops}. */
+    public static void register() {
+        ServerLifecycleEvents.SERVER_STARTING.register(s -> server = s);
+        ServerLifecycleEvents.SERVER_STOPPED.register(s -> server = null);
+    }
+
+    /** SlotKit's client init: the connection's registries, for reads off the server thread. */
+    public static void installClientRegistries(Supplier<HolderLookup.@Nullable Provider> registries) {
+        clientRegistries = registries;
+    }
+
+    private static DynamicOps<Tag> ops() {
+        MinecraftServer s = server;
+        HolderLookup.Provider registries = s != null && s.isSameThread() ? s.registryAccess() : clientRegistries.get();
+        return registries == null ? NbtOps.INSTANCE : RegistryOps.create(NbtOps.INSTANCE, registries);
+    }
+
     /** The canonical stored form of {@code value}. Throws if the channel's codec cannot encode it. */
     public static <T> Tag encode(SlotStateChannel<T> channel, T value) {
         Codec<T> codec = channel.codec();
-        return codec.encodeStart(NbtOps.INSTANCE, value)
+        return codec.encodeStart(ops(), value)
                     .getOrThrow(err -> new IllegalStateException(
                             "Codec failed to encode value for channel " + channel.id() + ": " + err));
     }
 
     /** The canonical stored form of {@code value}, or empty when the channel's codec refuses it. */
     public static <T> Optional<Tag> tryEncode(SlotStateChannel<T> channel, T value) {
-        return channel.codec().encodeStart(NbtOps.INSTANCE, value).result();
+        return channel.codec().encodeStart(ops(), value).result();
     }
 
     /** The value a stored tag holds, or empty when it no longer parses (never throws). */
     public static <T> Optional<T> tryDecode(SlotStateChannel<T> channel, Tag tag) {
-        return channel.codec().parse(NbtOps.INSTANCE, tag).result();
+        return channel.codec().parse(ops(), tag).result();
     }
 
     /** The value a stored tag holds, or the channel's default when it no longer parses. */

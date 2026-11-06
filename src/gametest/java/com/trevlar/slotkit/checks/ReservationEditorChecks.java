@@ -14,11 +14,15 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContex
 import net.fabricmc.fabric.api.client.gametest.v1.screenshot.TestScreenshotOptions;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.Registries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.world.Container;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.enchantment.Enchantments;
 import net.minecraft.world.level.block.Blocks;
 
 
@@ -81,6 +85,32 @@ public class ReservationEditorChecks implements FabricClientGameTest {
             ctx.runOnClient(mc -> ReservationEditor.remove());
             ctx.waitTicks(3);
             check(onServer(server, chest).isNone(), "Remove left " + onServer(server, chest));
+
+            // An occupied slot holding an item that doesn't stack, named and enchanted:
+            // opens on what it holds, Done reserves it, and the item stays.
+            server.runOnServer(s -> {
+                ItemStack sword = new ItemStack(Items.DIAMOND_SWORD);
+                sword.set(DataComponents.CUSTOM_NAME, Component.literal("Excalibur"));
+                sword.enchant(s.registryAccess().lookupOrThrow(Registries.ENCHANTMENT)
+                        .getOrThrow(Enchantments.SHARPNESS), 5);
+                ((Container) s.overworld().getBlockEntity(chest)).setItem(4, sword);
+            });
+            ctx.waitTicks(3);
+            ctx.runOnClient(mc -> {
+                var menu = ((ContainerScreen) mc.gui.screen()).getMenu();
+                ReservationEditor.open(SlotRef.of(menu, menu.getSlot(4), mc.player));
+            });
+            ctx.waitTicks(1);
+            check(draft(ctx).item().is(Items.DIAMOND_SWORD), "the sword's slot opened with " + draft(ctx));
+            ctx.runOnClient(mc -> ReservationEditor.setMatch(Reservation.Match.NAME, true));
+            ctx.runOnClient(mc -> ReservationEditor.done());
+            ctx.waitTicks(3);
+            Reservation sword = server.computeOnServer(s -> Reservations.get(SlotRef.of(
+                    (Container) s.overworld().getBlockEntity(chest), 4, null)));
+            check(sword.item().is(Items.DIAMOND_SWORD) && sword.match().contains(Reservation.Match.NAME),
+                    "Done on the sword's slot reserved " + sword);
+            check(server.computeOnServer(s -> ((Container) s.overworld().getBlockEntity(chest)).getItem(4)
+                    .is(Items.DIAMOND_SWORD)), "reserving the sword's slot moved the sword out");
         }
         if (!FAILURES.isEmpty()) throw new AssertionError(String.join("; ", FAILURES));
     }

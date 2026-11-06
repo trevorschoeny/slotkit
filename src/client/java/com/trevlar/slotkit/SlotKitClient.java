@@ -96,6 +96,10 @@ public class SlotKitClient implements ClientModInitializer {
         // (sent through a port, since common code must not name the client's networking).
         SlotStateClient.register();
         com.trevlar.slotkit.api.state.SlotState.installClientPlayer(() -> Minecraft.getInstance().player);
+        com.trevlar.slotkit.state.SlotStateServer.installClientRegistries(() -> {
+            var connection = Minecraft.getInstance().getConnection();
+            return connection == null ? null : connection.registryAccess();
+        });
         com.trevlar.slotkit.api.state.SlotState.installClientSender(ClientPlayNetworking::send);
         com.trevlar.slotkit.api.reserve.Reservations.installClientSender(ClientPlayNetworking::send);
         com.trevlar.slotkit.api.reserve.ReservationDisplay.register();

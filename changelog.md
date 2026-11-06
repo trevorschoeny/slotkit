@@ -12,6 +12,7 @@
 
 - A shulker box broken in survival dropped its slot state; the loot table copied only its name and contents.
 - A copper golem filling a chest now follows slot rules, whichever mod chose its slots.
+- Slot state holding a registry-backed value (an enchanted item) failed to save on the server; it now encodes with the world's registries.
 
 ## 2.3.0
 

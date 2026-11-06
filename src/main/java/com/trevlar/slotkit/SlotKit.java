@@ -41,6 +41,7 @@ public class SlotKit implements ModInitializer {
         // Per-slot state. Attachment and payload-type registration both have to run
         // on both sides.
         com.trevlar.slotkit.state.SlotStateAttachments.register();
+        com.trevlar.slotkit.state.SlotStateServer.register();
         // Slot state that travels with an item rides in custom_data, never in a
         // registered component (a synced registry entry would refuse vanilla clients
         // before the handshake runs). Its key stays off the network both ways.
