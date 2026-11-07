@@ -10,6 +10,7 @@ import com.trevlar.slotkit.api.window.SlotRef;
 import com.trevlar.slotkit.window.SlotGating;
 
 import net.minecraft.core.NonNullList;
+import net.minecraft.util.Prediction;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.Slot;
@@ -89,6 +90,37 @@ public abstract class SKInventoryInsertMixin {
         } finally {
             sk$incoming = outer;
         }
+    }
+
+    // Items going back to the inventory (a closed crafting grid, a menu switch) pick
+    // their slot with getFreeSlot before add() runs, so the stack is noted here too:
+    // without it an empty slot would be judged with no item, skipping put vetoes and
+    // preferences.
+    @WrapMethod(method = "placeItemBackInInventory(Lnet/minecraft/world/item/ItemStack;ZLnet/minecraft/util/Prediction;)V")
+    private void sk$noteReturned(ItemStack stack, boolean notify, Prediction prediction, Operation<Void> original) {
+        ItemStack outer = sk$incoming;
+        sk$incoming = stack;
+        try {
+            original.call(stack, notify, prediction);
+        } finally {
+            sk$incoming = outer;
+        }
+    }
+
+    /**
+     * Vanilla splits off as many as the stack size leaves room for and drops whatever
+     * add() doesn't place, so the split itself stays within the slot's limit: the rest
+     * goes round the loop to the next slot instead of vanishing.
+     */
+    @WrapOperation(method = "placeItemBackInInventory(Lnet/minecraft/world/item/ItemStack;ZLnet/minecraft/util/Prediction;)V",
+            at = @At(value = "INVOKE", target = "Lnet/minecraft/world/item/ItemStack;split(I)Lnet/minecraft/world/item/ItemStack;"))
+    private ItemStack sk$returnWithinLimit(ItemStack stack, int count, Operation<ItemStack> original,
+                                           @Local(ordinal = 0) int slot) {
+        int limit = SlotOperations.limitOf(SlotRef.of((Inventory) (Object) this, slot, player), stack);
+        int room = limit == SlotOperations.NO_LIMIT ? count : limit - getItem(slot).getCount();
+        // A chosen slot always has room (a full one is refused); 0 here falls back to
+        // vanilla rather than splitting nothing and looping.
+        return original.call(stack, room > 0 ? Math.min(count, room) : count);
     }
 
     @WrapMethod(method = "getSlotWithRemainingSpace")

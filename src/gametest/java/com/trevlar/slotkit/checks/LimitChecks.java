@@ -11,6 +11,7 @@ import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestServerContext;
 import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -68,6 +69,8 @@ public class LimitChecks implements ModInitializer, FabricClientGameTest {
             boxSlotIsCapped(server);
             clicksAreCapped(ctx, server, base);
             pickupIsCapped(ctx, server);
+            returnIsCapped(server);
+            swapIsCapped(server);
             hopperIsCapped(ctx, server, base.offset(0, 0, 4));
         } finally {
             on = false;
@@ -137,6 +140,41 @@ public class LimitChecks implements ModInitializer, FabricClientGameTest {
             inv.clearContent();
         });
         ctx.waitTicks(2);
+    }
+
+    // Items going back to the inventory: vanilla splits to the stack size and drops what
+    // add() leaves, so without the cap on the split, slot 0 at 2 of 4 lost the rest.
+    private static void returnIsCapped(TestServerContext server) {
+        server.runOnServer(s -> {
+            Inventory inv = player(s).getInventory();
+            inv.clearContent();
+            inventory = true;
+            inv.setItem(0, new ItemStack(Items.DIAMOND, 2));
+            inv.placeItemBackInInventory(new ItemStack(Items.DIAMOND, 10), net.minecraft.util.Prediction.SERVER_ONLY);
+            check(inv.getItem(0).getCount() == 4 && inv.countItem(Items.DIAMOND) == 12,
+                    "return: slot 0 holds " + inv.getItem(0) + " and the inventory " + inv.countItem(Items.DIAMOND) + " diamonds, not 4 and 12");
+            inventory = false;
+            inv.clearContent();
+        });
+    }
+
+    // F with no screen: the offhand's ten diamonds would land whole in hotbar slot 0.
+    private static void swapIsCapped(TestServerContext server) {
+        server.runOnServer(s -> {
+            ServerPlayer p = player(s);
+            Inventory inv = p.getInventory();
+            inv.clearContent();
+            inventory = true;
+            inv.setSelectedSlot(0);
+            inv.setItem(Inventory.SLOT_OFFHAND, new ItemStack(Items.DIAMOND, 10));
+            check(com.trevlar.slotkit.window.PlayerActions.refuses(p, ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND),
+                    "swap: ten diamonds may swap into a slot limited to 4");
+            inv.setItem(Inventory.SLOT_OFFHAND, new ItemStack(Items.DIAMOND, 3));
+            check(!com.trevlar.slotkit.window.PlayerActions.refuses(p, ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND),
+                    "swap: three diamonds are refused by a limit of 4");
+            inventory = false;
+            inv.clearContent();
+        });
     }
 
     private static void hopperIsCapped(ClientGameTestContext ctx, TestServerContext server, BlockPos at) {

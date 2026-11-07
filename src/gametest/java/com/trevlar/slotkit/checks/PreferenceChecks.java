@@ -60,6 +60,17 @@ public class PreferenceChecks implements ModInitializer, FabricClientGameTest {
             pickup(ctx, server, -1, "pickup: with nothing preferred, vanilla's first empty slot",
                     inv -> inv.getItem(0).getCount() == 5 && inv.getItem(PREFERRED).isEmpty());
 
+            // Items going back to the inventory pick an empty slot before add() runs.
+            on = true;
+            server.runOnServer(s -> {
+                Inventory inv = player(s).getInventory();
+                inv.clearContent();
+                inv.placeItemBackInInventory(new ItemStack(Items.DIAMOND, 5), net.minecraft.util.Prediction.SERVER_ONLY);
+                check(inv.getItem(PREFERRED).getCount() == 5, "return: an empty preferred slot beats vanilla's first empty slot (got " + layout(inv) + ")");
+                inv.clearContent();
+            });
+            on = false;
+
             // Shift-click from a chest. Vanilla walks the inventory hotbar end first (slot 8).
             server.runOnServer(s -> {
                 level(s).setBlockAndUpdate(at, Blocks.CHEST.defaultBlockState());

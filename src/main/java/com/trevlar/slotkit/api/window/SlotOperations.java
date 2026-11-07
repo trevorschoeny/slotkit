@@ -817,8 +817,17 @@ public final class SlotOperations {
         // A slot at its limit has no room: refused, so a pickup or a shift-click looks
         // for the next slot rather than stopping on this one.
         if (LIMITS.isEmpty()) return true;
+        int limit = limitOf(ref, group, incoming);
+        // A swap moves the whole stack and never splits it on the inventory's side, so a
+        // stack over the limit is refused outright.
+        if (operation == BehaviorKeys.HOTBAR_SWAP || operation == BehaviorKeys.OFFHAND_SWAP) {
+            return incoming.getCount() <= limit;
+        }
+        // Anything else fills up to the limit: room while the slot holds fewer of the
+        // item than that. A different item there counts as none (a click swaps it out).
         ItemStack there = ref.container().getItem(ref.containerSlot());
-        return !ItemStack.isSameItemSameComponents(there, incoming) || there.getCount() < limitOf(ref, group, incoming);
+        int held = ItemStack.isSameItemSameComponents(there, incoming) ? there.getCount() : 0;
+        return held < limit;
     }
 
     private static void disable(Object veto, RuntimeException e) {

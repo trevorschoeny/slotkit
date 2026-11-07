@@ -22,8 +22,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
  * The gate at hopper automation: a gate that denies extract or place stops a hopper
  * taking from or moving into a gated slot. Nobody is acting, so a gate that opens
  * for some players still enforces here. Then the automation operations
- * ({@link Automation}): a slot that refuses automation, or a reservation, is skipped,
- * and a reservation's cap holds. {@code tryMoveInItem} is also how a dropper fills a
+ * ({@link Automation}): a slot that refuses automation is skipped, and a slot's
+ * {@link com.trevlar.slotkit.api.window.SlotOperations.Limit} holds. {@code tryMoveInItem} is also how a dropper fills a
  * container and how a hopper takes an item off the ground.
  */
 @Mixin(HopperBlockEntity.class)
