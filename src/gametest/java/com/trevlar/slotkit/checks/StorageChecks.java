@@ -70,6 +70,7 @@ public class StorageChecks implements ModInitializer, FabricClientGameTest {
             serverWritesReachTheClient(ctx, server, chest);
             dimensionChangeKeepsTheLock(ctx, server);
             liveItemTakenByAHopperIsStale(server);
+            openedBoxShowsItsItem(ctx, server);
         }
         // Every check runs, so one run names every path that broke.
         if (!FAILURES.isEmpty()) throw new AssertionError(String.join("; ", FAILURES));
@@ -168,6 +169,41 @@ public class StorageChecks implements ModInitializer, FabricClientGameTest {
             check(pulled.is(Items.SHULKER_BOX), "the hopper pulled " + pulled);
             check(box.isStale(), "the box a hopper took is still live, so its open menu keeps taking items into nothing");
         });
+    }
+
+    // A box opened from the inventory: its slots' SHARED values are the box item's, read,
+    // written and seen on the client, though the client's container is a plain copy.
+    private static void openedBoxShowsItsItem(ClientGameTestContext ctx, TestServerContext server) {
+        server.runOnServer(s -> {
+            ServerPlayer p = player(s);
+            ItemStack box = new ItemStack(Items.SHULKER_BOX);
+            MARK.set(box, 2, true);
+            p.getInventory().setItem(9, box);
+            class Opened extends net.minecraft.world.SimpleContainer implements com.trevlar.slotkit.api.item.ItemContents {
+                Opened() { super(27); }
+                @Override public com.trevlar.slotkit.api.item.ItemPath itemPath(net.minecraft.world.entity.player.Player asker) {
+                    return new com.trevlar.slotkit.api.item.ItemPath(com.trevlar.slotkit.api.item.ItemRef.Source.INVENTORY, 9, List.of());
+                }
+            }
+            p.openMenu(new net.minecraft.world.SimpleMenuProvider((id, inv, pl) ->
+                    new net.minecraft.world.inventory.ShulkerBoxMenu(id, inv, new Opened()), net.minecraft.network.chat.Component.literal("box")));
+        });
+        ctx.waitTicks(3);
+        ctx.runOnClient(mc -> check(MARK.get(mc.player.containerMenu.slots.get(2)) && !MARK.get(mc.player.containerMenu.slots.get(1)),
+                "an opened box's client slots don't show the box item's marks"));
+        server.runOnServer(s -> {
+            ServerPlayer p = player(s);
+            check(MARK.get(p, p.containerMenu.slots.get(2)), "an opened box's slot doesn't read its item's mark on the server");
+            MARK.set(p, p.containerMenu.slots.get(1), true);
+            MARK.set(p, p.containerMenu.slots.get(2), false);
+            ItemStack box = p.getInventory().getItem(9);
+            check(MARK.get(box, 1) && !MARK.get(box, 2), "a write on an opened box's slot didn't land on the box item");
+        });
+        ctx.waitTicks(3);
+        ctx.runOnClient(mc -> check(MARK.get(mc.player.containerMenu.slots.get(1)) && !MARK.get(mc.player.containerMenu.slots.get(2)),
+                "a change to the box item didn't reach the client"));
+        server.runOnServer(s -> player(s).closeContainer());
+        ctx.waitTicks(2);
     }
 
     private static int diamondsNear(MinecraftServer s, BlockPos pos) {

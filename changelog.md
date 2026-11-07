@@ -12,6 +12,7 @@
 - A shulker box broken in survival dropped its slot state; the loot table copied only its name and contents.
 - A copper golem filling a chest now follows slot rules, whichever mod chose its slots.
 - Slot state holding a registry-backed value (an enchanted item) failed to save on the server; it now encodes with the world's registries.
+- Slot state on a box opened from the inventory (`ItemContents`) read as the default on the client, so a write built on it overwrote the box's real values. Its slots now read, write and sync the box item's SHARED values, on both sides.
 
 #### Removed (breaking)
 

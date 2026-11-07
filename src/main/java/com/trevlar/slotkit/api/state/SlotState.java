@@ -189,6 +189,11 @@ public final class SlotState {
         if (isClientSide(viewer)) {
             return SlotStateClientCache.read(channel, slot);
         }
+        // A slot inside an item (a box opened from the inventory) reads the item's own value.
+        if (slot.container instanceof com.trevlar.slotkit.api.item.ItemContents contents) {
+            net.minecraft.world.item.ItemStack item = contents.item(viewer);
+            return item == null ? channel.defaultValue() : channel.get(item, slot.getContainerSlot());
+        }
         // A composite container (double chest) resolves this slot to the key of the
         // half that owns it and the index within that half. For a single-owner
         // container the local index is the global one.
@@ -208,6 +213,10 @@ public final class SlotState {
         if (isClientSide(viewer)) {
             if (!channel.scope().includes(viewer)) return;   // out of its mode: the server would refuse it
             writeFromClient(channel, slot, viewer, value);
+            return;
+        }
+        if (slot.container instanceof com.trevlar.slotkit.api.item.ItemContents contents) {
+            writeOnItem(channel, contents, viewer, slot.getContainerSlot(), value);
             return;
         }
         // Store under the owning (half's) key at the owner-local index. With no viewer
@@ -235,6 +244,28 @@ public final class SlotState {
             com.trevlar.slotkit.state.SlotStateHooks.sendIfViewing(
                     sp, slot.key(), slot.localSlotIndex(), channel, value);
         }
+    }
+
+    /**
+     * Stores a SHARED value on the item a slot is inside, and puts the item back where it
+     * lives (up a box-in-box chain too). Its viewer hears it from {@code ItemSlotStateSync}.
+     * PRIVATE values have no place on an item and are dropped. Server side.
+     */
+    static <T> void writeOnItem(SlotStateChannel<T> channel, com.trevlar.slotkit.api.item.ItemContents contents,
+                                @Nullable Player viewer, int index, T value) {
+        if (channel.visibility() != SlotStateChannel.Visibility.SHARED) return;
+        com.trevlar.slotkit.api.item.ItemPath path = viewer instanceof net.minecraft.server.level.ServerPlayer sp
+                ? contents.itemPath(sp) : null;
+        com.trevlar.slotkit.api.item.LiveItem live = path == null ? null
+                : com.trevlar.slotkit.api.item.ItemSources.live((net.minecraft.server.level.ServerPlayer) viewer, path);
+        if (live != null) {
+            channel.set(live.stack(), index, value);
+            live.commit();
+            return;
+        }
+        // A container holding its item directly (no path) is written in place.
+        net.minecraft.world.item.ItemStack item = contents.item(viewer);
+        if (item != null && !item.isEmpty()) channel.set(item, index, value);
     }
 
     /** Stores a value, or removes the entry when it is the channel's default. Server side. */

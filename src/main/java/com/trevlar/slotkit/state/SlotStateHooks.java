@@ -66,6 +66,7 @@ public final class SlotStateHooks {
                 (player, from, to) -> sendPlayerJoinSnapshot(player));
         ServerPlayConnectionEvents.DISCONNECT.register((handler, server) ->
                 SlotStateWrites.RATE.forget(handler.getPlayer().getUUID()));
+        ItemSlotStateSync.register();
     }
 
     // Snapshots
@@ -146,11 +147,14 @@ public final class SlotStateHooks {
         Slot slot = menuMatches && idx >= 0 && idx < menu.slots.size() ? menu.slots.get(idx) : null;
         Optional<ResolvedSlot> resolved = slot == null ? Optional.empty()
                 : SlotStateRegistry.resolve(slot.container, slot.getContainerSlot());
+        // A slot inside an item (a box opened from the inventory) has no key: the item holds its values.
+        boolean onItem = slot != null && resolved.isEmpty()
+                && com.trevlar.slotkit.core.Slots.target(slot).container instanceof com.trevlar.slotkit.api.item.ItemContents;
 
         SlotStateWrites.Judged<T> judged = SlotStateWrites.judge(channel,
                 ch -> SlotStateWire.decode(ch, payload.value(), player.registryAccess()),
                 () -> menuMatches,
-                () -> slot != null && slot.isActive() && resolved.isPresent() && menu.stillValid(player),
+                () -> slot != null && slot.isActive() && (resolved.isPresent() || onItem) && menu.stillValid(player),
                 ch -> ch.scope().includes(player) && ch.canWrite().allows(player, SlotRef.of(menu, slot, player)),
                 () -> SlotStateWrites.RATE.tryWrite(player.getUUID(), System.currentTimeMillis()));
 
@@ -162,7 +166,14 @@ public final class SlotStateHooks {
             // cache agrees again. Only when the slot is on the menu the client has open.
             if (channel != null && resolved.isPresent()) {
                 sendValue(player, menu.containerId, idx, channel, currentValue(channel, resolved.get(), player));
+            } else if (channel != null && onItem) {
+                sendValue(player, menu.containerId, idx, channel, channel.get(player, slot));
             }
+            return verdict;
+        }
+        if (onItem) {
+            // Stored on the item; ItemSlotStateSync sends it on (the writer already shows it).
+            channel.set(player, slot, judged.value());
             return verdict;
         }
 
