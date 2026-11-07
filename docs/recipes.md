@@ -274,7 +274,9 @@ Since 2.2.0. Give an item a state on the server and let the slot draw it. Here a
 ```java
 // Common init (the mod declares bothSides: required):
 static final ItemState<Boolean> OPEN = ItemState.flag("mymod:open", ItemState.Saved.NO);
+```
 
+```java
 // Server, when the box opens and when it closes:
 OPEN.set(ref, true);
 OPEN.clear(ref);
