@@ -57,6 +57,63 @@ public final class Automation {
         return room(new HeldContents(box), index, incoming);
     }
 
+    /**
+     * Whether {@code container} wants {@code incoming}: a slot in it, or in a box item in it,
+     * that a {@link SlotOperations.Preference} prefers for the item and that has
+     * {@link #room} for some of it. An empty slot reserved for cobblestone makes the chest a
+     * place for cobblestone, though it holds none. SlotKit asks it where a copper golem checks
+     * whether a chest takes what it holds; a mod's own target search (a golem looking for a
+     * home) asks it too. Server side. Since 3.0.0.
+     */
+    public static boolean wants(Container container, ItemStack incoming) {
+        if (incoming.isEmpty() || !SlotOperations.anyPreference()) return false;
+        for (int slot = 0; slot < container.getContainerSize(); slot++) {
+            if (wantsAt(container, slot, incoming)) return true;
+            ItemStack there = container.getItem(slot);
+            if (!isBox(there)) continue;
+            HeldContents box = new HeldContents(there);
+            for (int i = 0; i < box.getContainerSize(); i++) {
+                if (wantsAt(box, i, incoming)) return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean wantsAt(Container container, int slot, ItemStack incoming) {
+        return SlotOperations.prefers(SlotRef.of(container, slot, null), incoming) && room(container, slot, incoming) > 0;
+    }
+
+    /**
+     * Puts as much of {@code held} as fits into the slots that want it ({@link #wants}), in
+     * the container and in the box items in it: partial stacks first, then empty slots, as a
+     * pickup does. Shrinks {@code held}; the mover places the rest its own way.
+     */
+    @ApiStatus.Internal
+    public static void putPreferred(Container container, ItemStack held) {
+        if (held.isEmpty() || !SlotOperations.anyPreference()) return;
+        for (boolean partial : new boolean[] {true, false}) {
+            for (int slot = 0; slot < container.getContainerSize() && !held.isEmpty(); slot++) {
+                putIfWanted(container, slot, held, partial);
+                ItemStack there = container.getItem(slot);
+                if (!isBox(there)) continue;
+                HeldContents box = new HeldContents(there);
+                int had = held.getCount();
+                for (int i = 0; i < box.getContainerSize() && !held.isEmpty(); i++) putIfWanted(box, i, held, partial);
+                if (held.getCount() == had) continue;
+                // The box is a copy of the item's contents: write it back.
+                there.set(DataComponents.CONTAINER, ItemContainerContents.fromItems(box.getItems()));
+                container.setItem(slot, there);
+            }
+        }
+    }
+
+    private static void putIfWanted(Container container, int slot, ItemStack held, boolean partial) {
+        if (container.getItem(slot).isEmpty() == partial || !SlotOperations.prefers(SlotRef.of(container, slot, null), held)) return;
+        int n = room(container, slot, held);
+        put(container, slot, held, n);
+        held.shrink(n);
+    }
+
     /** Whether automation may take items out of {@code container}'s slot. */
     public static boolean mayTake(Container container, int slot) {
         return SlotOperations.allows(SlotRef.of(container, slot, null), BehaviorKeys.AUTOMATION_TAKE);

@@ -5,6 +5,7 @@
 - Automation operations `AUTOMATION_PUT` and `AUTOMATION_TAKE`, with `Automation.room` and `Automation.mayTake`: what hoppers, droppers, dispensers and copper golems ask before moving items, and what a mod's own automation can ask, also for a slot inside a shulker box in a chest. A put veto on `AUTOMATION_PUT` (a mod's lock) holds for all of them.
 - `SlotOperations.Limit`, registered with `limit`: a cap on how many of an item a slot holds, below its stack size. Every limit is asked and the lowest wins, at every hand that fills a slot: clicks, shift-clicks, drags, pickups, automation, and slots inside a box item. `SlotOperations.limitOf` reads it.
 - `SlotOperations.Preference`, registered with `prefer`: a slot a mod prefers for an item is tried first when a pickup or a shift-click picks where to land, partial stacks before empty slots as before. Vetoes and limits still judge every slot; with nothing preferred the order is vanilla's.
+- A preferred slot makes its chest a copper golem's target for the item, though the chest holds none, also when the slot is inside a shulker box in the chest; the golem fills preferred slots first. `Automation.wants` gives a mod's own target search the same answer.
 - `SlotStateChannel.get(SlotRef)`, and `get`/`set` on an item: a SHARED channel's value wherever a veto's slot lives, including slots inside a box item.
 
 #### Fixed

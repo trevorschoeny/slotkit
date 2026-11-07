@@ -1,5 +1,6 @@
 package com.trevlar.slotkit.mixin;
 
+import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.wrapmethod.WrapMethod;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
@@ -23,14 +24,27 @@ import org.spongepowered.asm.mixin.injection.At;
  * in the same chest or box, or hands it back to the golem. Wrapped, not replaced, so no mod
  * that changes the walk has to know about SlotKit.
  *
+ * <p>Choosing: a chest with a slot that wants the held item counts as one that holds it,
+ * so vanilla accepts it on arrival and a mod looking for a home (Savvy Copper Golems) finds
+ * it, nested boxes included. The wanted slots then fill first.
+ *
  * <p>Taking: a slot that refuses {@code AUTOMATION_TAKE} reads as empty to the golem's pick,
  * so it takes from the next slot.
  */
 @Mixin(TransportItemsBetweenContainers.class)
 public class SKCopperGolemPutMixin {
 
+    /** A chest with a slot that wants the held item ({@link Automation#wants}) takes it, as one holding the item does. */
+    @ModifyReturnValue(method = "hasItemMatchingHandItem", at = @At("RETURN"))
+    private static boolean sk$orASlotWantsIt(boolean vanilla, PathfinderMob body, Container container) {
+        return vanilla || Automation.wants(container, body.getMainHandItem());
+    }
+
     @WrapMethod(method = "addItemsToContainer")
     private static ItemStack sk$putWhereAllowed(PathfinderMob body, Container container, Operation<ItemStack> original) {
+        // The slots that want the item fill first; the walk places what's left.
+        Automation.putPreferred(container, body.getMainHandItem());
+        if (body.getMainHandItem().isEmpty()) return ItemStack.EMPTY;
         ItemStack held = body.getMainHandItem().copy();
         ItemStack[] before = new ItemStack[container.getContainerSize()];
         for (int slot = 0; slot < before.length; slot++) before[slot] = container.getItem(slot).copy();

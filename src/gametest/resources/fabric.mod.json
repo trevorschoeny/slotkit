@@ -12,7 +12,8 @@
       "com.trevlar.slotkit.checks.StorageChecks",
       "com.trevlar.slotkit.checks.ClickChecks",
       "com.trevlar.slotkit.checks.LimitChecks",
-      "com.trevlar.slotkit.checks.PreferenceChecks"
+      "com.trevlar.slotkit.checks.PreferenceChecks",
+      "com.trevlar.slotkit.checks.GolemWantChecks"
     ],
     "main": [
       "com.trevlar.slotkit.checks.CarriedChecks",
@@ -20,7 +21,8 @@
       "com.trevlar.slotkit.checks.StorageChecks",
       "com.trevlar.slotkit.checks.ClickChecks",
       "com.trevlar.slotkit.checks.LimitChecks",
-      "com.trevlar.slotkit.checks.PreferenceChecks"
+      "com.trevlar.slotkit.checks.PreferenceChecks",
+      "com.trevlar.slotkit.checks.GolemWantChecks"
     ]
   },
   "custom": {
