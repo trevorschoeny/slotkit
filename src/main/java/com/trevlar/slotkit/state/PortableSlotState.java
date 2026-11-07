@@ -46,7 +46,7 @@ import java.util.Map;
  *   <li><b>Private and unforgeable on the wire.</b> custom_data syncs to clients, so
  *       {@link #installWireStrip} drops the per-player marks from custom_data's stream codec
  *       both ways: a client never reads another player's marks, and a creative client cannot
- *       write them by sending an item back. The SHARED part crosses (2.4.0): it is the same
+ *       write them by sending an item back. The SHARED part crosses (3.0.0): it is the same
  *       for every viewer, so a client draws a box's reservations; a creative client, which
  *       can make any item, can send one back with SHARED values of its choosing.</li>
  *   <li><b>A placed box owns its state.</b> Placing consumes the key (it moves into the

@@ -409,6 +409,28 @@ SlotOperations.vetoPut(ModeScope.BOTH, (ref, group, op, incoming) ->
 
 Result: a world pickup lands only in a group that already holds that item, and then fills any empty slot in it, so one cobblestone in a box lets pickups fill the box. A `PutVeto` is a veto that is also handed the stack about to land. Every put SlotKit runs asks it through `SlotOperations.allowsPut`: a click place, shift-click in, drag-fill, a number-key or offhand swap (on both slots), a world pickup, and a click a mod sends under `SlotOperations.as`. `SlotGroups.holds` looks at the group's slots on the open menu, or in the player's inventory when no menu is open. A mod that puts items itself asks `allowsPut` with the stack before it acts.
 
+## Cap how many of an item a slot holds
+
+Needs: SlotKit 3.0.0. Call at common init.
+
+```java
+SlotOperations.limit(ModeScope.BOTH, (ref, group, incoming) ->
+        incoming.is(Items.TORCH) && MySettings.isTorchSlot(ref) ? 16 : SlotOperations.NO_LIMIT);
+```
+
+Result: the slot takes torches up to 16 and refuses more, from a click, a shift-click, a drag, a pickup or a hopper. Every limit is asked and the lowest answer wins. A mod that fills slots itself asks `SlotOperations.limitOf(ref, incoming)`, or `Automation.room(...)` for automation.
+
+## Send pickups to a slot first
+
+Needs: SlotKit 3.0.0. Call at common init.
+
+```java
+SlotOperations.prefer(ModeScope.BOTH, (ref, group, incoming) ->
+        incoming.is(Items.TORCH) && MySettings.isTorchSlot(ref));
+```
+
+Result: a torch picked up or shift-clicked into the inventory lands in the torch slot before anywhere else: its partial stack first, then, if it is empty, before other empty slots. Vetoes and limits still judge it, so a full or refusing slot is passed over. The client predicts the move the server makes, so answer the same on both sides.
+
 ## Add an operation of your own
 
 Needs: SlotKit, client tier. Define at common init, and check before acting.

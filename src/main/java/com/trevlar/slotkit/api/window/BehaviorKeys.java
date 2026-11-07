@@ -140,14 +140,14 @@ public final class BehaviorKeys {
      * Operation: whether automation may put items into this slot of a placed container:
      * a hopper or hopper minecart, a dropper, a copper golem, an item a hopper pulls off
      * the ground. Nobody is acting, so only a veto for both modes speaks. Asked through
-     * {@link Automation#room}, which a mod's own automation asks too. Since 2.4.0.
+     * {@link Automation#room}, which a mod's own automation asks too. Since 3.0.0.
      */
     public static final BehaviorKey<TriBool> AUTOMATION_PUT = operation("automation_put");
 
     /**
      * Operation: whether automation may take items out of this slot: a hopper pulling or
      * emptying itself, a dispenser or dropper firing. Asked through {@link Automation#mayTake}.
-     * Since 2.4.0.
+     * Since 3.0.0.
      */
     public static final BehaviorKey<TriBool> AUTOMATION_TAKE = operation("automation_take");
 

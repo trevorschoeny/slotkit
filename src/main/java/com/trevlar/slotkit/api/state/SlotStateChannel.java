@@ -294,7 +294,7 @@ public record SlotStateChannel<T>(
         return SlotState.readShared(this, container, containerSlotIndex);
     }
 
-    // Wherever a veto's slot lives. Since 2.4.0.
+    // Wherever a veto's slot lives. Since 3.0.0.
 
     /**
      * Reads this channel's value at the slot a veto is asked about, wherever it lives: a
@@ -317,7 +317,7 @@ public record SlotStateChannel<T>(
     }
 
     // On an item. SHARED only: what a portable container (a shulker box) carries on its
-    // item, slot by slot, seen on every side. Since 2.4.0.
+    // item, slot by slot, seen on every side. Since 3.0.0.
 
     /**
      * The SHARED value at index {@code index} of the container {@code item} carries (a

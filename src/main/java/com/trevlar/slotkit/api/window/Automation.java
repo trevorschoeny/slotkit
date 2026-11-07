@@ -20,7 +20,7 @@ import org.jspecify.annotations.Nullable;
  * with no player, so the cascade and every veto for both modes speak, the put vetoes with
  * the stack: a reservation, a mod's lock. SlotKit asks these at vanilla's hoppers,
  * droppers, dispensers and copper golems; a mod that moves items itself asks them per
- * slot, and gets the same answers. Server side. Since 2.4.0.
+ * slot, and gets the same answers. Server side. Since 3.0.0.
  *
  * <pre>{@code
  * int n = Automation.room(chest, slot, held);           // 0: skip this slot

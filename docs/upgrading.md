@@ -2,7 +2,7 @@
 
 ## From SlotKit 2.x to 3.0
 
-3.0 removes API no mod used. Change the dependency to `slotkit` `>=3.0.0 <4.0.0` ([versioning](versioning.md#what-to-declare)). A mod that uses none of the removed classes needs no other change, and no saved data needs migration.
+3.0 removes API no mod used, and needs MenuKit 8.0.0. Change the dependencies to `menukit` `>=8.0.0 <9.0.0` and `slotkit` `>=3.0.0 <4.0.0` ([versioning](versioning.md#what-to-declare)), and do [MenuKit's 8.0 upgrade](https://github.com/trevorschoeny/menukit/blob/main/docs/upgrading.md). A mod that uses none of the removed classes needs no other change, and no saved data needs migration.
 
 | Removed | Instead |
 |---|---|
@@ -11,6 +11,8 @@
 | `StorageAttachment.custom(spec)`, `customPlayerAttached(spec)`, `CustomAttachmentSpec` | A built-in factory (`playerAttached`, `blockScoped`, `entityAttached`, `itemContainer`), or the mod's own `Storage`. |
 | `PlayerStorage`, `VirtualStorage`, `KeyedStorage`, `KeyedStorages` | A plain `Storage`. Slot state saved under a `KeyedStorages.player(...)` key still loads. |
 | `DropRule`, `PlayerStorageAttachment.dropsOnDeath(rule)` | Nothing: every player attachment dies the vanilla way, which is what `DropRule.DEFAULT` did. |
+
+One list grows: `BehaviorKeys.VANILLA_OPERATIONS` now holds `AUTOMATION_PUT` and `AUTOMATION_TAKE` too, which hoppers, droppers, dispensers and copper golems ask. A settings screen that lists it shows the two, and a veto on any operation is now also asked for automation.
 
 ## From SlotKit 2.1 to 2.2
 

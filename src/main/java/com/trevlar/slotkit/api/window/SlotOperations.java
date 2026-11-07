@@ -538,7 +538,7 @@ public final class SlotOperations {
      * {@link #NO_LIMIT} when it has nothing to say. Every registered limit is asked and
      * the lowest answer wins, at every hand that fills a slot: a click, a shift-click, a
      * drag, a pickup, automation ({@link Automation#room}), and slots inside a box item.
-     * A slot already holding that many of the item refuses the put. Since 2.4.0.
+     * A slot already holding that many of the item refuses the put. Since 3.0.0.
      */
     @FunctionalInterface
     public interface Limit {
@@ -552,7 +552,7 @@ public final class SlotOperations {
 
     /**
      * Registers a {@link Limit} that applies while the acting player's mode is in
-     * {@code scope}, read per question as {@link #veto(ModeScope, Veto)} is. Since 2.4.0.
+     * {@code scope}, read per question as {@link #veto(ModeScope, Veto)} is. Since 3.0.0.
      */
     public static void limit(ModeScope scope, Limit limit) {
         com.trevlar.menukit.api.Declarations.requireOpen("SlotOperations.limit");
@@ -564,7 +564,7 @@ public final class SlotOperations {
     /**
      * The most of {@code incoming} the slot may hold under every registered {@link Limit}:
      * the lowest answer, or {@link #NO_LIMIT} when none caps it (an empty {@code incoming}
-     * included). Not clamped to the stack size; the caller takes the smaller. Since 2.4.0.
+     * included). Not clamped to the stack size; the caller takes the smaller. Since 3.0.0.
      */
     public static int limitOf(SlotRef ref, ItemStack incoming) {
         if (LIMITS.isEmpty() || incoming.isEmpty()) return NO_LIMIT;
@@ -605,7 +605,7 @@ public final class SlotOperations {
      * shift-click's merge, then its empty slots), preferred slots are tried first and
      * the rest follow in vanilla's order. Vetoes and limits still judge every slot, so
      * a preferred slot that refuses is passed over. Consulted per slot per move, so
-     * keep it a lookup. Since 2.4.0.
+     * keep it a lookup. Since 3.0.0.
      */
     @FunctionalInterface
     public interface Preference {
@@ -616,7 +616,7 @@ public final class SlotOperations {
 
     /**
      * Registers a {@link Preference} that applies while the acting player's mode is in
-     * {@code scope}, read per question as {@link #veto(ModeScope, Veto)} is. Since 2.4.0.
+     * {@code scope}, read per question as {@link #veto(ModeScope, Veto)} is. Since 3.0.0.
      */
     public static void prefer(ModeScope scope, Preference preference) {
         com.trevlar.menukit.api.Declarations.requireOpen("SlotOperations.prefer");
@@ -626,7 +626,7 @@ public final class SlotOperations {
                 : (slot, group, incoming) -> scope.includes(slot.player()) && preference.prefers(slot, group, incoming));
     }
 
-    /** Whether any registered {@link Preference} prefers this slot for {@code incoming}. Since 2.4.0. */
+    /** Whether any registered {@link Preference} prefers this slot for {@code incoming}. Since 3.0.0. */
     public static boolean prefers(SlotRef ref, ItemStack incoming) {
         if (PREFERENCES.isEmpty() || incoming.isEmpty()) return false;
         SlotGroupId group = SlotGroups.of(Objects.requireNonNull(ref, "ref"));

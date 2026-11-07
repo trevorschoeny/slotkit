@@ -1,18 +1,9 @@
 ## 3.0.0
 
-#### Removed (breaking)
-
-API no mod used is gone. [Upgrading](docs/upgrading.md#from-slotkit-2x-to-30) lists what to use instead.
-
-- The custom-menu framework: `CustomMenu`, `CustomContainerMenu`, `SlotLayout`, `QuickMoveRouter`, and the client's `ClientMenu`, `CustomContainerScreen` and `MenuScreenFactory`.
-- The extra storage kinds: `PlayerStorage`, `VirtualStorage`, `KeyedStorage`, `KeyedStorages`, `EphemeralStorage`, and `CustomAttachmentSpec` with `StorageAttachment.custom` and `customPlayerAttached`. `StorageAttachment.ephemeral` stays.
-- `DropRule` and `PlayerStorageAttachment.dropsOnDeath`. Every player attachment dies the vanilla way, as it did by default: `keepInventory` keeps it, Curse of Vanishing destroys it, otherwise it drops.
-
-## 2.4.0
-
 #### Added
 
 - Automation operations `AUTOMATION_PUT` and `AUTOMATION_TAKE`, with `Automation.room` and `Automation.mayTake`: what hoppers, droppers, dispensers and copper golems ask before moving items, and what a mod's own automation can ask, also for a slot inside a shulker box in a chest. A put veto on `AUTOMATION_PUT` (a mod's lock) holds for all of them.
+- `SlotOperations.Limit`, registered with `limit`: a cap on how many of an item a slot holds, below its stack size. Every limit is asked and the lowest wins, at every hand that fills a slot: clicks, shift-clicks, drags, pickups, automation, and slots inside a box item. `SlotOperations.limitOf` reads it.
 - `SlotOperations.Preference`, registered with `prefer`: a slot a mod prefers for an item is tried first when a pickup or a shift-click picks where to land, partial stacks before empty slots as before. Vetoes and limits still judge every slot; with nothing preferred the order is vanilla's.
 - `SlotStateChannel.get(SlotRef)`, and `get`/`set` on an item: a SHARED channel's value wherever a veto's slot lives, including slots inside a box item.
 
@@ -21,6 +12,14 @@ API no mod used is gone. [Upgrading](docs/upgrading.md#from-slotkit-2x-to-30) li
 - A shulker box broken in survival dropped its slot state; the loot table copied only its name and contents.
 - A copper golem filling a chest now follows slot rules, whichever mod chose its slots.
 - Slot state holding a registry-backed value (an enchanted item) failed to save on the server; it now encodes with the world's registries.
+
+#### Removed (breaking)
+
+API no mod used is gone. [Upgrading](docs/upgrading.md#from-slotkit-2x-to-30) lists what to use instead.
+
+- The custom-menu framework: `CustomMenu`, `CustomContainerMenu`, `SlotLayout`, `QuickMoveRouter`, and the client's `ClientMenu`, `CustomContainerScreen` and `MenuScreenFactory`.
+- The extra storage kinds: `PlayerStorage`, `VirtualStorage`, `KeyedStorage`, `KeyedStorages`, `EphemeralStorage`, and `CustomAttachmentSpec` with `StorageAttachment.custom` and `customPlayerAttached`. `StorageAttachment.ephemeral` stays.
+- `DropRule` and `PlayerStorageAttachment.dropsOnDeath`. Every player attachment dies the vanilla way, as it did by default: `keepInventory` keeps it, Curse of Vanishing destroys it, otherwise it drops.
 
 ## 2.3.0
 

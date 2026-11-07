@@ -156,15 +156,16 @@ A slot anchor is a MenuKit anchor whose box is one slot's frame or one slot grou
 
 #### Allow, gate, and veto operations
 
-An operation is something done to a slot. Vanilla's eleven are `CLICK_TAKE`, `CLICK_PUT`, `SHIFT_CLICK_OUT`, `SHIFT_CLICK_IN`, `COLLECT`, `DRAG_FILL`, `HOTBAR_SWAP`, `OFFHAND_SWAP`, `DROP`, `DROP_STACK`, and `INVENTORY_INSERT`, and every one is on by default.
+An operation is something done to a slot. Vanilla's thirteen are `CLICK_TAKE`, `CLICK_PUT`, `SHIFT_CLICK_OUT`, `SHIFT_CLICK_IN`, `COLLECT`, `DRAG_FILL`, `HOTBAR_SWAP`, `OFFHAND_SWAP`, `DROP`, `DROP_STACK`, `INVENTORY_INSERT`, and, for hoppers, droppers, dispensers and copper golems, `AUTOMATION_PUT` and `AUTOMATION_TAKE`. Every one is on by default.
 
 - What a slot allows is decided by a cascade. A per-slot declaration wins over the slot's group, the group wins over its category, and the category wins over the key's default. `SlotOperations.inherent(scope, category, operation, value)` sets the category level.
 - `SlotOperations.veto(scope, rule)` registers a rule that can only say no, for a mod that is not the slot's author, such as a lock.
 - `SlotOperations.allows(menu, slot, player, operation)` is the one check, and it passes when the cascade allows the operation and no veto refuses it.
+- `SlotOperations.vetoPut(scope, rule)` is a veto that also sees the stack about to land. `SlotOperations.limit(scope, rule)` caps how many of an item a slot holds, and `SlotOperations.prefer(scope, rule)` puts a slot first when a pickup or a shift-click picks where to land.
 - A gate sets what a slot accepts and releases, and how many of an item it holds. It is set with `SlotSpec.gate(...)` or `Window.slot(scope, address).gate(...)`. `Address.playerInventory(n)` names a player inventory slot at startup, the same address on every screen.
 - A mod adds its own operation by declaring a `BehaviorKey`, publishing it with `SlotOperations.define`, and shipping a name and description in its lang file.
 
-[Operation](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#operation) and [Gate](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#gate) cover roles, `AppliesTo`, and click tagging with `SlotOperations.as`. See also [Block operations on a locked slot](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#block-operations-on-a-locked-slot) and [Add an operation of your own](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#add-an-operation-of-your-own).
+[Operation](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#operation) and [Gate](https://github.com/trevorschoeny/slotkit/blob/main/docs/concepts.md#gate) cover roles, `AppliesTo`, and click tagging with `SlotOperations.as`. See also [Block operations on a locked slot](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#block-operations-on-a-locked-slot), [Cap how many of an item a slot holds](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#cap-how-many-of-an-item-a-slot-holds), [Send pickups to a slot first](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#send-pickups-to-a-slot-first) and [Add an operation of your own](https://github.com/trevorschoeny/slotkit/blob/main/docs/recipes.md#add-an-operation-of-your-own).
 
 #### Build created slots
 
