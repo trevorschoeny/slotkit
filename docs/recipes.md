@@ -269,7 +269,7 @@ To keep a menu open on a nested item, bind it with `ItemSources.live(container, 
 
 ## Show an item as open
 
-Since 2.2.0. Give an item a state on the server and let the slot draw it. Here a box shows its lid open and a grey wash while the mod's `OPEN` state is on it.
+Since 2.2.0. Give an item a state on the server and let the slot draw it. Here a box shows its lid open and a gray wash while the mod's `OPEN` state is on it.
 
 ```java
 // Common init (the mod declares bothSides: required):
@@ -361,7 +361,7 @@ The last argument is the channel's writer rule. The server judges every write a 
 
 On a server without SlotKit, or without this channel, the client neither sends the write nor shows it. To gray a control the server cannot hold, read `Presence.serverHasChannel(id)`.
 
-With no open menu, use `CHANNEL.get(player, key, index)` with a `PersistentContainerKey`, or `CHANNEL.get(container, index)` for a shared value at a placed container.
+With no open menu, use `CHANNEL.get(player, key, index)` with a `PersistentContainerKey`, or `CHANNEL.get(container, index)` for a shared value at a placed container. Inside a veto, limit or preference, `CHANNEL.get(ref)` reads the slot's value wherever it lives, a slot inside a box item included: a lock veto reading whether a slot is locked calls this instead of resolving the live `Slot` itself. For a SHARED channel, `CHANNEL.get(item, index)` and `CHANNEL.set(item, index, value)` read and write a value directly on a box item's slot; the caller puts the item back where it lives.
 
 ## Gate a slot by its address
 

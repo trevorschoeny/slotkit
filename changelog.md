@@ -7,6 +7,12 @@
 - `SlotOperations.Preference`, registered with `prefer`: a slot a mod prefers for an item is tried first when a pickup or a shift-click picks where to land, partial stacks before empty slots as before. Vetoes and limits still judge every slot; with nothing preferred the order is vanilla's.
 - A preferred slot makes its chest a copper golem's target for the item, though the chest holds none, also when the slot is inside a shulker box in the chest; the golem fills preferred slots first. `Automation.wants` gives a mod's own target search the same answer.
 - `SlotStateChannel.get(SlotRef)`, and `get`/`set` on an item: a SHARED channel's value wherever a veto's slot lives, including slots inside a box item.
+- `ItemContents.item(player)`: the item a container shows the contents of, read on the server by default; a container that holds its item directly (a box inside a box or a chest) overrides it.
+
+#### Changed
+
+- Requires MenuKit 8.0.0.
+- `BehaviorKeys.VANILLA_OPERATIONS` includes `AUTOMATION_PUT` and `AUTOMATION_TAKE`.
 
 #### Fixed
 
@@ -50,13 +56,13 @@ API no mod used is gone. [Upgrading](docs/upgrading.md#from-slotkit-2x-to-30) li
 - The F key's offhand swap with no screen open didn't hand a put veto the real incoming stack, so a plain swap could put through an item a veto would have refused.
 - A `LiveItem` stayed live after a hopper (or any `removeItem`) took its whole stack, so a menu open on that box kept taking items that went nowhere.
 
-### 2.2.1
+## 2.2.1
 
 #### Fixed
 
 - A slot hidden only by the client's reveal check now keeps a write the server syncs to it, instead of dropping it. This fixed pocket items that stayed invisible on the client after a pickup, Restock, or a cycle.
 
-### 2.2.0
+## 2.2.0
 
 #### Added
 

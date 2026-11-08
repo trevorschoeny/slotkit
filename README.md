@@ -13,10 +13,10 @@ SlotKit has two tiers. A mod needs SlotKit on the other side only for the second
 | Tier | Needs SlotKit on | Adds |
 | --- | --- | --- |
 | Client | The client only. It works on any server, vanilla included. | Slot groups and categories in every menu, slot operations, vetoes and gates, and panels placed on a slot or a slot group |
-| Client and server | Both sides | Created slots, custom container menus, storage attachments, per-slot state, and items found inside shulker boxes and bundles |
+| Client and server | Both sides | Created slots, storage attachments, per-slot state, and items found inside shulker boxes and bundles |
 
 - Every slot group, vanilla or created, is published under a category any mod can read, with or without a menu open.
-- Each thing that can be done to a slot is named as an operation. Vanilla has eleven, one per gesture, and a mod can add its own. A slot's own setting is checked first, then its group's, then its category's, and a locking mod can veto any operation.
+- Each thing that can be done to a slot is named as an operation. Vanilla has thirteen: eleven a player does, one per gesture, and two for automation. A mod can add its own. A slot's own setting is checked first, then its group's, then its category's, and a locking mod can veto any operation.
 - A MenuKit panel can be placed around a slot group, or at an offset from one slot, so it shows on every screen with that group or slot. That includes the survival inventory, every chest, and every other container.
 - Every rule about a slot (a veto, a category rule, a gate, a slot-state channel) is declared for survival, creative, or both, and holds in creative too. A panel can take a different place in each mode.
 - A player inventory slot has one address, the same on every screen and for every player, so a rule can name it at startup.
@@ -31,7 +31,6 @@ SlotKit has two tiers. A mod needs SlotKit on the other side only for the second
 - A mod can find and use items anywhere a player carries them: the inventory, the ender chest, and shulker boxes and bundles nested to any depth. The chest a player has open can be searched too. A change writes back through every container, and a menu can stay open on a nested item, like a bundle inside a shulker box. A mod's own carried slots, such as a pocket or a carried ender chest, can be searched as well.
 - An item can carry a state of the mod's own, saved with it or not, and a slot can draw the item differently while that state or a client-side check holds: an animation, another stack in its place, or a mark under or over it.
 - A mod can take a plain double-click on a slot for its own action, the same gesture in every mod that uses it.
-- Custom container menus are built from MenuKit panels.
 - Created slots behave like vanilla ones in creative and survival, on death, and with Curse of Binding and Mending.
 - Per-slot state can be attached to any slot, either private to each player or shared by everyone viewing it. The server checks every write a client sends. The state is stored on the slot's owner (a player, block, entity, or item), where `/data get` can read it.
 - Each side checks which mods the other has before the world loads. A server refuses only players missing a mod that builds slots, and names the mods to install, with links. Everyone else joins.
@@ -88,8 +87,8 @@ repositories {
     maven { url 'https://api.modrinth.com/maven' }
 }
 dependencies {
-    implementation 'maven.modrinth:menukit:7.5.0+26.3'
-    implementation 'maven.modrinth:xQUBXV8I:2.3.0+26.3'   // SlotKit
+    implementation 'maven.modrinth:menukit:8.0.0+26.3'
+    implementation 'maven.modrinth:xQUBXV8I:3.0.0+26.3'   // SlotKit
 }
 ```
 
@@ -98,14 +97,14 @@ dependencies {
 Declare both in `fabric.mod.json`, each against its own version, with both bounds ([why](https://github.com/trevorschoeny/slotkit/blob/main/docs/versioning.md)). Separate the bounds with a space, since Fabric doesn't read a comma there.
 
 ```json
-"depends": { "menukit": ">=7.5.0 <8.0.0", "slotkit": ">=2.3.0 <3.0.0" }
+"depends": { "menukit": ">=8.0.0 <9.0.0", "slotkit": ">=3.0.0 <4.0.0" }
 ```
 
 Players install SlotKit as its own mod, next to the mods that use it. List it as a required dependency on the mod's Modrinth page so it's installed with them.
 
 ### Requirements
 
-- [MenuKit](https://modrinth.com/mod/menukit) 7.5.0 or newer, below 8.0.0. SlotKit builds its panels and slot drawing on MenuKit.
+- [MenuKit](https://modrinth.com/mod/menukit) 8.0.0 or newer, below 9.0.0. SlotKit builds its panels and slot drawing on MenuKit.
 - [Fabric API](https://modrinth.com/mod/fabric-api)
 
 ### Compatibility

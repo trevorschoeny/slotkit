@@ -26,14 +26,14 @@ Pin each Kit against its own version, to the major.minor the mod was built again
 
 ```json
 "depends": {
-  "menukit": ">=7.5.0 <8.0.0",
-  "slotkit": ">=2.3.0 <3.0.0"
+  "menukit": ">=8.0.0 <9.0.0",
+  "slotkit": ">=3.0.0 <4.0.0"
 }
 ```
 
 A minor release can add API. A mod can call something a later minor added while declaring only the major's first release as its floor. That mod loads on the older SlotKit and crashes with `NoSuchMethodError` the first time it calls the new method. Set the lower bound to the version the mod was built and tested against, not the oldest one believed to still work.
 
-SlotKit 2.3.0 needs MenuKit `>=7.5.0 <8.0.0`. Your mod's `menukit` range sits inside that.
+SlotKit 3.0.0 needs MenuKit `>=8.0.0 <9.0.0`. Your mod's `menukit` range sits inside that.
 
 ## Two mistakes
 
@@ -47,7 +47,7 @@ SlotKit declares `breaks` against mods known to be incompatible, but it can only
 
 ## Your mod's own version and its slots
 
-The join check compares the slot groups each `required` mod registers through `ParityGroup`, not its version number ([concepts](concepts.md#declaring-sides)). A release of your mod that changes those groups refuses players on the other release, with a message. A release that changes a custom menu's slots, or a group built with `CreatedSlots.onto`, is not caught. Change that menu's or group's id in the same release.
+The join check compares the slot groups each `required` mod registers through `ParityGroup`, not its version number ([concepts](concepts.md#declaring-sides)). A release of your mod that changes those groups refuses players on the other release, with a message. A release that changes a group built with `CreatedSlots.onto` is not caught. Change that group's id in the same release.
 
 ## When SlotKit takes a new major
 

@@ -4,6 +4,11 @@
 
 3.0 removes API no mod used, and needs MenuKit 8.0.0. Change the dependencies to `menukit` `>=8.0.0 <9.0.0` and `slotkit` `>=3.0.0 <4.0.0` ([versioning](versioning.md#what-to-declare)), and do [MenuKit's 8.0 upgrade](https://github.com/trevorschoeny/menukit/blob/main/docs/upgrading.md). A mod that uses none of the removed classes needs no other change, and no saved data needs migration.
 
+```diff
+-"depends": { "menukit": ">=7.5.0 <8.0.0", "slotkit": ">=2.3.0 <3.0.0" }
++"depends": { "menukit": ">=8.0.0 <9.0.0", "slotkit": ">=3.0.0 <4.0.0" }
+```
+
 | Removed | Instead |
 |---|---|
 | `CustomMenu`, `CustomContainerMenu`, `SlotLayout`, `QuickMoveRouter`, and their client half `ClientMenu`, `CustomContainerScreen`, `MenuScreenFactory` | A vanilla menu with created slots (`ParityGroup`, `OnDemandGroup`, `CreatedSlots.onto`), or the mod's own `AbstractContainerMenu`. Shift-click routes are `QuickMoveRoutes`. |
@@ -12,7 +17,37 @@
 | `PlayerStorage`, `VirtualStorage`, `KeyedStorage`, `KeyedStorages` | A plain `Storage`. Slot state saved under a `KeyedStorages.player(...)` key still loads. |
 | `DropRule`, `PlayerStorageAttachment.dropsOnDeath(rule)` | Nothing: every player attachment dies the vanilla way, which is what `DropRule.DEFAULT` did. |
 
+```diff
+-public static final CustomMenu<MyMenu> MY_MENU = CustomMenu.define("mymod:my_menu", MyMenu::new);
++MY_SLOTS = ParityGroup.register("mymod:my_slots",
++        SlotSpec.at("my_slots", SlotGroupCategory.PLAYER_INVENTORY).count(9)
++                .storage(player -> MY_STORAGE.bind(player)));
+```
+
+```diff
+-public static final EphemeralStorage POCKETS = new EphemeralStorage(9);
++public static final StorageAttachment<Void, NonNullList<ItemStack>> POCKETS = StorageAttachment.ephemeral(9);
++// bind it with StorageAttachment.ephemeral(9).bind((Void) null)
+```
+
+```diff
+-public static final StorageAttachment<Player, NonNullList<ItemStack>> POCKETS =
+-        StorageAttachment.custom(new CustomAttachmentSpec<>(...));
++public static final PlayerStorageAttachment<NonNullList<ItemStack>> POCKETS =
++        StorageAttachment.playerAttached("mymod", "pockets", 9);
+```
+
+```diff
+-PlayerStorageAttachment<NonNullList<ItemStack>> POCKETS =
+-        StorageAttachment.playerAttached("mymod", "pockets", 9).dropsOnDeath(DropRule.DEFAULT);
++PlayerStorageAttachment<NonNullList<ItemStack>> POCKETS =
++        StorageAttachment.playerAttached("mymod", "pockets", 9);
++// drops the vanilla way now: keepInventory keeps it, Curse of Vanishing destroys it, otherwise it drops
+```
+
 One list grows: `BehaviorKeys.VANILLA_OPERATIONS` now holds `AUTOMATION_PUT` and `AUTOMATION_TAKE` too, which hoppers, droppers, dispensers and copper golems ask. A settings screen that lists it shows the two, and a veto on any operation is now also asked for automation.
+
+A box item's SHARED slot state now travels to clients with the item, where before it never left the server; a creative client that moves such an item can send back SHARED values of its own choosing, so a `SHARED` channel's `canWrite` rule is not a guard for box items the way it is for a menu slot. PRIVATE state is unaffected: it is still never sent.
 
 ## From SlotKit 2.1 to 2.2
 
@@ -76,11 +111,13 @@ Pass the 1.x panel id as the group's owner id, unchanged, so its id stays the sa
 
 ## From MenuKit: Containers or MenuKit 6
 
-This section moves a mod to SlotKit 1.0.0 from MenuKit: Containers 6.x, or from the slot code MenuKit 6 carried (`api.slot`, `api.window`, `SlotGroupPanelAdapter`). SlotKit is Containers renamed, plus that slot code. Then follow [1.x to 2.0](#from-slotkit-1x-to-20), [2.0 to 2.1](#from-slotkit-20-to-21) and [2.1 to 2.2](#from-slotkit-21-to-22).
+This section moves a mod to SlotKit 1.0.0 from MenuKit: Containers 6.x, or from the slot code MenuKit 6 carried (`api.slot`, `api.window`, `SlotGroupPanelAdapter`). SlotKit is Containers renamed, plus that slot code. Then follow [1.x to 2.0](#from-slotkit-1x-to-20), [2.0 to 2.1](#from-slotkit-20-to-21), [2.1 to 2.2](#from-slotkit-21-to-22) and [2.x to 3.0](#from-slotkit-2x-to-30).
 
 Do MenuKit's 7.0.0 upgrade first: [MenuKit's upgrading page](https://github.com/trevorschoeny/menukit/blob/main/docs/upgrading-7.md). It also tells you whether your mod needs SlotKit at all.
 
 Saved data needs no migration. See [What does not change](#what-does-not-change).
+
+This section and the checklist below describe SlotKit 1.0.0, where `CustomMenu` still existed. Custom menus were removed in 3.0.0 ([2.x to 3.0](#from-slotkit-2x-to-30)); a mod migrating straight to the current release builds created slots instead and skips every `CustomMenu` mention below.
 
 ## Checklist
 
@@ -306,7 +343,7 @@ Do not rename `menukit:` to `slotkit:` in any saved id. The ids keep the old nam
 | `cannot find symbol` on a `com.trevlar.menukit.api.slot` or `.api.window` class | A wildcard import the map could not reach. | Write one import per class and run the map again. |
 | `cannot find symbol: class SlotGroup` | Containers' created group type, in a file the first rename in step 4 did not reach. | Rename it to `CreatedSlotGroup` in that file. Leave a `SlotGroup` class of your own alone. |
 | `cannot find symbol: variable ContainerKeys` | A `ContainerKeys.MENDING` the second rename did not reach. | Write `BehaviorKeys.MENDING`. |
-| Startup throws `IllegalStateException: Mod 'mymod' has a "slotkit" block in fabric.mod.json, but "bothSides" must be "required" or "preferred"` | A misspelt value. | Write `"required"` or `"preferred"`. |
+| Startup throws `IllegalStateException: Mod 'mymod' has a "slotkit" block in fabric.mod.json, but "bothSides" must be "required" or "preferred"` | A misspelled value. | Write `"required"` or `"preferred"`. |
 | Startup throws `IllegalStateException: ParityGroup 'mymod:pockets' builds slots, so SlotKit is needed on both sides` (or `CustomMenu ...`) | The mod does not declare `required`. | Add `"custom": { "slotkit": { "bothSides": "required" } }`. |
 | Startup throws `... its namespace 'my-mod' is not a loaded mod's id`, or `... an id that builds slots is namespaced by the id of the mod that defines it` | The panel or menu id's namespace is not your mod id. | Use your mod id as the namespace. |
 | A player is refused: "This server needs SlotKit and ... on your game too" | Expected for a `required` mod. The player lacks SlotKit or the mod. | The player installs both. |
