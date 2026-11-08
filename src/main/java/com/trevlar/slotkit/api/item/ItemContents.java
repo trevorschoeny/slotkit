@@ -35,7 +35,9 @@ public interface ItemContents {
      * {@link #itemPath} on the server, and {@code null} on a client or with no player. A
      * container that holds its item directly (a box inside a chest, seen by automation)
      * returns it. What slot state on the item is read from ({@code SlotStateChannel.get(SlotRef)}).
-     * Since 3.0.0.
+     * A container that overrides this and is a {@code Container} also has SHARED slot state
+     * written onto the item it returns, then {@code setChanged()} called: put the item back
+     * where it lives there. Since 3.0.0.
      */
     default @Nullable ItemStack item(@Nullable Player player) {
         if (!(player instanceof ServerPlayer server)) return null;

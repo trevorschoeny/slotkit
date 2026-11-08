@@ -71,6 +71,7 @@ public class StorageChecks implements ModInitializer, FabricClientGameTest {
             dimensionChangeKeepsTheLock(ctx, server);
             liveItemTakenByAHopperIsStale(server);
             openedBoxShowsItsItem(ctx, server);
+            nestedBoxKeepsItsItem(server);
         }
         // Every check runs, so one run names every path that broke.
         if (!FAILURES.isEmpty()) throw new AssertionError(String.join("; ", FAILURES));
@@ -204,6 +205,39 @@ public class StorageChecks implements ModInitializer, FabricClientGameTest {
                 "a change to the box item didn't reach the client"));
         server.runOnServer(s -> player(s).closeContainer());
         ctx.waitTicks(2);
+    }
+
+    // A box opened inside another box, as Open Anywhere holds it: a container bound to the
+    // inner item by its own LiveItem. A write on its slot lands on the inner item through
+    // that LiveItem, which stays bound, so the box stays open.
+    private static void nestedBoxKeepsItsItem(TestServerContext server) {
+        server.runOnServer(s -> {
+            ServerPlayer p = player(s);
+            ItemStack outer = new ItemStack(Items.SHULKER_BOX);
+            outer.set(net.minecraft.core.component.DataComponents.CONTAINER,
+                    net.minecraft.world.item.component.ItemContainerContents.fromItems(List.of(
+                            ItemStack.EMPTY, new ItemStack(Items.SHULKER_BOX))));
+            p.getInventory().setItem(10, outer);
+            com.trevlar.slotkit.api.item.ItemPath inner = new com.trevlar.slotkit.api.item.ItemPath(
+                    com.trevlar.slotkit.api.item.ItemRef.Source.INVENTORY, 10, List.of(1));
+            com.trevlar.slotkit.api.item.LiveItem live = com.trevlar.slotkit.api.item.ItemSources.live(p, inner);
+            check(live != null, "the inner box didn't bind");
+            if (live == null) return;
+            class Opened extends net.minecraft.world.SimpleContainer implements com.trevlar.slotkit.api.item.ItemContents {
+                Opened() { super(27); }
+                @Override public com.trevlar.slotkit.api.item.ItemPath itemPath(net.minecraft.world.entity.player.Player asker) {
+                    return live.isStale() ? null : live.path();
+                }
+                @Override public ItemStack item(net.minecraft.world.entity.player.Player asker) { return live.stack(); }
+                @Override public void setChanged() { live.commit(); }
+            }
+            Opened box = new Opened();
+            MARK.set(p, new net.minecraft.world.inventory.Slot(box, 3, 0, 0), true);
+            check(!live.isStale(), "a write on a nested box's slot unbound the box's own item");
+            com.trevlar.slotkit.api.item.ItemRef now = com.trevlar.slotkit.api.item.ItemSources.at(p, inner);
+            check(now != null && MARK.get(now.stack(), 3), "a write on a nested box's slot didn't land on the inner item");
+            p.getInventory().setItem(10, ItemStack.EMPTY);
+        });
     }
 
     private static int diamondsNear(MinecraftServer s, BlockPos pos) {

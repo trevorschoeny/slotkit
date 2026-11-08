@@ -254,6 +254,18 @@ public final class SlotState {
     static <T> void writeOnItem(SlotStateChannel<T> channel, com.trevlar.slotkit.api.item.ItemContents contents,
                                 @Nullable Player viewer, int index, T value) {
         if (channel.visibility() != SlotStateChannel.Visibility.SHARED) return;
+        // A container that holds its own item (Open Anywhere's opened box, bound to it by a
+        // LiveItem) is written through that item and puts it back itself on setChanged. A
+        // second LiveItem from the path would replace the item under the container's own,
+        // and a box opened inside another box would then lose its place and close.
+        if (contents instanceof net.minecraft.world.Container c && HOLDS_ITEM.get(contents.getClass())) {
+            net.minecraft.world.item.ItemStack own = contents.item(viewer);
+            if (own != null && !own.isEmpty()) {
+                channel.set(own, index, value);
+                c.setChanged();
+                return;
+            }
+        }
         com.trevlar.slotkit.api.item.ItemPath path = viewer instanceof net.minecraft.server.level.ServerPlayer sp
                 ? contents.itemPath(sp) : null;
         com.trevlar.slotkit.api.item.LiveItem live = path == null ? null
@@ -267,6 +279,19 @@ public final class SlotState {
         net.minecraft.world.item.ItemStack item = contents.item(viewer);
         if (item != null && !item.isEmpty()) channel.set(item, index, value);
     }
+
+    // Whether a container class returns an item it holds, rather than ItemContents' default
+    // lookup by path, whose stack for a box inside a box is a copy a write would be lost on.
+    private static final ClassValue<Boolean> HOLDS_ITEM = new ClassValue<>() {
+        @Override protected Boolean computeValue(Class<?> type) {
+            try {
+                return type.getMethod("item", Player.class).getDeclaringClass()
+                        != com.trevlar.slotkit.api.item.ItemContents.class;
+            } catch (NoSuchMethodException e) {
+                return false;
+            }
+        }
+    };
 
     /** Stores a value, or removes the entry when it is the channel's default. Server side. */
     private static <T> void writeResolved(SlotStateChannel<T> channel, ResolvedSlot slot,
